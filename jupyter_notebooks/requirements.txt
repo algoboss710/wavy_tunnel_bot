@@ -1,0 +1,5 @@
+jupyter
+MetaTrader5
+pandas
+numpy
+matplotlib
