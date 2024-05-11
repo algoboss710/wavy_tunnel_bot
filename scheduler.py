@@ -5,6 +5,8 @@ from strategy import tunnel_strategy
 from metatrader import mt5_lib
 from config import Config
 from utils.error_handling import handle_error, warn_error
+from strategy.tunnel_strategy import run_strategy
+
 
 def initialize_strategy():
     try:
@@ -17,6 +19,21 @@ def initialize_strategy():
         )
 
         tunnel_strategy.run_strategy(
+            symbols=Config.SYMBOLS,
+            mt5_init=mt5_init,
+            timeframe=Config.MT5_TIMEFRAME,
+            lot_size=Config.MT5_LOT_SIZE,
+            min_take_profit=Config.MIN_TP_PROFIT,
+            max_loss_per_day=Config.MAX_LOSS_PER_DAY,
+            starting_equity=Config.STARTING_EQUITY,
+            max_traders_per_day=Config.LIMIT_NO_OF_TRADES
+        )
+    except Exception as e:
+        warn_error(e, "Error initializing strategy")
+
+         try:
+        # ...
+        run_strategy(
             symbols=Config.SYMBOLS,
             mt5_init=mt5_init,
             timeframe=Config.MT5_TIMEFRAME,

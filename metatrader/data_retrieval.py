@@ -1,6 +1,8 @@
 import MetaTrader5 as mt5
 import pandas as pd
 from datetime import datetime
+from utils.error_handling import handle_error
+
 
 def initialize_mt5():
     if not mt5.initialize():
@@ -13,6 +15,22 @@ def shutdown_mt5():
     mt5.shutdown()
 
 def get_historical_data(symbol, timeframe, start_time, end_time):
+
+    
+      try:
+        rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
+        if rates is None:
+            raise Exception(f"Failed to retrieve historical data for {symbol}")
+
+        data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
+        data['time'] = pd.to_datetime(data['time'], unit='s')
+
+        return data
+
+    except Exception as e:
+        handle_error(e, f"Failed to retrieve historical data for {symbol}")
+        return None
+        
     rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
     if rates is None:
         print(f"Failed to retrieve historical data for {symbol}")
@@ -21,6 +39,7 @@ def get_historical_data(symbol, timeframe, start_time, end_time):
     data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
     data['time'] = pd.to_datetime(data['time'], unit='s')
     return data
+
 
 def get_current_price(symbol):
     prices = mt5.symbol_info_tick(symbol)
