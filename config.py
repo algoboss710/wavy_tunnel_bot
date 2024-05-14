@@ -26,3 +26,13 @@ class Config:
     LIMIT_NO_OF_TRADES = os.getenv("LIMIT_NO_OF_TRADES")
     RISK_PER_TRADE = float(os.getenv("RISK_PER_TRADE", 0.01))
     PIP_VALUE = float(os.getenv("PIP_VALUE", 0.0001))
+
+    @classmethod
+    def validate(cls):
+        required_vars = [
+            'MT5_LOGIN', 'MT5_PASSWORD', 'MT5_SERVER', 'MT5_PATH',
+            'MT5_LOT_SIZE', 'SYMBOLS', 'MT5_TIMEFRAME', 'RISK_PER_TRADE'
+        ]
+        for var in required_vars:
+            if not getattr(cls, var, None):
+                raise ValueError(f"Missing required environment variable: {var}")

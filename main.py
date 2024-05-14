@@ -1,14 +1,21 @@
 import signal
+import sys
 from scheduler import setup_schedule, run_scheduled_tasks
 from utils.error_handling import handle_error, critical_error
 from strategy.trade_logic import calculate_position_size, entry_long, entry_short, exit_trade
 from utils.data_validation import validate_data, sanitize_data
 from config import Config
 from metatrader.connection import initialize_mt5
-from metatrader.trade_management import get_open_positions, should_exit_position
+from metatrader.trade_management import get_open_positions, should_exit_position, generate_trade_signal
+from metatrader.connection import initialize_mt5, get_account_info
+
 
 def signal_handler(signum, frame):
     critical_error("Signal received, shutting down", f"Signal handler triggered with signal: {signum}")
+    sys.exit(0)
+
+# Register the signal handler
+signal.signal(signal.SIGINT, signal_handler)
 
 def main():
     signal.signal(signal.SIGINT, signal_handler)

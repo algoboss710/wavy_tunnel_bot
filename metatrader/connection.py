@@ -41,3 +41,15 @@ def check_connection(mt_version):
             return False
     else:
         raise ValueError("Invalid MetaTrader version. Please specify 4 or 5.")
+
+def initialize_mt5():
+    retries = 3
+    while retries > 0:
+        if not mt5.initialize():
+            print(f"Failed to initialize MetaTrader5. Retries left: {retries}")
+            retries -= 1
+            time.sleep(1)  # Wait for a second before retrying
+        else:
+            return True
+    print("Failed to initialize MetaTrader5 after multiple retries.")
+    return False

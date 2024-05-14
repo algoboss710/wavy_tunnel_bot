@@ -1,5 +1,6 @@
 import MetaTrader5 as mt5
 import pandas as pd
+import requests_cache
 from datetime import datetime
 from utils.error_handling import handle_error
 
@@ -14,31 +15,28 @@ def initialize_mt5():
 def shutdown_mt5():
     mt5.shutdown()
 
+requests_cache.install_cache('historical_data_cache', backend='sqlite', expire_after=3600)
+
+
 def get_historical_data(symbol, timeframe, start_time, end_time):
-
-    
-      try:
+    try:
+        # Check if data is available in cache
+        cache_key = f"{symbol}_{timeframe}_{start_time}_{end_time}"
+        cached_data = requests_cache.get_cache().get(cache_key)
+        if cached_data:
+            return pd.read_json(cached_data)
+        
+        # Retrieve data from MT5
         rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
-        if rates is None:
-            raise Exception(f"Failed to retrieve historical data for {symbol}")
-
-        data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
-        data['time'] = pd.to_datetime(data['time'], unit='s')
-
+        # ... Process and return data ...
+        
+        # Store data in cache
+        requests_cache.get_cache().set(cache_key, data.to_json())
+        
         return data
-
     except Exception as e:
         handle_error(e, f"Failed to retrieve historical data for {symbol}")
         return None
-        
-    rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
-    if rates is None:
-        print(f"Failed to retrieve historical data for {symbol}")
-        return None
-
-    data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
-    data['time'] = pd.to_datetime(data['time'], unit='s')
-    return data
 
 
 def get_current_price(symbol):

@@ -83,3 +83,13 @@ def setup_schedule():
     schedule.every().day.at("09:00").do(initialize_strategy)
     schedule.every(15).minutes.do(run_trading_task)
     logging.info("Scheduler setup complete. Next run at: %s", schedule.next_run())
+
+def adjust_schedule(market_conditions):
+    if market_conditions == 'volatile':
+        schedule.every(5).minutes.do(run_trading_task)
+    elif market_conditions == 'calm':
+        schedule.every(30).minutes.do(run_trading_task)
+
+# Call adjust_schedule() based on market conditions
+market_conditions = analyze_market_conditions()
+adjust_schedule(market_conditions)

@@ -75,7 +75,14 @@ def validate_trade_request(trade_request):
         raise ValueError("Invalid order filling type. Must be 'ORDER_FILLING_FOK'")
 
     if trade_request['type_time'] != 'ORDER_TIME_GTC':
-        raise ValueError("Invalid order time type. Must be 'ORDER_TIME_GTC'")
+        raise ValueError("Invalid order time type. Must be 'ORDER_TIME_GTC'")if trade_request['volume'] <= 0:
+        raise ValueError("Trade volume must be positive.")
+    
+    if trade_request['sl'] >= trade_request['price']:
+        raise ValueError("Stop loss must be below the entry price for a long trade.")
+    
+    if trade_request['tp'] <= trade_request['price']:
+        raise ValueError("Take profit must be above the entry price for a long trade.")
 
 def validate_close_request(close_request):
     required_fields = ['action', 'position', 'type', 'type_filling', 'type_time']

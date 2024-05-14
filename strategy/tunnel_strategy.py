@@ -19,6 +19,21 @@ def generate_trade_signal(data, period, deviation):
         return 'SELL'
     else:
         return None
+def calculate_tunnel_bounds(data, period, deviation_factor):
+    ema = calculate_ema(data['close'], period)
+    volatility = np.std(data['close'])
+    deviation = deviation_factor * volatility
+    upper_bound = ema + deviation
+    lower_bound = ema - deviation
+    return upper_bound, lower_bound
+
+# Adjust deviation_factor based on market conditions
+if market_conditions == 'volatile':
+    deviation_factor = 2.5
+else:
+    deviation_factor = 2.0
+
+upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
 
 def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
     try:
