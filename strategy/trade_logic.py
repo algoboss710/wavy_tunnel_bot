@@ -1,4 +1,5 @@
 from utils.error_handling import handle_error
+from tunnel_strategy import execute_trade, manage_position
 
 def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value):
     risk_amount = account_balance * risk_per_trade
