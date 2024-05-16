@@ -1,24 +1,45 @@
 import numpy as np
 from metatrader.data_retrieval import get_historical_data
 from utils.error_handling import handle_error
-from indicators import calculate_ema
-from trade_management import execute_trade, manage_position
+from metatrader.indicators import calculate_ema
+from metatrader.trade_management import place_order, close_position, modify_order
+import MetaTrader5 as mt5
 
-def calculate_tunnel_bounds(data, period, deviation):
-    ema = calculate_ema(data['close'], period)
-    upper_bound = ema + (deviation * np.std(data['close']))
-    lower_bound = ema - (deviation * np.std(data['close']))
-    return upper_bound, lower_bound
-
-def generate_trade_signal(data, period, deviation):
-    upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation)
-    
-    if data['close'].iloc[-1] > upper_bound[-1]:
-        return 'BUY'
-    elif data['close'].iloc[-1] < lower_bound[-1]:
-        return 'SELL'
-    else:
+def execute_trade(trade_request):
+    try:
+        result = place_order(
+            trade_request['symbol'],
+            trade_request['action'].lower(),
+            trade_request['volume'],
+            trade_request['price'],
+            trade_request['sl'],
+            trade_request['tp']
+        )
+        if result == 'Order failed':
+            raise Exception("Failed to execute trade")
+        return result
+    except Exception as e:
+        handle_error(e, "Failed to execute trade")
         return None
+
+def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
+    try:
+        positions = mt5.positions_get(symbol=symbol)
+        if positions:
+            for position in positions:
+                if position.profit >= min_take_profit:
+                    close_position(position.ticket)
+                elif position.profit <= -max_loss_per_day:
+                    close_position(position.ticket)
+                else:
+                    current_equity = mt5.account_info().equity
+                    if current_equity <= starting_equity * 0.9:  # Close position if equity drops by 10%
+                        close_position(position.ticket)
+                    elif mt5.positions_total() >= max_trades_per_day:
+                        close_position(position.ticket)
+    except Exception as e:
+        handle_error(e, "Failed to manage position")
+
 def calculate_tunnel_bounds(data, period, deviation_factor):
     ema = calculate_ema(data['close'], period)
     volatility = np.std(data['close'])
@@ -27,13 +48,20 @@ def calculate_tunnel_bounds(data, period, deviation_factor):
     lower_bound = ema - deviation
     return upper_bound, lower_bound
 
-# Adjust deviation_factor based on market conditions
-if market_conditions == 'volatile':
-    deviation_factor = 2.5
-else:
-    deviation_factor = 2.0
+def generate_trade_signal(data, period, deviation_factor):
+    upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
+    if data['close'].iloc[-1] > upper_bound[-1]:
+        return 'BUY'
+    elif data['close'].iloc[-1] < lower_bound[-1]:
+        return 'SELL'
+    else:
+        return None
 
-upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
+def adjust_deviation_factor(market_conditions):
+    if market_conditions == 'volatile':
+        return 2.5
+    else:
+        return 2.0
 
 def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
     try:
@@ -43,9 +71,10 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                 raise Exception(f"Failed to retrieve historical data for {symbol}")
 
             period = 20
-            deviation = 2
+            market_conditions = 'volatile'  # Placeholder for determining market conditions
+            deviation_factor = adjust_deviation_factor(market_conditions)
 
-            signal = generate_trade_signal(data, period, deviation)
+            signal = generate_trade_signal(data, period, deviation_factor)
 
             if signal == 'BUY':
                 trade_request = {

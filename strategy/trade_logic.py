@@ -1,4 +1,3 @@
-from metatrader.trade_management import execute_trade, manage_position
 from utils.error_handling import handle_error
 
 def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value):
