@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from utils.error_handling import handle_error, critical_error
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 project_dir = os.path.dirname(script_dir)
@@ -12,27 +13,99 @@ reload_env()
 
 class Config:
     MT5_LOGIN = os.getenv("MT5_LOGIN")
+    if not MT5_LOGIN:
+        raise ValueError("MT5_LOGIN environment variable is not set.")
+
     MT5_PASSWORD = os.getenv("MT5_PASSWORD")
+    if not MT5_PASSWORD:
+        raise ValueError("MT5_PASSWORD environment variable is not set.")
+
     MT5_SERVER = os.getenv("MT5_SERVER")
+    if not MT5_SERVER:
+        raise ValueError("MT5_SERVER environment variable is not set.")
+
     MT5_PATH = os.getenv("MT5_PATH")
-    MT5_LOT_SIZE = os.getenv("MT5_LOT_SIZE")
-    SYMBOLS = os.getenv("SYMBOLS").split(",")
+    if not MT5_PATH:
+        raise ValueError("MT5_PATH environment variable is not set.")
+
     MT5_TIMEFRAME = os.getenv("MT5_TIMEFRAME")
+    if MT5_TIMEFRAME not in ["M1", "M5", "M15", "M30", "H1", "H4", "D1"]:
+        raise ValueError(f"Invalid MT5_TIMEFRAME value: {MT5_TIMEFRAME}. Expected values: M1, M5, M15, M30, H1, H4, D1.")
+
+    SYMBOLS = os.getenv("SYMBOLS")
+    if SYMBOLS:
+        SYMBOLS = SYMBOLS.split(",")
+    else:
+        raise ValueError("SYMBOLS environment variable is not set.")
+
     TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-    TELEGRAM_IDS = os.getenv("TELEGRAM_IDS").split(",")
-    MIN_TP_PROFIT = os.getenv("MIN_TP_PROFIT")
-    MAX_LOSS_PER_DAY = os.getenv("MAX_LOSS_PER_DAY")
-    STARTING_EQUITY = os.getenv("STARTING_EQUITY")
-    LIMIT_NO_OF_TRADES = os.getenv("LIMIT_NO_OF_TRADES")
-    RISK_PER_TRADE = float(os.getenv("RISK_PER_TRADE", 0.01))
-    PIP_VALUE = float(os.getenv("PIP_VALUE", 0.0001))
+    if not TELEGRAM_TOKEN:
+        raise ValueError("TELEGRAM_BOT_TOKEN environment variable is not set.")
+
+    TELEGRAM_IDS = os.getenv("TELEGRAM_IDS")
+    if TELEGRAM_IDS:
+        TELEGRAM_IDS = TELEGRAM_IDS.split(",")
+    else:
+        raise ValueError("TELEGRAM_IDS environment variable is not set.")
+
+    try:
+        MIN_TP_PROFIT = float(os.getenv("MIN_TP_PROFIT"))
+    except (ValueError, TypeError):
+        raise ValueError(f"Invalid MIN_TP_PROFIT value: {os.getenv('MIN_TP_PROFIT')}. Expected a numeric value.")
+
+    try:
+        MAX_LOSS_PER_DAY = float(os.getenv("MAX_LOSS_PER_DAY"))
+    except (ValueError, TypeError):
+        raise ValueError(f"Invalid MAX_LOSS_PER_DAY value: {os.getenv('MAX_LOSS_PER_DAY')}. Expected a numeric value.")
+
+    try:
+        STARTING_EQUITY = float(os.getenv("STARTING_EQUITY"))
+    except (ValueError, TypeError):
+        raise ValueError(f"Invalid STARTING_EQUITY value: {os.getenv('STARTING_EQUITY')}. Expected a numeric value.")
+
+    try:
+        LIMIT_NO_OF_TRADES = int(os.getenv("LIMIT_NO_OF_TRADES"))
+    except (ValueError, TypeError):
+        raise ValueError(f"Invalid LIMIT_NO_OF_TRADES value: {os.getenv('LIMIT_NO_OF_TRADES')}. Expected an integer value.")
+
+    try:
+        RISK_PER_TRADE = float(os.getenv("RISK_PER_TRADE", 0.01))
+    except ValueError:
+        raise ValueError(f"Invalid RISK_PER_TRADE value: {os.getenv('RISK_PER_TRADE')}. Expected a numeric value.")
+
+    if not 0 < RISK_PER_TRADE <= 1:
+        raise ValueError(f"RISK_PER_TRADE value must be between 0 and 1. Current value: {RISK_PER_TRADE}")
+
+    try:
+        PIP_VALUE = float(os.getenv("PIP_VALUE", 0.0001))
+    except ValueError:
+        raise ValueError(f"Invalid PIP_VALUE value: {os.getenv('PIP_VALUE')}. Expected a numeric value.")
 
     @classmethod
     def validate(cls):
-        required_vars = [
-            'MT5_LOGIN', 'MT5_PASSWORD', 'MT5_SERVER', 'MT5_PATH',
-            'MT5_LOT_SIZE', 'SYMBOLS', 'MT5_TIMEFRAME', 'RISK_PER_TRADE'
-        ]
-        for var in required_vars:
-            if not getattr(cls, var, None):
-                raise ValueError(f"Missing required environment variable: {var}")
+        try:
+            required_vars = [
+                'MT5_LOGIN', 'MT5_PASSWORD', 'MT5_SERVER', 'MT5_PATH',
+                'MT5_TIMEFRAME', 'SYMBOLS', 'TELEGRAM_TOKEN', 'TELEGRAM_IDS'
+            ]
+            for var in required_vars:
+                if not getattr(cls, var, None):
+                    raise ValueError(f"Missing required environment variable: {var}")
+
+            numeric_vars = ['MIN_TP_PROFIT', 'MAX_LOSS_PER_DAY', 'STARTING_EQUITY', 'RISK_PER_TRADE', 'PIP_VALUE']
+            for var in numeric_vars:
+                if not isinstance(getattr(cls, var, None), (int, float)):
+                    raise ValueError(f"Invalid value for {var}. Expected a numeric value.")
+
+            if not isinstance(cls.LIMIT_NO_OF_TRADES, int):
+                raise ValueError(f"Invalid value for LIMIT_NO_OF_TRADES. Expected an integer value.")
+
+        except ValueError as e:
+            handle_error(e, "Configuration validation failed")
+            critical_error(e, "Invalid configuration settings")
+
+try:
+    Config.validate()
+except Exception as e:
+    handle_error(e, "Error occurred during configuration validation")
+    raise
