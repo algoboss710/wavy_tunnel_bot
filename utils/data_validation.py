@@ -1,6 +1,9 @@
 from typing import Any
 from pydantic import BaseModel, ValidationError
-import logging
+from .logger import setup_logging
+from .error_handling import handle_error
+
+setup_logging()
 
 class TradeRequestSchema(BaseModel):
     action: str
@@ -24,9 +27,6 @@ class CloseRequestSchema(BaseModel):
     type_time: str
 
 def validate_data(data: Any, schema: dict) -> bool:
-    """
-    Validate data against a specified schema.
-    """
     try:
         if schema == TradeRequestSchema.schema():
             TradeRequestSchema(**data)
@@ -36,13 +36,10 @@ def validate_data(data: Any, schema: dict) -> bool:
             raise ValueError("Invalid schema provided")
         return True
     except ValidationError as e:
-        logging.error(f"Data validation failed: {str(e)}")
+        handle_error(e, "Data validation failed")
         return False
 
 def sanitize_data(data: Any) -> Any:
-    """
-    Sanitize and clean the input data.
-    """
     try:
         if isinstance(data, dict):
             sanitized_data = {}
@@ -56,7 +53,7 @@ def sanitize_data(data: Any) -> Any:
         else:
             return data
     except Exception as e:
-        logging.error(f"Data sanitization failed: {str(e)}")
+        handle_error(e, "Data sanitization failed")
         return None
     
 def validate_trade_request(trade_request):
@@ -75,14 +72,7 @@ def validate_trade_request(trade_request):
         raise ValueError("Invalid order filling type. Must be 'ORDER_FILLING_FOK'")
 
     if trade_request['type_time'] != 'ORDER_TIME_GTC':
-        raise ValueError("Invalid order time type. Must be 'ORDER_TIME_GTC'")if trade_request['volume'] <= 0:
-        raise ValueError("Trade volume must be positive.")
-    
-    if trade_request['sl'] >= trade_request['price']:
-        raise ValueError("Stop loss must be below the entry price for a long trade.")
-    
-    if trade_request['tp'] <= trade_request['price']:
-        raise ValueError("Take profit must be above the entry price for a long trade.")
+        raise ValueError("Invalid order time type. Must be 'ORDER_TIME_GTC'")
 
 def validate_close_request(close_request):
     required_fields = ['action', 'position', 'type', 'type_filling', 'type_time']
