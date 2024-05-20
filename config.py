@@ -39,32 +39,30 @@ class Config:
         raise ValueError("SYMBOLS environment variable is not set.")
 
     TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-    if not TELEGRAM_TOKEN:
-        raise ValueError("TELEGRAM_BOT_TOKEN environment variable is not set.")
-
     TELEGRAM_IDS = os.getenv("TELEGRAM_IDS")
-    if TELEGRAM_IDS:
+    if TELEGRAM_TOKEN and TELEGRAM_IDS:
         TELEGRAM_IDS = TELEGRAM_IDS.split(",")
     else:
-        raise ValueError("TELEGRAM_IDS environment variable is not set.")
+        TELEGRAM_TOKEN = None
+        TELEGRAM_IDS = None
 
     try:
-        MIN_TP_PROFIT = float(os.getenv("MIN_TP_PROFIT"))
+        MIN_TP_PROFIT = float(os.getenv("MIN_TP_PROFIT", 50.0))
     except (ValueError, TypeError):
         raise ValueError(f"Invalid MIN_TP_PROFIT value: {os.getenv('MIN_TP_PROFIT')}. Expected a numeric value.")
 
     try:
-        MAX_LOSS_PER_DAY = float(os.getenv("MAX_LOSS_PER_DAY"))
+        MAX_LOSS_PER_DAY = float(os.getenv("MAX_LOSS_PER_DAY", 1000.0))
     except (ValueError, TypeError):
         raise ValueError(f"Invalid MAX_LOSS_PER_DAY value: {os.getenv('MAX_LOSS_PER_DAY')}. Expected a numeric value.")
 
     try:
-        STARTING_EQUITY = float(os.getenv("STARTING_EQUITY"))
+        STARTING_EQUITY = float(os.getenv("STARTING_EQUITY", 10000.0))
     except (ValueError, TypeError):
         raise ValueError(f"Invalid STARTING_EQUITY value: {os.getenv('STARTING_EQUITY')}. Expected a numeric value.")
 
     try:
-        LIMIT_NO_OF_TRADES = int(os.getenv("LIMIT_NO_OF_TRADES"))
+        LIMIT_NO_OF_TRADES = int(os.getenv("LIMIT_NO_OF_TRADES", 5))
     except (ValueError, TypeError):
         raise ValueError(f"Invalid LIMIT_NO_OF_TRADES value: {os.getenv('LIMIT_NO_OF_TRADES')}. Expected an integer value.")
 
@@ -86,7 +84,7 @@ class Config:
         try:
             required_vars = [
                 'MT5_LOGIN', 'MT5_PASSWORD', 'MT5_SERVER', 'MT5_PATH',
-                'MT5_TIMEFRAME', 'SYMBOLS', 'TELEGRAM_TOKEN', 'TELEGRAM_IDS'
+                'MT5_TIMEFRAME', 'SYMBOLS'
             ]
             for var in required_vars:
                 if not getattr(cls, var, None):

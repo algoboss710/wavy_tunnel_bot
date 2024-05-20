@@ -37,7 +37,12 @@ def get_historical_data(symbol, timeframe, start_time, end_time):
     except Exception as e:
         handle_error(e, f"Failed to retrieve historical data for {symbol}")
         return None
-
+    
+def retrieve_historical_data(symbol, start_date, end_date, timeframe):
+    rates = mt5.copy_rates_range(symbol, timeframe, start_date, end_date)
+    data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
+    data['time'] = pd.to_datetime(data['time'], unit='s')
+    return data
 
 def get_current_price(symbol):
     prices = mt5.symbol_info_tick(symbol)

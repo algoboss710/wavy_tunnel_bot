@@ -1,49 +1,62 @@
-import logging
-import signal
-import sys
+import MetaTrader5 as mt5
 from config import Config
-from scheduler import setup_schedule, run_scheduled_tasks
-from metatrader.connection import initialize_mt5
-from utils.error_handling import handle_error, critical_error
-
-#Looking at simplifying the main method so experimenting with this approach - have put the old approach in comments below.
-
-def signal_handler(signal, frame):
-    logging.info("Received SIGINT. Shutting down gracefully...")
-    sys.exit(0)
+from metatrader.connection import initialize_mt5, shutdown_mt5
+from metatrader.data_retrieval import get_historical_data
+from strategy.tunnel_strategy import run_strategy
+from backtesting.backtest import run_backtest
+from utils.logger import setup_logging
+from utils.error_handling import handle_error
 
 def main():
-    # Set up signal handler for graceful shutdown
-    signal.signal(signal.SIGINT, signal_handler)
-
     try:
-        # Load configuration settings
-        config = Config()
+        # Set up logging
+        setup_logging()
 
-        # Initialize logging
-        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+        # Initialize MetaTrader5
+        if not initialize_mt5(Config.MT5_PATH):
+            raise Exception("Failed to initialize MetaTrader5")
 
-        # Initialize MetaTrader 5 connection
-        mt5_connected = initialize_mt5(
-            config.MT5_PATH,
-            config.MT5_LOGIN,
-            config.MT5_PASSWORD,
-            config.MT5_SERVER
+        # Run the trading strategy
+        run_strategy(
+            symbols=Config.SYMBOLS,
+            mt5_init=mt5,
+            timeframe=mt5.TIMEFRAME_M1,
+            lot_size=0.01,
+            min_take_profit=Config.MIN_TP_PROFIT,
+            max_loss_per_day=Config.MAX_LOSS_PER_DAY,
+            starting_equity=Config.STARTING_EQUITY,
+            max_trades_per_day=Config.LIMIT_NO_OF_TRADES
         )
 
-        if not mt5_connected:
-            critical_error("Failed to initialize MetaTrader 5 connection. Exiting...")
+        # Run backtesting
+        symbol = 'EURUSD'
+        start_date = '2022-01-01'
+        end_date = '2022-12-31'
+        timeframe = mt5.TIMEFRAME_H1
+        initial_balance = 10000
+        risk_percent = 0.02
 
-        # Set up the scheduler
-        setup_schedule()
-
-        # Run the scheduled tasks
-        run_scheduled_tasks()
+        run_backtest(
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date,
+            timeframe=timeframe,
+            initial_balance=initial_balance,
+            risk_percent=risk_percent,
+            min_take_profit=Config.MIN_TP_PROFIT,
+            max_loss_per_day=Config.MAX_LOSS_PER_DAY,
+            starting_equity=Config.STARTING_EQUITY,
+            max_trades_per_day=Config.LIMIT_NO_OF_TRADES
+        )
 
     except Exception as e:
-        handle_error(e, "An error occurred in the main script.")
+        handle_error(e, "An error occurred in the main function")
 
-if __name__ == "__main__":
+    finally:
+        # Shutdown MetaTrader5
+        shutdown_mt5()
+
+if __name__ == '__main__':
     main()
 
 

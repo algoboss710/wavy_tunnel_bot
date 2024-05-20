@@ -48,6 +48,12 @@ def calculate_tunnel_bounds(data, period, deviation_factor):
     lower_bound = ema - deviation
     return upper_bound, lower_bound
 
+def calculate_position_size(self, balance, risk_percent):
+        # Calculate position size based on balance and risk percentage
+        risk_amount = balance * risk_percent
+        position_size = risk_amount / (self.stop_loss * self.point_value)
+        return position_size
+
 def generate_trade_signal(data, period, deviation_factor):
     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
     if data['close'].iloc[-1] > upper_bound[-1]:
