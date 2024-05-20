@@ -2,6 +2,7 @@ import MetaTrader5 as mt5
 import pandas as pd
 import requests_cache
 from datetime import datetime
+from requests_cache import CachedSession
 from utils.error_handling import handle_error
 
 
@@ -15,24 +16,28 @@ def initialize_mt5():
 def shutdown_mt5():
     mt5.shutdown()
 
-requests_cache.install_cache('historical_data_cache', backend='sqlite', expire_after=3600)
+#requests_cache.install_cache('historical_data_cache', backend='sqlite', expire_after=3600)
 
 
 def get_historical_data(symbol, timeframe, start_time, end_time):
     try:
+        # Create a cached session
+        session = CachedSession('historical_data_cache', backend='sqlite', expire_after=3600)
+
         # Check if data is available in cache
         cache_key = f"{symbol}_{timeframe}_{start_time}_{end_time}"
-        cached_data = requests_cache.get_cache().get(cache_key)
+        cached_data = session.cache.get(cache_key)
         if cached_data:
             return pd.read_json(cached_data)
-        
+
         # Retrieve data from MT5
         rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
-        # ... Process and return data ...
-        
+        data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
+        data['time'] = pd.to_datetime(data['time'], unit='s')
+
         # Store data in cache
-        requests_cache.get_cache().set(cache_key, data.to_json())
-        
+        session.cache.set(cache_key, data.to_json())
+
         return data
     except Exception as e:
         handle_error(e, f"Failed to retrieve historical data for {symbol}")

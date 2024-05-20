@@ -36,6 +36,10 @@ def main():
         initial_balance = 10000
         risk_percent = 0.02
 
+        historical_data = get_historical_data(symbol, timeframe, start_date, end_date)
+        if historical_data is None or len(historical_data) == 0:
+            raise ValueError(f"No historical data retrieved for {symbol}")
+    
         run_backtest(
             symbol=symbol,
             start_date=start_date,

@@ -2,3 +2,21 @@
 2024-05-20 11:03:14,426 - ERROR - An error occurred in the main function: initialize_mt5() takes 0 positional arguments but 1 was given
 2024-05-20 11:10:37,734 - ERROR - An error occurred in the main function: Failed to initialize MetaTrader5
 2024-05-20 12:22:50,219 - ERROR - An error occurred in the main function: Failed to initialize MetaTrader5
+2024-05-20 13:46:04,183 - ERROR - Failed to run the strategy: name 'start_time' is not defined
+2024-05-20 13:46:04,183 - ERROR - Failed to retrieve historical data for EURUSD: 'SQLiteCache' object has no attribute 'get'
+2024-05-20 13:46:04,183 - ERROR - An error occurred in the main function: object of type 'NoneType' has no len()
+2024-05-20 13:54:14,941 - ERROR - Failed to run the strategy: name 'pd' is not defined
+2024-05-20 13:54:14,941 - ERROR - Failed to retrieve historical data for EURUSD: 'SQLiteCache' object has no attribute 'get'
+2024-05-20 13:54:14,941 - ERROR - An error occurred in the main function: object of type 'NoneType' has no len()
+2024-05-20 13:56:25,218 - ERROR - Failed to retrieve historical data for EURUSD: 'SQLiteCache' object has no attribute 'get'
+2024-05-20 13:56:25,218 - ERROR - Failed to run the strategy: Failed to retrieve historical data for EURUSD
+2024-05-20 13:56:25,219 - ERROR - Failed to retrieve historical data for EURUSD: 'SQLiteCache' object has no attribute 'get'
+2024-05-20 13:56:25,219 - ERROR - An error occurred in the main function: object of type 'NoneType' has no len()
+2024-05-20 13:58:51,073 - ERROR - Failed to retrieve historical data for EURUSD: 'SQLiteCache' object has no attribute 'get'
+2024-05-20 13:58:51,073 - ERROR - Failed to run the strategy: Failed to retrieve historical data for EURUSD
+2024-05-20 13:58:51,073 - ERROR - Failed to retrieve historical data for EURUSD: 'SQLiteCache' object has no attribute 'get'
+2024-05-20 13:58:51,073 - ERROR - An error occurred in the main function: No historical data retrieved for EURUSD
+2024-05-20 14:00:57,294 - ERROR - Failed to retrieve historical data for EURUSD: 'SQLiteCache' object has no attribute 'get'
+2024-05-20 14:00:57,295 - ERROR - Failed to run the strategy: Failed to retrieve historical data for EURUSD
+2024-05-20 14:00:57,296 - ERROR - Failed to retrieve historical data for EURUSD: 'SQLiteCache' object has no attribute 'get'
+2024-05-20 14:00:57,297 - ERROR - An error occurred in the main function: No historical data retrieved for EURUSD

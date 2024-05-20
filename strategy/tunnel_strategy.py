@@ -3,6 +3,7 @@ from metatrader.data_retrieval import get_historical_data
 from utils.error_handling import handle_error
 from metatrader.indicators import calculate_ema
 from metatrader.trade_management import place_order, close_position, modify_order
+import pandas as pd
 import MetaTrader5 as mt5
 
 def execute_trade(trade_request):
@@ -72,6 +73,9 @@ def adjust_deviation_factor(market_conditions):
 def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
     try:
         for symbol in symbols:
+            
+            start_time = pd.Timestamp.now() - pd.Timedelta(days=30)  # Example: 30 days ago
+            end_time = pd.Timestamp.now()  # Current time
             data = get_historical_data(symbol, timeframe, start_time, end_time)
             if data is None:
                 raise Exception(f"Failed to retrieve historical data for {symbol}")
