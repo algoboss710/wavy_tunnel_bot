@@ -2,6 +2,7 @@ import pandas as pd
 from metatrader.data_retrieval import get_historical_data
 from strategy.tunnel_strategy import generate_trade_signal, execute_trade, manage_position, calculate_position_size
 from utils.plotting import plot_backtest_results
+from config import Config
 
 def run_backtest(symbol, start_date, end_date, timeframe, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
     # Retrieve historical data
@@ -16,12 +17,17 @@ def run_backtest(symbol, start_date, end_date, timeframe, initial_balance, risk_
         # Calculate indicators and generate trading signals
         signal = generate_trade_signal(data.iloc[:i+1], period=20, deviation_factor=2.0)
 
+        pip_value = Config.PIP_VALUE
+        stop_loss_pips = 20  # Example value for stop loss in pips
+
+        position_size = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
+
         if signal == 'BUY':
             # Simulate trade entry
             trade = {
                 'entry_time': data.iloc[i]['time'],
                 'entry_price': data.iloc[i]['close'],
-                'volume': calculate_position_size(balance, risk_percent)
+                'volume': position_size
             }
             trades.append(trade)
             execute_trade(trade)

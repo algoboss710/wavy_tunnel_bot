@@ -1,25 +1,6 @@
 <documents>
 <document index="1">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\cleanup.py</source>
-<document_content>
-import re
-
-# Read the script from a file
-with open("output_script.py", "r") as file:
-    script = file.read()
-
-# Remove extra line spacing
-script_cleaned = re.sub(r'\n\s*\n', '\n', script)
-
-# Write the cleaned script back to the file
-with open("output_script.py", "w") as file:
-    file.write(script_cleaned)
-
-</document_content>
-</document>
-
-<document index="2">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\config.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\config.py</source>
 <document_content>
 import os
 from dotenv import load_dotenv
@@ -62,32 +43,30 @@ class Config:
         raise ValueError("SYMBOLS environment variable is not set.")
 
     TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-    if not TELEGRAM_TOKEN:
-        raise ValueError("TELEGRAM_BOT_TOKEN environment variable is not set.")
-
     TELEGRAM_IDS = os.getenv("TELEGRAM_IDS")
-    if TELEGRAM_IDS:
+    if TELEGRAM_TOKEN and TELEGRAM_IDS:
         TELEGRAM_IDS = TELEGRAM_IDS.split(",")
     else:
-        raise ValueError("TELEGRAM_IDS environment variable is not set.")
+        TELEGRAM_TOKEN = None
+        TELEGRAM_IDS = None
 
     try:
-        MIN_TP_PROFIT = float(os.getenv("MIN_TP_PROFIT"))
+        MIN_TP_PROFIT = float(os.getenv("MIN_TP_PROFIT", 50.0))
     except (ValueError, TypeError):
         raise ValueError(f"Invalid MIN_TP_PROFIT value: {os.getenv('MIN_TP_PROFIT')}. Expected a numeric value.")
 
     try:
-        MAX_LOSS_PER_DAY = float(os.getenv("MAX_LOSS_PER_DAY"))
+        MAX_LOSS_PER_DAY = float(os.getenv("MAX_LOSS_PER_DAY", 1000.0))
     except (ValueError, TypeError):
         raise ValueError(f"Invalid MAX_LOSS_PER_DAY value: {os.getenv('MAX_LOSS_PER_DAY')}. Expected a numeric value.")
 
     try:
-        STARTING_EQUITY = float(os.getenv("STARTING_EQUITY"))
+        STARTING_EQUITY = float(os.getenv("STARTING_EQUITY", 10000.0))
     except (ValueError, TypeError):
         raise ValueError(f"Invalid STARTING_EQUITY value: {os.getenv('STARTING_EQUITY')}. Expected a numeric value.")
 
     try:
-        LIMIT_NO_OF_TRADES = int(os.getenv("LIMIT_NO_OF_TRADES"))
+        LIMIT_NO_OF_TRADES = int(os.getenv("LIMIT_NO_OF_TRADES", 5))
     except (ValueError, TypeError):
         raise ValueError(f"Invalid LIMIT_NO_OF_TRADES value: {os.getenv('LIMIT_NO_OF_TRADES')}. Expected an integer value.")
 
@@ -109,7 +88,7 @@ class Config:
         try:
             required_vars = [
                 'MT5_LOGIN', 'MT5_PASSWORD', 'MT5_SERVER', 'MT5_PATH',
-                'MT5_TIMEFRAME', 'SYMBOLS', 'TELEGRAM_TOKEN', 'TELEGRAM_IDS'
+                'MT5_TIMEFRAME', 'SYMBOLS'
             ]
             for var in required_vars:
                 if not getattr(cls, var, None):
@@ -135,8 +114,8 @@ except Exception as e:
 </document_content>
 </document>
 
-<document index="3">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\generate_code_document.py</source>
+<document index="2">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\generate_code_document.py</source>
 <document_content>
 import os
 
@@ -162,72 +141,91 @@ def generate_code_document(root_dir):
     document += "</documents>"
     return document
 
-# Specify the root directory of your repository
-root_directory = r"C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot"
+if __name__ == "__main__":
+    # Specify the root directory of your repository
+    root_directory = r"C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot"
 
-# Generate the code document
-code_document = generate_code_document(root_directory)
+    # Generate the code document
+    code_document = generate_code_document(root_directory)
 
-# Specify the output file path
-output_file = r"C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\code_document.xml"
+    # Specify the output file path
+    output_file = os.path.join(root_directory, "code_document.xml")
 
-# Save the code document to a file
-with open(output_file, "w") as file:
-    file.write(code_document)
+    # Save the code document to a file
+    with open(output_file, "w") as file:
+        file.write(code_document)
 
-print(f"Code document saved to: {output_file}")
+    print(f"Code document saved to: {output_file}")
+
 </document_content>
 </document>
 
-<document index="4">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\main.py</source>
+<document index="3">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\main.py</source>
 <document_content>
-import logging
-import signal
-import sys
+import MetaTrader5 as mt5
 from config import Config
-from scheduler import setup_schedule, run_scheduled_tasks
-from metatrader.connection import initialize_mt5
-from utils.error_handling import handle_error, critical_error
-
-#Looking at simplifying the main method so experimenting with this approach - have put the old approach in comments below.
-
-def signal_handler(signal, frame):
-    logging.info("Received SIGINT. Shutting down gracefully...")
-    sys.exit(0)
+from metatrader.connection import initialize_mt5, shutdown_mt5
+from metatrader.data_retrieval import get_historical_data
+from strategy.tunnel_strategy import run_strategy
+from backtesting.backtest import run_backtest
+from utils.logger import setup_logging
+from utils.error_handling import handle_error
 
 def main():
-    # Set up signal handler for graceful shutdown
-    signal.signal(signal.SIGINT, signal_handler)
-
     try:
-        # Load configuration settings
-        config = Config()
+        # Set up logging
+        setup_logging()
 
-        # Initialize logging
-        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+        # Initialize MetaTrader5
+        if not initialize_mt5(Config.MT5_PATH):
+            raise Exception("Failed to initialize MetaTrader5")
 
-        # Initialize MetaTrader 5 connection
-        mt5_connected = initialize_mt5(
-            config.MT5_PATH,
-            config.MT5_LOGIN,
-            config.MT5_PASSWORD,
-            config.MT5_SERVER
+        # Run the trading strategy
+        run_strategy(
+            symbols=Config.SYMBOLS,
+            mt5_init=mt5,
+            timeframe=mt5.TIMEFRAME_M1,
+            lot_size=0.01,
+            min_take_profit=Config.MIN_TP_PROFIT,
+            max_loss_per_day=Config.MAX_LOSS_PER_DAY,
+            starting_equity=Config.STARTING_EQUITY,
+            max_trades_per_day=Config.LIMIT_NO_OF_TRADES
         )
 
-        if not mt5_connected:
-            critical_error("Failed to initialize MetaTrader 5 connection. Exiting...")
+        # Run backtesting
+        symbol = 'EURUSD'
+        start_date = '2022-01-01'
+        end_date = '2022-12-31'
+        timeframe = mt5.H1
+        initial_balance = 10000
+        risk_percent = 0.02
 
-        # Set up the scheduler
-        setup_schedule()
-
-        # Run the scheduled tasks
-        run_scheduled_tasks()
+        historical_data = get_historical_data(symbol, timeframe, start_date, end_date)
+        if historical_data is None or len(historical_data) == 0:
+            raise ValueError(f"No historical data retrieved for {symbol}")
+    
+        run_backtest(
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date,
+            timeframe=timeframe,
+            initial_balance=initial_balance,
+            risk_percent=risk_percent,
+            min_take_profit=Config.MIN_TP_PROFIT,
+            max_loss_per_day=Config.MAX_LOSS_PER_DAY,
+            starting_equity=Config.STARTING_EQUITY,
+            max_trades_per_day=Config.LIMIT_NO_OF_TRADES
+        )
 
     except Exception as e:
-        handle_error(e, "An error occurred in the main script.")
+        handle_error(e, "An error occurred in the main function")
 
-if __name__ == "__main__":
+    finally:
+        # Shutdown MetaTrader5
+        shutdown_mt5()
+
+if __name__ == '__main__':
     main()
 
 
@@ -303,8 +301,201 @@ if __name__ == "__main__":
 </document_content>
 </document>
 
+<document index="4">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\scheduler.py</source>
+<document_content>
+import schedule
+import time
+import logging
+from strategy.tunnel_strategy import run_strategy
+from metatrader.connection import initialize_mt5
+from config import Config
+from utils.error_handling import handle_error, warn_error
+from strategy.trade_logic import calculate_position_size, entry_long, entry_short, exit_trade
+from utils.data_validation import validate_data, sanitize_data
+from metatrader.trade_management import get_open_positions, should_exit_position
+
+def initialize_strategy():
+    try:
+        logging.info("Initializing strategy on server: %s", Config.MT5_SERVER)
+        mt5_init = initialize_mt5(
+            login=Config.MT5_LOGIN,
+            password=Config.MT5_PASSWORD,
+            server=Config.MT5_SERVER,
+            path=Config.MT5_PATH,
+        )
+
+        run_strategy(
+            symbols=Config.SYMBOLS,
+            mt5_init=mt5_init,
+            timeframe=Config.MT5_TIMEFRAME,
+            lot_size=Config.MT5_LOT_SIZE,
+            min_take_profit=Config.MIN_TP_PROFIT,
+            max_loss_per_day=Config.MAX_LOSS_PER_DAY,
+            starting_equity=Config.STARTING_EQUITY,
+            max_traders_per_day=Config.LIMIT_NO_OF_TRADES
+        )
+    except Exception as e:
+        warn_error(e, "Error initializing strategy")
+
+def run_scheduled_tasks():
+    while True:
+        try:
+            schedule.run_pending()
+            time.sleep(1)
+        except Exception as e:
+            handle_error(e, "Error during scheduled task execution")
+
+def run_trading_task():
+    try:
+        account_info = get_account_info()
+        account_balance = account_info["balance"]
+
+        for symbol in Config.SYMBOLS:
+            data = get_historical_data(symbol, Config.MT5_TIMEFRAME, start_time, end_time)
+            sanitized_data = sanitize_data(data)
+
+            if validate_data(sanitized_data, TradeRequestSchema.schema()):
+                signal = generate_trade_signal(sanitized_data, period, deviation)
+                price = sanitized_data["close"].iloc[-1]
+                stop_loss_pips = 20
+                take_profit_pips = 40
+                deviation = 10
+                magic = 12345
+                comment = "Tunnel Strategy"
+
+                position_size = calculate_position_size(account_balance, Config.RISK_PER_TRADE, stop_loss_pips, Config.PIP_VALUE)
+
+                if signal == 'BUY':
+                    sl = price - (stop_loss_pips * Config.PIP_VALUE)
+                    tp = price + (take_profit_pips * Config.PIP_VALUE)
+                    entry_long(symbol, position_size, price, sl, tp, deviation, magic, comment)
+                elif signal == 'SELL':
+                    sl = price + (stop_loss_pips * Config.PIP_VALUE)
+                    tp = price - (take_profit_pips * Config.PIP_VALUE)
+                    entry_short(symbol, position_size, price, sl, tp, deviation, magic, comment)
+            else:
+                logging.error("Invalid input data")
+
+        open_positions = get_open_positions()
+        for position in open_positions:
+            if should_exit_position(position):
+                exit_trade(position.ticket)
+
+    except Exception as e:
+        handle_error(e, "Failed to execute trading task or validate/sanitize input data")
+
+def setup_schedule():
+    schedule.every().day.at("09:00").do(initialize_strategy)
+    schedule.every(15).minutes.do(run_trading_task)
+    logging.info("Scheduler setup complete. Next run at: %s", schedule.next_run())
+
+def adjust_schedule(market_conditions):
+    if market_conditions == 'volatile':
+        schedule.every(5).minutes.do(run_trading_task)
+    elif market_conditions == 'calm':
+        schedule.every(30).minutes.do(run_trading_task)
+
+# Call adjust_schedule() based on market conditions
+market_conditions = analyze_market_conditions()
+adjust_schedule(market_conditions)
+</document_content>
+</document>
+
 <document index="5">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\output_script.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\backtesting\backtest.py</source>
+<document_content>
+import pandas as pd
+from metatrader.data_retrieval import get_historical_data
+from strategy.tunnel_strategy import generate_trade_signal, execute_trade, manage_position, calculate_position_size
+from utils.plotting import plot_backtest_results
+
+def run_backtest(symbol, start_date, end_date, timeframe, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
+    # Retrieve historical data
+    data = get_historical_data(symbol, timeframe, start_date, end_date)
+
+    # Initialize variables
+    balance = initial_balance
+    trades = []
+
+    # Backtesting loop
+    for i in range(len(data)):
+        # Calculate indicators and generate trading signals
+        signal = generate_trade_signal(data.iloc[:i+1], period=20, deviation_factor=2.0)
+
+        if signal == 'BUY':
+            # Simulate trade entry
+            trade = {
+                'entry_time': data.iloc[i]['time'],
+                'entry_price': data.iloc[i]['close'],
+                'volume': calculate_position_size(balance, risk_percent)
+            }
+            trades.append(trade)
+            execute_trade(trade)
+
+        elif signal == 'SELL':
+            # Simulate trade exit
+            if trades:
+                trade = trades[-1]
+                trade['exit_time'] = data.iloc[i]['time']
+                trade['exit_price'] = data.iloc[i]['close']
+                trade['profit'] = (trade['exit_price'] - trade['entry_price']) * trade['volume']
+                balance += trade['profit']
+                execute_trade(trade)
+
+        manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+
+    # Calculate performance metrics
+    total_profit = balance - initial_balance
+    num_trades = len(trades)
+    win_rate = sum(1 for trade in trades if trade['profit'] > 0) / num_trades
+    max_drawdown = calculate_max_drawdown(trades, initial_balance)
+
+    # Print performance metrics
+    print(f"Total Profit: {total_profit:.2f}")
+    print(f"Number of Trades: {num_trades}")
+    print(f"Win Rate: {win_rate:.2%}")
+    print(f"Maximum Drawdown: {max_drawdown:.2f}")
+
+    # Plot backtest results
+    plot_backtest_results(data, trades)
+
+def calculate_max_drawdown(trades, initial_balance):
+    balance = initial_balance
+    max_balance = initial_balance
+    max_drawdown = 0
+
+    for trade in trades:
+        balance += trade['profit']
+        max_balance = max(max_balance, balance)
+        drawdown = max_balance - balance
+        max_drawdown = max(max_drawdown, drawdown)
+
+    return max_drawdown
+</document_content>
+</document>
+
+<document index="6">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\ignore_extra_stuff\cleanup.py</source>
+<document_content>
+import re
+
+# Read the script from a file
+with open("output_script.py", "r") as file:
+    script = file.read()
+
+# Remove extra line spacing
+script_cleaned = re.sub(r'\n\s*\n', '\n', script)
+
+# Write the cleaned script back to the file
+with open("output_script.py", "w") as file:
+    file.write(script_cleaned)
+
+</document_content>
+</document>
+
+<document index="7">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\ignore_extra_stuff\output_script.py</source>
 <document_content>
 # # First NoteBook Script - Showing Live Orders Placed
 # # Connect to MetaTrader 5
@@ -982,109 +1173,8 @@ print("MetaTrader5 disconnected")
 </document_content>
 </document>
 
-<document index="6">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\scheduler.py</source>
-<document_content>
-import schedule
-import time
-import logging
-from strategy.tunnel_strategy import run_strategy
-from metatrader.connection import initialize_mt5
-from config import Config
-from utils.error_handling import handle_error, warn_error
-from strategy.trade_logic import calculate_position_size, entry_long, entry_short, exit_trade
-from utils.data_validation import validate_data, sanitize_data
-from metatrader.trade_management import get_open_positions, should_exit_position
-
-def initialize_strategy():
-    try:
-        logging.info("Initializing strategy on server: %s", Config.MT5_SERVER)
-        mt5_init = initialize_mt5(
-            login=Config.MT5_LOGIN,
-            password=Config.MT5_PASSWORD,
-            server=Config.MT5_SERVER,
-            path=Config.MT5_PATH,
-        )
-
-        run_strategy(
-            symbols=Config.SYMBOLS,
-            mt5_init=mt5_init,
-            timeframe=Config.MT5_TIMEFRAME,
-            lot_size=Config.MT5_LOT_SIZE,
-            min_take_profit=Config.MIN_TP_PROFIT,
-            max_loss_per_day=Config.MAX_LOSS_PER_DAY,
-            starting_equity=Config.STARTING_EQUITY,
-            max_traders_per_day=Config.LIMIT_NO_OF_TRADES
-        )
-    except Exception as e:
-        warn_error(e, "Error initializing strategy")
-
-def run_scheduled_tasks():
-    while True:
-        try:
-            schedule.run_pending()
-            time.sleep(1)
-        except Exception as e:
-            handle_error(e, "Error during scheduled task execution")
-
-def run_trading_task():
-    try:
-        account_info = get_account_info()
-        account_balance = account_info["balance"]
-
-        for symbol in Config.SYMBOLS:
-            data = get_historical_data(symbol, Config.MT5_TIMEFRAME, start_time, end_time)
-            sanitized_data = sanitize_data(data)
-
-            if validate_data(sanitized_data, TradeRequestSchema.schema()):
-                signal = generate_trade_signal(sanitized_data, period, deviation)
-                price = sanitized_data["close"].iloc[-1]
-                stop_loss_pips = 20
-                take_profit_pips = 40
-                deviation = 10
-                magic = 12345
-                comment = "Tunnel Strategy"
-
-                position_size = calculate_position_size(account_balance, Config.RISK_PER_TRADE, stop_loss_pips, Config.PIP_VALUE)
-
-                if signal == 'BUY':
-                    sl = price - (stop_loss_pips * Config.PIP_VALUE)
-                    tp = price + (take_profit_pips * Config.PIP_VALUE)
-                    entry_long(symbol, position_size, price, sl, tp, deviation, magic, comment)
-                elif signal == 'SELL':
-                    sl = price + (stop_loss_pips * Config.PIP_VALUE)
-                    tp = price - (take_profit_pips * Config.PIP_VALUE)
-                    entry_short(symbol, position_size, price, sl, tp, deviation, magic, comment)
-            else:
-                logging.error("Invalid input data")
-
-        open_positions = get_open_positions()
-        for position in open_positions:
-            if should_exit_position(position):
-                exit_trade(position.ticket)
-
-    except Exception as e:
-        handle_error(e, "Failed to execute trading task or validate/sanitize input data")
-
-def setup_schedule():
-    schedule.every().day.at("09:00").do(initialize_strategy)
-    schedule.every(15).minutes.do(run_trading_task)
-    logging.info("Scheduler setup complete. Next run at: %s", schedule.next_run())
-
-def adjust_schedule(market_conditions):
-    if market_conditions == 'volatile':
-        schedule.every(5).minutes.do(run_trading_task)
-    elif market_conditions == 'calm':
-        schedule.every(30).minutes.do(run_trading_task)
-
-# Call adjust_schedule() based on market conditions
-market_conditions = analyze_market_conditions()
-adjust_schedule(market_conditions)
-</document_content>
-</document>
-
-<document index="7">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\jupyter_notebooks\script.py</source>
+<document index="8">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\jupyter_notebooks\script.py</source>
 <document_content>
 import os
 import json
@@ -1112,12 +1202,13 @@ if __name__ == "__main__":
 </document_content>
 </document>
 
-<document index="8">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\metatrader\connection.py</source>
+<document index="9">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\connection.py</source>
 <document_content>
 import MetaTrader5 as mt5
-import MetaTrader4 as mt4
+# import MetaTrader4 as mt4
 import win32com.client
+import time
 
 def connect(login, password, server, path, mt_version):
     if mt_version == 5:
@@ -1125,61 +1216,66 @@ def connect(login, password, server, path, mt_version):
             print("initialize() failed for MT5, error code =", mt5.last_error())
             return False
         return True
-    elif mt_version == 4:
-        try:
-            mt4_client = mt4.MT4()
-            mt4_client.Connect(server, login, password, "")
-            return True
-        except Exception as e:
-            print("initialize() failed for MT4, error =", e)
-            return False
+    # elif mt_version == 4:
+    #     try:
+    #         mt4_client = mt4.MT4()
+    #         mt4_client.Connect(server, login, password, "")
+    #         return True
+    #     except Exception as e:
+    #         print("initialize() failed for MT4, error =", e)
+    #         return False
     else:
         raise ValueError("Invalid MetaTrader version. Please specify 4 or 5.")
 
 def disconnect(mt_version):
     if mt_version == 5:
         mt5.shutdown()
-    elif mt_version == 4:
-        try:
-            mt4_client = mt4.MT4()
-            mt4_client.Disconnect()
-        except Exception as e:
-            print("disconnect() failed for MT4, error =", e)
+    # elif mt_version == 4:
+    #     try:
+    #         mt4_client = mt4.MT4()
+    #         mt4_client.Disconnect()
+    #     except Exception as e:
+    #         print("disconnect() failed for MT4, error =", e)
 
 def check_connection(mt_version):
     if mt_version == 5:
         return mt5.terminal_info() is not None
-    elif mt_version == 4:
-        try:
-            mt4_client = mt4.MT4()
-            return mt4_client.IsConnected()
-        except Exception as e:
-            print("check_connection() failed for MT4, error =", e)
-            return False
-    else:
-        raise ValueError("Invalid MetaTrader version. Please specify 4 or 5.")
+    # elif mt_version == 4:
+    #     try:
+    #         mt4_client = mt4.MT4()
+    #         return mt4_client.IsConnected()
+    #     except Exception as e:
+    #         print("check_connection() failed for MT4, error =", e)
+    #         return False
+    # else:
+    #     raise ValueError("Invalid MetaTrader version. Please specify 4 or 5.")
 
-def initialize_mt5():
-    retries = 3
-    while retries > 0:
-        if not mt5.initialize():
-            print(f"Failed to initialize MetaTrader5. Retries left: {retries}")
-            retries -= 1
-            time.sleep(1)  # Wait for a second before retrying
-        else:
-            return True
-    print("Failed to initialize MetaTrader5 after multiple retries.")
-    return False
+def initialize_mt5(mt5_path):
+    # Initialize MetaTrader 5
+    if not mt5.initialize(path=mt5_path):
+        print("Failed to initialize MetaTrader 5 terminal.")
+        mt5.shutdown()
+        return False
+    else:
+        print("MetaTrader 5 terminal initialized successfully.")
+        return True
+
+def shutdown_mt5():
+    # Shutdown MetaTrader 5
+    mt5.shutdown()
+    print("MetaTrader 5 connection gracefully shut down.")
+
 </document_content>
 </document>
 
-<document index="9">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\metatrader\data_retrieval.py</source>
+<document index="10">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\data_retrieval.py</source>
 <document_content>
 import MetaTrader5 as mt5
 import pandas as pd
 import requests_cache
-from datetime import datetime
+from datetime import datetime, timedelta
+from requests_cache import CachedSession
 from utils.error_handling import handle_error
 
 
@@ -1193,29 +1289,72 @@ def initialize_mt5():
 def shutdown_mt5():
     mt5.shutdown()
 
-requests_cache.install_cache('historical_data_cache', backend='sqlite', expire_after=3600)
-
+start_time = datetime.now() - timedelta(days=30)  # Example: 30 days ago
+end_time = datetime.now()  # Current time
 
 def get_historical_data(symbol, timeframe, start_time, end_time):
     try:
-        # Check if data is available in cache
-        cache_key = f"{symbol}_{timeframe}_{start_time}_{end_time}"
-        cached_data = requests_cache.get_cache().get(cache_key)
-        if cached_data:
-            return pd.read_json(cached_data)
-        
         # Retrieve data from MT5
         rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
-        # ... Process and return data ...
-        
-        # Store data in cache
-        requests_cache.get_cache().set(cache_key, data.to_json())
-        
+        data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
+        data['time'] = pd.to_datetime(data['time'], unit='s')
+
         return data
     except Exception as e:
         handle_error(e, f"Failed to retrieve historical data for {symbol}")
         return None
+#requests_cache.install_cache('historical_data_cache', backend='sqlite', expire_after=3600)
 
+# def get_historical_data(symbol, timeframe, start_time, end_time):
+#     try:
+#         # Create a cached session
+#         session = CachedSession('historical_data_cache', backend='sqlite', expire_after=3600)
+
+#         # Check if data is available in cache
+#         cache_key = f"{symbol}_{timeframe}_{start_time}_{end_time}"
+        
+#         def retrieve_data():
+#             # Retrieve data from MT5
+#             rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
+#             data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
+#             data['time'] = pd.to_datetime(data['time'], unit='s')
+#             return data
+
+#         data = session.cache.get_or_set(cache_key, retrieve_data)
+
+#         return data
+#     except Exception as e:
+#         handle_error(e, f"Failed to retrieve historical data for {symbol}")
+#         return None
+# def get_historical_data(symbol, timeframe, start_time, end_time):
+#     try:
+#         # Create a cached session
+#         session = CachedSession('historical_data_cache', backend='sqlite', expire_after=3600)
+
+#         # Check if data is available in cache
+#         cache_key = f"{symbol}_{timeframe}_{start_time}_{end_time}"
+#         cached_data = session.cache.get(cache_key)
+#         if cached_data:
+#             return pd.read_json(cached_data)
+
+#         # Retrieve data from MT5
+#         rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
+#         data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
+#         data['time'] = pd.to_datetime(data['time'], unit='s')
+
+#         # Store data in cache
+#         session.cache.set(cache_key, data.to_json())
+
+#         return data
+#     except Exception as e:
+#         handle_error(e, f"Failed to retrieve historical data for {symbol}")
+#         return None
+    
+def retrieve_historical_data(symbol, start_date, end_date, timeframe):
+    rates = mt5.copy_rates_range(symbol, timeframe, start_date, end_date)
+    data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
+    data['time'] = pd.to_datetime(data['time'], unit='s')
+    return data
 
 def get_current_price(symbol):
     prices = mt5.symbol_info_tick(symbol)
@@ -1318,8 +1457,8 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="10">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\metatrader\indicators.py</source>
+<document index="11">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\indicators.py</source>
 <document_content>
 import numpy as np
 
@@ -1330,8 +1469,8 @@ def calculate_ema(prices, period):
 </document_content>
 </document>
 
-<document index="11">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\metatrader\trade_management.py</source>
+<document index="12">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\trade_management.py</source>
 <document_content>
 import MetaTrader5 as mt5
 
@@ -1377,15 +1516,15 @@ def modify_order(ticket, sl=None, tp=None):
 </document_content>
 </document>
 
-<document index="12">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\metatrader\__init__.py</source>
+<document index="13">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\__init__.py</source>
 <document_content>
 from .data_retrieval import get_historical_data
 </document_content>
 </document>
 
-<document index="13">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\strategy\trade_logic.py</source>
+<document index="14">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\trade_logic.py</source>
 <document_content>
 from utils.error_handling import handle_error
 from tunnel_strategy import execute_trade, manage_position
@@ -1445,14 +1584,15 @@ def exit_trade(position_ticket):
 </document_content>
 </document>
 
-<document index="14">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\strategy\tunnel_strategy.py</source>
+<document index="15">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\tunnel_strategy.py</source>
 <document_content>
 import numpy as np
 from metatrader.data_retrieval import get_historical_data
 from utils.error_handling import handle_error
 from metatrader.indicators import calculate_ema
 from metatrader.trade_management import place_order, close_position, modify_order
+import pandas as pd
 import MetaTrader5 as mt5
 
 def execute_trade(trade_request):
@@ -1498,6 +1638,12 @@ def calculate_tunnel_bounds(data, period, deviation_factor):
     lower_bound = ema - deviation
     return upper_bound, lower_bound
 
+def calculate_position_size(self, balance, risk_percent):
+        # Calculate position size based on balance and risk percentage
+        risk_amount = balance * risk_percent
+        position_size = risk_amount / (self.stop_loss * self.point_value)
+        return position_size
+
 def generate_trade_signal(data, period, deviation_factor):
     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
     if data['close'].iloc[-1] > upper_bound[-1]:
@@ -1516,6 +1662,9 @@ def adjust_deviation_factor(market_conditions):
 def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
     try:
         for symbol in symbols:
+            
+            start_time = pd.Timestamp.now() - pd.Timedelta(days=30)  # Example: 30 days ago
+            end_time = pd.Timestamp.now()  # Current time
             data = get_historical_data(symbol, timeframe, start_time, end_time)
             if data is None:
                 raise Exception(f"Failed to retrieve historical data for {symbol}")
@@ -1566,15 +1715,15 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
 </document_content>
 </document>
 
-<document index="15">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\strategy\__init__.py</source>
+<document index="16">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\__init__.py</source>
 <document_content>
 from .tunnel_strategy import run_strategy
 </document_content>
 </document>
 
-<document index="16">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\test_connection.py</source>
+<document index="17">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_connection.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -1599,8 +1748,8 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="17">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\test_data_retrieval.py</source>
+<document index="18">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_data_retrieval.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -1631,8 +1780,8 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="18">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\test_indicators.py</source>
+<document index="19">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_indicators.py</source>
 <document_content>
 import unittest
 from metatrader.indicators import calculate_ema
@@ -1650,8 +1799,8 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="19">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\test_strategy.py</source>
+<document index="20">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_strategy.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -1676,8 +1825,8 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="20">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\test_trade_management.py</source>
+<document index="21">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_trade_management.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -1741,15 +1890,15 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="21">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\__init__.py</source>
+<document index="22">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\__init__.py</source>
 <document_content>
 
 </document_content>
 </document>
 
-<document index="22">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\utils\data_validation.py</source>
+<document index="23">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\data_validation.py</source>
 <document_content>
 from typing import Any
 from pydantic import BaseModel, ValidationError
@@ -1847,8 +1996,8 @@ def validate_close_request(close_request):
 </document_content>
 </document>
 
-<document index="23">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\utils\error_handling.py</source>
+<document index="24">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\error_handling.py</source>
 <document_content>
 import logging
 
@@ -1876,8 +2025,8 @@ def warn_error(error, message):
 </document_content>
 </document>
 
-<document index="24">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\utils\logger.py</source>
+<document index="25">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\logger.py</source>
 <document_content>
 import logging
 import os
@@ -1899,8 +2048,51 @@ def setup_logging(log_level=logging.INFO, log_file="app.log", max_size=10485760,
 </document_content>
 </document>
 
-<document index="25">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\utils\types.py</source>
+<document index="26">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\plotting.py</source>
+<document_content>
+import matplotlib.pyplot as plt
+
+def plot_backtest_results(data, trades):
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+
+    # Plot price data
+    ax1.plot(data['time'], data['close'], label='Price')
+    ax1.set_ylabel('Price')
+    ax1.set_title('Backtest Results')
+    ax1.grid(True)
+
+    # Plot trades
+    for trade in trades:
+        entry_time = trade['entry_time']
+        entry_price = trade['entry_price']
+        exit_time = trade.get('exit_time')
+        exit_price = trade.get('exit_price')
+
+        if exit_time is None:
+            ax1.plot(entry_time, entry_price, 'g^', markersize=8, label='Entry')
+        else:
+            ax1.plot(entry_time, entry_price, 'g^', markersize=8)
+            ax1.plot(exit_time, exit_price, 'rv', markersize=8)
+            ax1.plot([entry_time, exit_time], [entry_price, exit_price], 'k--')
+
+    ax1.legend()
+
+    # Plot account balance
+    balance = [trade['balance'] for trade in trades]
+    ax2.plot(data['time'], balance, label='Account Balance')
+    ax2.set_ylabel('Balance')
+    ax2.set_title('Account Balance')
+    ax2.grid(True)
+    ax2.legend()
+
+    plt.tight_layout()
+    plt.show()
+</document_content>
+</document>
+
+<document index="27">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\types.py</source>
 <document_content>
 from typing import NewType
 
@@ -1915,8 +2107,8 @@ LotSize = NewType("LotSize", float)
 </document_content>
 </document>
 
-<document index="26">
-<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\utils\__init__.py</source>
+<document index="28">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\__init__.py</source>
 <document_content>
 from .data_validation import validate_data, sanitize_data, validate_trade_request, validate_close_request
 from .logger import setup_logging

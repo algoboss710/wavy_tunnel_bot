@@ -23,13 +23,31 @@ def get_historical_data(symbol, timeframe, start_time, end_time):
     try:
         # Retrieve data from MT5
         rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
+        if rates is None:
+            raise ValueError(f"Failed to retrieve historical data for {symbol} with timeframe {timeframe} from {start_time} to {end_time}")
+        
         data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
         data['time'] = pd.to_datetime(data['time'], unit='s')
+        
+        if data.empty:
+            raise ValueError(f"No historical data retrieved for {symbol} with timeframe {timeframe} from {start_time} to {end_time}")
 
         return data
     except Exception as e:
         handle_error(e, f"Failed to retrieve historical data for {symbol}")
         return None
+
+# def get_historical_data(symbol, timeframe, start_time, end_time):
+#     try:
+#         # Retrieve data from MT5
+#         rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
+#         data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
+#         data['time'] = pd.to_datetime(data['time'], unit='s')
+
+#         return data
+#     except Exception as e:
+#         handle_error(e, f"Failed to retrieve historical data for {symbol}")
+#         return None
 #requests_cache.install_cache('historical_data_cache', backend='sqlite', expire_after=3600)
 
 # def get_historical_data(symbol, timeframe, start_time, end_time):

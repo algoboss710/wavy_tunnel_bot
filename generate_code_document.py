@@ -22,17 +22,18 @@ def generate_code_document(root_dir):
     document += "</documents>"
     return document
 
-# Specify the root directory of your repository
-root_directory = r"C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot"
+if __name__ == "__main__":
+    # Specify the root directory of your repository
+    root_directory = r"C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot"
 
-# Generate the code document
-code_document = generate_code_document(root_directory)
+    # Generate the code document
+    code_document = generate_code_document(root_directory)
 
-# Specify the output file path
-output_file = r"C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\code_document.xml"
+    # Specify the output file path
+    output_file = os.path.join(root_directory, "code_document.xml")
 
-# Save the code document to a file
-with open(output_file, "w") as file:
-    file.write(code_document)
+    # Save the code document to a file
+    with open(output_file, "w") as file:
+        file.write(code_document)
 
-print(f"Code document saved to: {output_file}")
+    print(f"Code document saved to: {output_file}")
