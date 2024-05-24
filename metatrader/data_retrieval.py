@@ -19,15 +19,20 @@ def shutdown_mt5():
 start_time = datetime.now() - timedelta(days=30)  # Example: 30 days ago
 end_time = datetime.now()  # Current time
 
+# ...
+
 def get_historical_data(symbol, timeframe, start_time, end_time):
     try:
         # Retrieve data from MT5
         rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
-        if rates is None:
+        if rates is None or len(rates) == 0:
             raise ValueError(f"Failed to retrieve historical data for {symbol} with timeframe {timeframe} from {start_time} to {end_time}")
         
         data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
         data['time'] = pd.to_datetime(data['time'], unit='s')
+        
+        print(f"Historical data shape after retrieval: {data.shape}")
+        print(f"Historical data head after retrieval:\n{data.head()}")
         
         if data.empty:
             raise ValueError(f"No historical data retrieved for {symbol} with timeframe {timeframe} from {start_time} to {end_time}")
@@ -36,6 +41,8 @@ def get_historical_data(symbol, timeframe, start_time, end_time):
     except Exception as e:
         handle_error(e, f"Failed to retrieve historical data for {symbol}")
         return None
+
+# ...
 
 # def get_historical_data(symbol, timeframe, start_time, end_time):
 #     try:

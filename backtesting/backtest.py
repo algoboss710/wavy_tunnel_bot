@@ -8,6 +8,13 @@ def run_backtest(symbol, start_date, end_date, timeframe, initial_balance, risk_
     # Retrieve historical data
     data = get_historical_data(symbol, timeframe, start_date, end_date)
 
+    if data is None or data.empty:
+        print(f"No historical data retrieved for {symbol} from {start_date} to {end_date}")
+        return
+
+    print(f"Backtest data shape: {data.shape}")
+    print(f"Backtest data head:\n{data.head()}")
+
     # Initialize variables
     balance = initial_balance
     trades = []
@@ -43,12 +50,6 @@ def run_backtest(symbol, start_date, end_date, timeframe, initial_balance, risk_
                 execute_trade(trade)
 
         manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
-
-    # Calculate performance metrics
-    total_profit = balance - initial_balance
-    num_trades = len(trades)
-    win_rate = sum(1 for trade in trades if trade['profit'] > 0) / num_trades
-    max_drawdown = calculate_max_drawdown(trades, initial_balance)
 
     # Print performance metrics
     print(f"Total Profit: {total_profit:.2f}")

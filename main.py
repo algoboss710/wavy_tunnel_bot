@@ -8,6 +8,8 @@ from strategy.tunnel_strategy import run_strategy, calculate_ema, detect_peaks_a
 from backtesting.backtest import run_backtest
 from utils.logger import setup_logging
 from utils.error_handling import handle_error
+import MetaTrader5 as mt5
+print(mt5.__version__)
 import logging
 
 def main():
@@ -33,6 +35,8 @@ def main():
             historical_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, datetime.now() - pd.Timedelta(days=30), datetime.now())
             if historical_data is None or historical_data.empty:
                 raise ValueError(f"No historical data retrieved for {symbol}")
+            print(f"Historical data shape after retrieval: {historical_data.shape}")
+            print(f"Historical data head after retrieval:\n{historical_data.head()}")
             logging.info("Historical price data retrieved successfully.")
             logging.info(historical_data.head())
 
@@ -58,20 +62,6 @@ def main():
             logging.info("Entry signals generated.")
             logging.info(historical_data[['time', 'close', 'buy_signal', 'sell_signal']].head())
 
-            # Run trading strategy
-            logging.info("Running trading strategy...")
-            run_strategy(
-                symbols=[symbol],
-                mt5_init=mt5,
-                timeframe=mt5.TIMEFRAME_M1,
-                lot_size=0.01,
-                min_take_profit=Config.MIN_TP_PROFIT,
-                max_loss_per_day=Config.MAX_LOSS_PER_DAY,
-                starting_equity=Config.STARTING_EQUITY,
-                max_trades_per_day=Config.LIMIT_NO_OF_TRADES
-            )
-            logging.info("Trading strategy completed.")
-
             # Run backtesting
             logging.info("Running backtest...")
             start_date = datetime(2022, 1, 1)
@@ -81,9 +71,9 @@ def main():
 
             backtest_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, start_date, end_date)
             if backtest_data is None or backtest_data.empty:
-                raise ValueError(f"No historical data retrieved for {symbol} for backtesting")
-            logging.info("Backtest data retrieved successfully.")
-
+                logging.error(f"No historical data retrieved for {symbol} for backtesting")
+            else:
+                logging.info("Backtest data retrieved successfully.")
             run_backtest(
                 symbol=symbol,
                 start_date=start_date,
@@ -95,11 +85,54 @@ def main():
                 max_loss_per_day=Config.MAX_LOSS_PER_DAY,
                 starting_equity=Config.STARTING_EQUITY,
                 max_trades_per_day=Config.LIMIT_NO_OF_TRADES
-            )
+                )
             logging.info("Backtest completed successfully.")
+            # # Run trading strategy
+            # logging.info("Running trading strategy...")
+            # run_strategy(
+            #     symbols=[symbol],
+            #     mt5_init=mt5,
+            #     timeframe=mt5.TIMEFRAME_M1,
+            #     lot_size=0.01,
+            #     min_take_profit=Config.MIN_TP_PROFIT,
+            #     max_loss_per_day=Config.MAX_LOSS_PER_DAY,
+            #     starting_equity=Config.STARTING_EQUITY,
+            #     max_trades_per_day=Config.LIMIT_NO_OF_TRADES
+            # )
+            # print(f"Historical data shape after running strategy: {historical_data.shape}")
+            # print(f"Historical data head after running strategy:\n{historical_data.head()}")
+            # logging.info("Trading strategy completed.")
+
+            # # Run backtesting
+            # logging.info("Running backtest...")
+            # start_date = datetime(2022, 1, 1)
+            # end_date = datetime(2022, 12, 31)
+            # initial_balance = 10000
+            # risk_percent = 0.02
+
+            # backtest_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, start_date, end_date)
+            # if backtest_data is None or backtest_data.empty:
+            #     raise ValueError(f"No historical data retrieved for {symbol} for backtesting")
+            # logging.info("Backtest data retrieved successfully.")
+
+            # run_backtest(
+            #     symbol=symbol,
+            #     start_date=start_date,
+            #     end_date=end_date,
+            #     timeframe=mt5.TIMEFRAME_H1,
+            #     initial_balance=initial_balance,
+            #     risk_percent=risk_percent,
+            #     min_take_profit=Config.MIN_TP_PROFIT,
+            #     max_loss_per_day=Config.MAX_LOSS_PER_DAY,
+            #     starting_equity=Config.STARTING_EQUITY,
+            #     max_trades_per_day=Config.LIMIT_NO_OF_TRADES
+            # )
+            # logging.info("Backtest completed successfully.")
 
     except Exception as e:
-        handle_error(e, "An error occurred in the main function")
+        error_code = mt5.last_error()
+        error_message = "An error occurred"
+        handle_error(e, f"An error occurred in the main function: {error_code} - {error_message}")
 
     finally:
         logging.info("Shutting down MetaTrader5...")

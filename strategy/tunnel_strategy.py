@@ -6,20 +6,22 @@ from metatrader.trade_management import place_order, close_position, modify_orde
 import pandas as pd
 import MetaTrader5 as mt5
 
-def calculate_ema(data, period):
-    ema_values = [None] * (period - 1)  # Initialize with None for the first period - 1 values
-    sma = sum(data[:period]) / period
-    ema_values.append(sma)
-    multiplier = 2 / (period + 1)
-    for price in data[period:]:
-        new_ema = (price - ema_values[-1]) * multiplier + ema_values[-1]
-        ema_values.append(new_ema)
-    
-    # Ensure the length matches the input data
-    while len(ema_values) < len(data):
-        ema_values.append(None)
-    
-    return ema_values
+def calculate_ema(prices, period):
+    if isinstance(prices, (float, int)):
+        # If prices is a single value, return it as is
+        return prices
+    elif isinstance(prices, (list, np.ndarray, pd.Series)):
+        # If prices is a list, array, or pandas Series, calculate the EMA
+        ema_values = np.zeros_like(prices)
+        ema_values[:period] = np.nan
+        sma = np.mean(prices[:period])
+        ema_values[period - 1] = sma
+        multiplier = 2 / (period + 1)
+        for i in range(period, len(prices)):
+            ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
+        return pd.Series(ema_values, index=prices.index)
+    else:
+        raise ValueError("Invalid input type for prices. Expected float, int, list, numpy array, or pandas Series.")
 
 def detect_peaks_and_dips(df, peak_type):
     peaks = []
@@ -117,13 +119,27 @@ def calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value):
     return position_size
 
 def generate_trade_signal(data, period, deviation_factor):
+    print(f"Data shape: {data.shape}")
+    print(f"Data head:\n{data.head()}")
+    
     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
-    if data['close'].iloc[-1] > upper_bound[-1]:
-        return 'BUY'
-    elif data['close'].iloc[-1] < lower_bound[-1]:
-        return 'SELL'
-    else:
-        return None
+    
+    print(f"Upper bound shape: {upper_bound.shape}")
+    print(f"Upper bound head:\n{upper_bound.head()}")
+    print(f"Lower bound shape: {lower_bound.shape}")
+    print(f"Lower bound head:\n{lower_bound.head()}")
+    
+    if len(upper_bound) > 0 and len(lower_bound) > 0:
+        print(f"Last close price: {data['close'].iloc[-1]}")
+        print(f"Last upper bound: {upper_bound.iloc[-1]}")
+        print(f"Last lower bound: {lower_bound.iloc[-1]}")
+        
+        if data['close'].iloc[-1] > upper_bound.iloc[-1]:
+            return 'BUY'
+        elif data['close'].iloc[-1] < lower_bound.iloc[-1]:
+            return 'SELL'
+    
+    return None
 
 def adjust_deviation_factor(market_conditions):
     if market_conditions == 'volatile':
@@ -140,9 +156,37 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
             if data is None:
                 raise Exception(f"Failed to retrieve historical data for {symbol}")
 
+            print(f"Historical data shape before calculations: {data.shape}")
+            print(f"Historical data head before calculations:\n{data.head()}")
+            print(f"Historical data for {symbol}:")
+            print(data.head())
+            print(f"Data types: {data.dtypes}")
+
             period = 20
             market_conditions = 'volatile'  # Placeholder for determining market conditions
             deviation_factor = adjust_deviation_factor(market_conditions)
+
+            print("Calculating Wavy Tunnel indicators...")
+            data['wavy_h'] = calculate_ema(data['high'], 34)
+            data['wavy_c'] = calculate_ema(data['close'], 34)
+            data['wavy_l'] = calculate_ema(data['low'], 34)
+            data['tunnel1'] = calculate_ema(data['close'], 144)
+            data['tunnel2'] = calculate_ema(data['close'], 169)
+            data['long_term_ema'] = calculate_ema(data['close'], 200)
+            print("Indicators calculated.")
+
+            print("Detecting peaks and dips...")
+            peak_type = 21  # Define the peak_type variable
+            peaks, dips = detect_peaks_and_dips(data, peak_type)
+            print(f"Peaks: {peaks[:5]}")
+            print(f"Dips: {dips[:5]}")
+
+            print(f"Historical data shape after calculations: {data.shape}")
+            print(f"Historical data head after calculations:\n{data.head()}")
+            
+            print("Generating entry signals...")
+            data['buy_signal'], data['sell_signal'] = zip(*data.apply(lambda x: check_entry_conditions(x, peaks, dips, symbol), axis=1))
+            print("Entry signals generated.")
 
             signal = generate_trade_signal(data, period, deviation_factor)
 
@@ -161,6 +205,7 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                     'type_filling': 'ORDER_FILLING_FOK',
                     'type_time': 'ORDER_TIME_GTC'
                 }
+                print(f"Executing BUY trade for {symbol}...")
                 execute_trade(trade_request)
             elif signal == 'SELL':
                 trade_request = {
@@ -177,9 +222,11 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                     'type_filling': 'ORDER_FILLING_FOK',
                     'type_time': 'ORDER_TIME_GTC'
                 }
+                print(f"Executing SELL trade for {symbol}...")
                 execute_trade(trade_request)
 
             manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
 
     except Exception as e:
         handle_error(e, "Failed to run the strategy")
+        raise

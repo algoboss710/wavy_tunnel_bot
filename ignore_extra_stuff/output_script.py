@@ -100,14 +100,16 @@ for dip in dips:
     print(dip)
 # # Generate Entry Signals
 ## Implement entry conditions
-def check_entry_conditions(row):
+def check_entry_conditions(row, peaks, dips, symbol):
     buy_condition = (
         row['close'] > max(row['wavy_c'], row['wavy_h'], row['wavy_l']) and
-        min(row['wavy_c'], row['wavy_h'], row['wavy_l']) > max(row['tunnel1'], row['tunnel2'])
+        min(row['wavy_c'], row['wavy_h'], row['wavy_l']) > max(row['tunnel1'], row['tunnel2']) and
+        any(abs(row['close'] - peak) < 0.00001 for peak in peaks)  # Check if the close price is close to any peak
     )
     sell_condition = (
         row['close'] < min(row['wavy_c'], row['wavy_h'], row['wavy_l']) and
-        max(row['wavy_c'], row['wavy_h'], row['wavy_l']) < min(row['tunnel1'], row['tunnel2'])
+        max(row['wavy_c'], row['wavy_h'], row['wavy_l']) < min(row['tunnel1'], row['tunnel2']) and
+        any(abs(row['close'] - dip) < 0.00001 for dip in dips)  # Check if the close price is close to any dip
     )
     if apply_threshold:
         threshold = threshold_values.get(symbol[:3], threshold_values['default']) * mt5.symbol_info(symbol).trade_tick_size
