@@ -21,9 +21,12 @@ def run_backtest(symbol, start_date, end_date, timeframe, initial_balance, risk_
 
     # Backtesting loop
     for i in range(len(data)):
+        print(f"Iteration: {i}")
+        print(f"Data shape: {data.iloc[:i+1].shape}")
+        print(f"Data head:\n{data.iloc[:i+1].head()}")
+
         # Calculate indicators and generate trading signals
         signal = generate_trade_signal(data.iloc[:i+1], period=20, deviation_factor=2.0)
-
         pip_value = Config.PIP_VALUE
         stop_loss_pips = 20  # Example value for stop loss in pips
 

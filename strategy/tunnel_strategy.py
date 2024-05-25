@@ -119,26 +119,14 @@ def calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value):
     return position_size
 
 def generate_trade_signal(data, period, deviation_factor):
-    print(f"Data shape: {data.shape}")
-    print(f"Data head:\n{data.head()}")
-    
     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
-    
-    print(f"Upper bound shape: {upper_bound.shape}")
-    print(f"Upper bound head:\n{upper_bound.head()}")
-    print(f"Lower bound shape: {lower_bound.shape}")
-    print(f"Lower bound head:\n{lower_bound.head()}")
-    
+
     if len(upper_bound) > 0 and len(lower_bound) > 0:
-        print(f"Last close price: {data['close'].iloc[-1]}")
-        print(f"Last upper bound: {upper_bound.iloc[-1]}")
-        print(f"Last lower bound: {lower_bound.iloc[-1]}")
-        
         if data['close'].iloc[-1] > upper_bound.iloc[-1]:
             return 'BUY'
         elif data['close'].iloc[-1] < lower_bound.iloc[-1]:
             return 'SELL'
-    
+
     return None
 
 def adjust_deviation_factor(market_conditions):
