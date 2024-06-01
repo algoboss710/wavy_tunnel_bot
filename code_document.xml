@@ -1,10 +1,11 @@
 <documents>
 <document index="1">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\config.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\config.py</source>
 <document_content>
 import os
 from dotenv import load_dotenv
 from utils.error_handling import handle_error, critical_error
+import logging
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 project_dir = os.path.dirname(script_dir)
@@ -106,6 +107,13 @@ class Config:
             handle_error(e, "Configuration validation failed")
             critical_error(e, "Invalid configuration settings")
 
+
+    @classmethod
+    def log_config(cls):
+        for attr, value in cls.__dict__.items():
+            if not callable(value) and not attr.startswith("__") and not isinstance(value, classmethod):
+                logging.info(f"{attr}: {value}")
+
 try:
     Config.validate()
 except Exception as e:
@@ -116,7 +124,7 @@ except Exception as e:
 </document>
 
 <document index="2">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\generate_code_document.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\generate_code_document.py</source>
 <document_content>
 import os
 
@@ -144,7 +152,7 @@ def generate_code_document(root_dir):
 
 if __name__ == "__main__":
     # Specify the root directory of your repository
-    root_directory = r"C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot"
+    root_directory = r"C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot"
 
     # Generate the code document
     code_document = generate_code_document(root_directory)
@@ -162,7 +170,7 @@ if __name__ == "__main__":
 </document>
 
 <document index="3">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\main.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\main.py</source>
 <document_content>
 import MetaTrader5 as mt5
 import pandas as pd
@@ -179,7 +187,11 @@ import logging
 def main():
     try:
         setup_logging()
-        logging.info("Starting the main function.")
+        logging.info("STARTING APPLICATION")
+
+        # Log configuration settings
+        logging.info("LOGGING ALL THE CONFIG SETTINGS")
+        Config.log_config()
 
         # Initialize MetaTrader5
         logging.info("Initializing MetaTrader5...")
@@ -194,78 +206,118 @@ def main():
                 raise ValueError(f"Symbol {symbol} not available")
             logging.info(f"Symbol {symbol} selected successfully.")
 
-            # Retrieve historical price data
-            logging.info(f"Retrieving historical price data for {symbol}...")
-            historical_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, datetime.now() - pd.Timedelta(days=30), datetime.now())
-            if historical_data is None or historical_data.empty:
-                raise ValueError(f"No historical data retrieved for {symbol}")
-            logging.info("Historical price data retrieved successfully.")
-            logging.info(historical_data.head())
+            # # Retrieve historical price data
+            # logging.info(f"Retrieving historical price data for {symbol}...")
+            # historical_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, datetime.now() - pd.Timedelta(days=30), datetime.now())
+            # if historical_data is None or historical_data.empty:
+            #     raise ValueError(f"No historical data retrieved for {symbol}")
+            # print(f"Historical data shape after retrieval: {historical_data.shape}")
+            # print(f"Historical data head after retrieval:\n{historical_data.head()}")
+            # logging.info("Historical price data retrieved successfully.")
+            # logging.info(historical_data.head())
 
-            # Calculate indicators
-            logging.info("Calculating Wavy Tunnel indicator...")
-            historical_data['wavy_h'] = calculate_ema(historical_data['high'], 34)
-            historical_data['wavy_c'] = calculate_ema(historical_data['close'], 34)
-            historical_data['wavy_l'] = calculate_ema(historical_data['low'], 34)
-            historical_data['tunnel1'] = calculate_ema(historical_data['close'], 144)
-            historical_data['tunnel2'] = calculate_ema(historical_data['close'], 169)
-            historical_data['long_term_ema'] = calculate_ema(historical_data['close'], 200)
-            logging.info("Indicators calculated.")
+            # # Calculate indicators
+            # logging.info("Calculating Wavy Tunnel indicator...")
+            # historical_data['wavy_h'] = calculate_ema(historical_data['high'], 34)
+            # historical_data['wavy_c'] = calculate_ema(historical_data['close'], 34)
+            # historical_data['wavy_l'] = calculate_ema(historical_data['low'], 34)
+            # historical_data['tunnel1'] = calculate_ema(historical_data['close'], 144)
+            # historical_data['tunnel2'] = calculate_ema(historical_data['close'], 169)
+            # historical_data['long_term_ema'] = calculate_ema(historical_data['close'], 200)
+            # logging.info("Indicators calculated.")
 
-            # Detect peaks and dips
-            logging.info("Detecting peaks and dips...")
-            peaks, dips = detect_peaks_and_dips(historical_data, peak_type=21)
-            logging.info(f"Peaks: {peaks[:5]}")
-            logging.info(f"Dips: {dips[:5]}")
+            # # Detect peaks and dips
+            # logging.info("Detecting peaks and dips...")
+            # peaks, dips = detect_peaks_and_dips(historical_data, peak_type=21)
+            # logging.info(f"Peaks: {peaks[:5]}")
+            # logging.info(f"Dips: {dips[:5]}")
 
-            # Generate entry signals
-            logging.info("Generating entry signals...")
-            historical_data['buy_signal'], historical_data['sell_signal'] = zip(*historical_data.apply(lambda x: check_entry_conditions(x, peaks, dips, symbol), axis=1))
-            logging.info("Entry signals generated.")
-            logging.info(historical_data[['time', 'close', 'buy_signal', 'sell_signal']].head())
-
-            # Run trading strategy
-            logging.info("Running trading strategy...")
-            run_strategy(
-                symbols=[symbol],
-                mt5_init=mt5,
-                timeframe=mt5.TIMEFRAME_M1,
-                lot_size=0.01,
-                min_take_profit=Config.MIN_TP_PROFIT,
-                max_loss_per_day=Config.MAX_LOSS_PER_DAY,
-                starting_equity=Config.STARTING_EQUITY,
-                max_trades_per_day=Config.LIMIT_NO_OF_TRADES
-            )
-            logging.info("Trading strategy completed.")
+            # # Generate entry signals
+            # logging.info("Generating entry signals...")
+            # historical_data['buy_signal'], historical_data['sell_signal'] = zip(*historical_data.apply(lambda x: check_entry_conditions(x, peaks, dips, symbol), axis=1))
+            # logging.info("Entry signals generated.")
+            # logging.info(historical_data[['time', 'close', 'buy_signal', 'sell_signal']].head())
 
             # Run backtesting
             logging.info("Running backtest...")
             start_date = datetime(2022, 1, 1)
-            end_date = datetime(2022, 12, 31)
+            end_date = datetime(2022, 1, 5)
             initial_balance = 10000
-            risk_percent = 0.02
+            risk_percent = Config.RISK_PER_TRADE
 
             backtest_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, start_date, end_date)
-            if backtest_data is None or backtest_data.empty:
-                raise ValueError(f"No historical data retrieved for {symbol} for backtesting")
-            logging.info("Backtest data retrieved successfully.")
+            if backtest_data is not None and not backtest_data.empty:
+                logging.info(f"Backtest data shape: {backtest_data.shape}")
+                logging.info(f"Backtest data head:\n{backtest_data.head()}")
+            else:
+                logging.error(f"No historical data retrieved for {symbol} for backtesting")
+                continue
 
-            run_backtest(
-                symbol=symbol,
-                start_date=start_date,
-                end_date=end_date,
-                timeframe=mt5.TIMEFRAME_H1,
-                initial_balance=initial_balance,
-                risk_percent=risk_percent,
-                min_take_profit=Config.MIN_TP_PROFIT,
-                max_loss_per_day=Config.MAX_LOSS_PER_DAY,
-                starting_equity=Config.STARTING_EQUITY,
-                max_trades_per_day=Config.LIMIT_NO_OF_TRADES
-            )
-            logging.info("Backtest completed successfully.")
+             # Ensure there are enough data points for the indicators
+            if len(backtest_data) < 20:  
+                logging.error(f"Not enough data for symbol {symbol} to perform backtest")
+                continue
+
+            try:
+                run_backtest(
+                    symbol=symbol,
+                    data=backtest_data,
+                    initial_balance=initial_balance,
+                    risk_percent=risk_percent,
+                    min_take_profit=Config.MIN_TP_PROFIT,
+                    max_loss_per_day=Config.MAX_LOSS_PER_DAY,
+                    starting_equity=Config.STARTING_EQUITY,
+                    max_trades_per_day=Config.LIMIT_NO_OF_TRADES
+                )
+                logging.info("Backtest completed successfully.")
+            except Exception as e:
+                handle_error(e, f"An error occurred during backtesting for {symbol}")
+            # # Run trading strategy
+            # logging.info("Running trading strategy...")
+            # run_strategy(
+            #     symbols=[symbol],
+            #     mt5_init=mt5,
+            #     timeframe=mt5.TIMEFRAME_M1,
+            #     lot_size=0.01,
+            #     min_take_profit=Config.MIN_TP_PROFIT,
+            #     max_loss_per_day=Config.MAX_LOSS_PER_DAY,
+            #     starting_equity=Config.STARTING_EQUITY,
+            #     max_trades_per_day=Config.LIMIT_NO_OF_TRADES
+            # )
+            # print(f"Historical data shape after running strategy: {historical_data.shape}")
+            # print(f"Historical data head after running strategy:\n{historical_data.head()}")
+            # logging.info("Trading strategy completed.")
+
+            # # Run backtesting
+            # logging.info("Running backtest...")
+            # start_date = datetime(2022, 1, 1)
+            # end_date = datetime(2022, 12, 31)
+            # initial_balance = 10000
+            # risk_percent = 0.02
+
+            # backtest_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, start_date, end_date)
+            # if backtest_data is None or backtest_data.empty:
+            #     raise ValueError(f"No historical data retrieved for {symbol} for backtesting")
+            # logging.info("Backtest data retrieved successfully.")
+
+            # run_backtest(
+            #     symbol=symbol,
+            #     start_date=start_date,
+            #     end_date=end_date,
+            #     timeframe=mt5.TIMEFRAME_H1,
+            #     initial_balance=initial_balance,
+            #     risk_percent=risk_percent,
+            #     min_take_profit=Config.MIN_TP_PROFIT,
+            #     max_loss_per_day=Config.MAX_LOSS_PER_DAY,
+            #     starting_equity=Config.STARTING_EQUITY,
+            #     max_trades_per_day=Config.LIMIT_NO_OF_TRADES
+            # )
+            # logging.info("Backtest completed successfully.")
 
     except Exception as e:
-        handle_error(e, "An error occurred in the main function")
+        error_code = mt5.last_error()
+        error_message = "An error occurred"
+        handle_error(e, f"An error occurred in the main function: {error_code} - {error_message}")
 
     finally:
         logging.info("Shutting down MetaTrader5...")
@@ -362,7 +414,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="4">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\scheduler.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\scheduler.py</source>
 <document_content>
 import schedule
 import time
@@ -463,29 +515,120 @@ adjust_schedule(market_conditions)
 </document>
 
 <document index="5">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\backtesting\backtest.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\tempCodeRunnerFile.py</source>
 <document_content>
+# Run trading strategy
+            # logging.info("Running trading strategy...")
+            # run_strategy(
+            #     symbols=[symbol],
+            #     mt5_init=mt5,
+            #     timeframe=mt5.TIMEFRAME_M1,
+</document_content>
+</document>
+
+<document index="6">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\backtesting\backtest.py</source>
+<document_content>
+# import pandas as pd
+# from metatrader.data_retrieval import get_historical_data
+# from strategy.tunnel_strategy import generate_trade_signal, execute_trade, manage_position, calculate_position_size
+# from utils.plotting import plot_backtest_results
+# from config import Config
+
+# def run_backtest(symbol, start_date, end_date, timeframe, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
+#     # Retrieve historical data
+#     data = get_historical_data(symbol, timeframe, start_date, end_date)
+
+#     if data is None or data.empty:
+#         print(f"No historical data retrieved for {symbol} from {start_date} to {end_date}")
+#         return
+
+#     print(f"Backtest data shape: {data.shape}")
+#     print(f"Backtest data head:\n{data.head()}")
+
+#     # Initialize variables
+#     balance = initial_balance
+#     trades = []
+
+#     # Backtesting loop
+#     for i in range(len(data)):
+#         print(f"Iteration: {i}")
+#         print(f"Data shape: {data.iloc[:i+1].shape}")
+#         print(f"Data head:\n{data.iloc[:i+1].head()}")
+
+#         # Calculate indicators and generate trading signals
+#         signal = generate_trade_signal(data.iloc[:i+1], period=20, deviation_factor=2.0)
+#         pip_value = Config.PIP_VALUE
+#         stop_loss_pips = 20  # Example value for stop loss in pips
+
+#         position_size = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
+
+#         if signal == 'BUY':
+#             # Simulate trade entry
+#             trade = {
+#                 'entry_time': data.iloc[i]['time'],
+#                 'entry_price': data.iloc[i]['close'],
+#                 'volume': position_size
+#             }
+#             trades.append(trade)
+#             execute_trade(trade)
+
+#         elif signal == 'SELL':
+#             # Simulate trade exit
+#             if trades:
+#                 trade = trades[-1]
+#                 trade['exit_time'] = data.iloc[i]['time']
+#                 trade['exit_price'] = data.iloc[i]['close']
+#                 trade['profit'] = (trade['exit_price'] - trade['entry_price']) * trade['volume']
+#                 balance += trade['profit']
+#                 execute_trade(trade)
+
+#         manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+
+#     # Print performance metrics
+#     print(f"Total Profit: {total_profit:.2f}")
+#     print(f"Number of Trades: {num_trades}")
+#     print(f"Win Rate: {win_rate:.2%}")
+#     print(f"Maximum Drawdown: {max_drawdown:.2f}")
+
+#     # Plot backtest results
+#     plot_backtest_results(data, trades)
+
+# def calculate_max_drawdown(trades, initial_balance):
+#     balance = initial_balance
+#     max_balance = initial_balance
+#     max_drawdown = 0
+
+#     for trade in trades:
+#         balance += trade['profit']
+#         max_balance = max(max_balance, balance)
+#         drawdown = max_balance - balance
+#         max_drawdown = max(max_drawdown, drawdown)
+
+#     return max_drawdown
+
 import pandas as pd
+from datetime import datetime
 from metatrader.data_retrieval import get_historical_data
-from strategy.tunnel_strategy import generate_trade_signal, execute_trade, manage_position, calculate_position_size
+from strategy.tunnel_strategy import generate_trade_signal, execute_trade, manage_position
 from utils.plotting import plot_backtest_results
+from utils.error_handling import handle_error
 from config import Config
+import logging
 
-def run_backtest(symbol, start_date, end_date, timeframe, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
-    # Retrieve historical data
-    data = get_historical_data(symbol, timeframe, start_date, end_date)
-
-    # Initialize variables
+def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
     balance = initial_balance
     trades = []
+    stop_loss_pips = 20  # Example value for stop loss in pips
 
-    # Backtesting loop
-    for i in range(len(data)):
+    for i in range(20, len(data)):  # Start after enough data points are available
+        logging.info(f"Iteration: {i}")
+        logging.info(f"Data shape: {data.iloc[:i+1].shape}")
+        logging.info(f"Data head:\n{data.iloc[:i+1].head()}")
+
         # Calculate indicators and generate trading signals
         signal = generate_trade_signal(data.iloc[:i+1], period=20, deviation_factor=2.0)
-
         pip_value = Config.PIP_VALUE
-        stop_loss_pips = 20  # Example value for stop loss in pips
 
         position_size = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
 
@@ -511,17 +654,16 @@ def run_backtest(symbol, start_date, end_date, timeframe, initial_balance, risk_
 
         manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
 
-    # Calculate performance metrics
-    total_profit = balance - initial_balance
+    # Print performance metrics
+    total_profit = sum(trade['profit'] for trade in trades if 'profit' in trade)
     num_trades = len(trades)
-    win_rate = sum(1 for trade in trades if trade['profit'] > 0) / num_trades
+    win_rate = sum(1 for trade in trades if 'profit' in trade and trade['profit'] > 0) / num_trades
     max_drawdown = calculate_max_drawdown(trades, initial_balance)
 
-    # Print performance metrics
-    print(f"Total Profit: {total_profit:.2f}")
-    print(f"Number of Trades: {num_trades}")
-    print(f"Win Rate: {win_rate:.2%}")
-    print(f"Maximum Drawdown: {max_drawdown:.2f}")
+    logging.info(f"Total Profit: {total_profit:.2f}")
+    logging.info(f"Number of Trades: {num_trades}")
+    logging.info(f"Win Rate: {win_rate:.2%}")
+    logging.info(f"Maximum Drawdown: {max_drawdown:.2f}")
 
     # Plot backtest results
     plot_backtest_results(data, trades)
@@ -539,11 +681,28 @@ def calculate_max_drawdown(trades, initial_balance):
 
     return max_drawdown
 
+def calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value):
+    risk_amount = balance * risk_percent
+    position_size = risk_amount / (stop_loss_pips * pip_value)
+    return position_size
+
+def generate_trade_signal(data, period, deviation_factor):
+    # Placeholder for generating trade signals
+    return 'BUY' if data['close'].iloc[-1] > data['close'].mean() else 'SELL'
+
+def execute_trade(trade):
+    # Placeholder for executing trades
+    pass
+
+def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
+    # Placeholder for managing positions
+    pass
+
 </document_content>
 </document>
 
-<document index="6">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\ignore_extra_stuff\cleanup.py</source>
+<document index="7">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\ignore_extra_stuff\cleanup.py</source>
 <document_content>
 import re
 
@@ -561,8 +720,8 @@ with open("output_script.py", "w") as file:
 </document_content>
 </document>
 
-<document index="7">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\ignore_extra_stuff\output_script.py</source>
+<document index="8">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\ignore_extra_stuff\output_script.py</source>
 <document_content>
 # # First NoteBook Script - Showing Live Orders Placed
 # # Connect to MetaTrader 5
@@ -666,14 +825,16 @@ for dip in dips:
     print(dip)
 # # Generate Entry Signals
 ## Implement entry conditions
-def check_entry_conditions(row):
+def check_entry_conditions(row, peaks, dips, symbol):
     buy_condition = (
         row['close'] > max(row['wavy_c'], row['wavy_h'], row['wavy_l']) and
-        min(row['wavy_c'], row['wavy_h'], row['wavy_l']) > max(row['tunnel1'], row['tunnel2'])
+        min(row['wavy_c'], row['wavy_h'], row['wavy_l']) > max(row['tunnel1'], row['tunnel2']) and
+        any(abs(row['close'] - peak) < 0.00001 for peak in peaks)  # Check if the close price is close to any peak
     )
     sell_condition = (
         row['close'] < min(row['wavy_c'], row['wavy_h'], row['wavy_l']) and
-        max(row['wavy_c'], row['wavy_h'], row['wavy_l']) < min(row['tunnel1'], row['tunnel2'])
+        max(row['wavy_c'], row['wavy_h'], row['wavy_l']) < min(row['tunnel1'], row['tunnel2']) and
+        any(abs(row['close'] - dip) < 0.00001 for dip in dips)  # Check if the close price is close to any dip
     )
     if apply_threshold:
         threshold = threshold_values.get(symbol[:3], threshold_values['default']) * mt5.symbol_info(symbol).trade_tick_size
@@ -1240,8 +1401,429 @@ print("MetaTrader5 disconnected")
 </document_content>
 </document>
 
-<document index="8">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\jupyter_notebooks\script.py</source>
+<document index="9">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\jupyter_notebooks\backtest-notebook.py</source>
+<document_content>
+# Importing required libraries
+import numpy as np
+import pandas as pd
+import MetaTrader5 as mt5
+import matplotlib.pyplot as plt
+
+# Connecting to the MetaTrader5 terminal
+if not mt5.initialize():
+    print("Failed to initialize MetaTrader5")
+    mt5.shutdown()
+else:
+    print("MetaTrader5 initialized successfully")
+
+# Specifying the symbol and timeframe
+symbol = "EURUSD"
+timeframe = mt5.TIMEFRAME_H1  # 1-hour timeframe
+
+# Retrieving historical price data
+num_bars = 1000  # Number of bars to retrieve
+rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, num_bars)
+
+# Converting the data to a pandas DataFrame
+df = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
+df['time'] = pd.to_datetime(df['time'], unit='s')
+
+# Printing the DataFrame
+print("Historical Price Data:")
+print(df.head())
+
+# Implementing the Wavy Tunnel and other indicators
+def ema(data, period):
+    ema_values = [None] * (period - 1)  # Initialize with None for the first period - 1 values
+    sma = sum(data[:period]) / period
+    ema_values.append(sma)
+    multiplier = 2 / (period + 1)
+    
+    for price in data[period:]:
+        ema = (price - ema_values[-1]) * multiplier + ema_values[-1]
+        ema_values.append(ema)
+    
+    return ema_values
+
+# Wavy Tunnel
+df['wavy_h'] = ema(df['high'], 34)
+df['wavy_c'] = ema(df['close'], 34)
+df['wavy_l'] = ema(df['low'], 34)
+df['tunnel1'] = ema(df['close'], 144)
+df['tunnel2'] = ema(df['close'], 169)
+
+# Printing the Wavy Tunnel columns
+print("Wavy Tunnel:")
+print(df[['time', 'high', 'low', 'close', 'wavy_h', 'wavy_c', 'wavy_l', 'tunnel1', 'tunnel2']].head())
+
+# Plotting the Wavy Tunnel
+plt.figure(figsize=(12, 6))
+plt.plot(df['time'], df['close'], label='Price')
+plt.plot(df['time'], df['wavy_h'], label='Wavy High')
+plt.plot(df['time'], df['wavy_c'], label='Wavy Close')
+plt.plot(df['time'], df['wavy_l'], label='Wavy Low')
+plt.plot(df['time'], df['tunnel1'], label='Tunnel 1')
+plt.plot(df['time'], df['tunnel2'], label='Tunnel 2')
+plt.xlabel('Time')
+plt.ylabel('Price')
+plt.title('Wavy Tunnel')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Implementing user inputs
+apply_threshold = True
+threshold_values = {
+    'USD': 2,
+    'EUR': 2,
+    'JPY': 300,
+    'GBP': 6,
+    'CHF': 2,
+    'AUD': 2,
+    'default': 100
+}
+
+# Liquidation level threshold
+min_auto_tp_threshold_values = {
+    'USD': 5,
+    'EUR': 10,
+    'JPY': 100,
+    'GBP': 50,
+    'CHF': 5,
+    'AUD': 5,
+    'default': 100
+}
+
+# Last take profit limit
+last_tp_limit_values = {
+    'USD': 15,
+    'EUR': 10,
+    'JPY': 800,
+    'GBP': 60,
+    'CHF': 15,
+    'AUD': 15,
+    'default': 250
+}
+
+peak_type = 21
+
+enable_second_strategy = True
+min_gap_second_values = {
+    'USD': 15,
+    'EUR': 15,
+    'JPY': 650,
+    'GBP': 50,
+    'CHF': 15,
+    'AUD': 15,
+    'default': 650
+}
+
+max_allow_into_zone = 0.25
+
+is_range = False
+from_date = '2024-02-01'
+to_date = '2024-03-16'
+
+is_proximity = True
+support_resistance_proximity = 0.01
+
+# Implementing peak and dip detection
+def detect_peaks_and_dips(df, peak_type):
+    peaks = []
+    dips = []
+    for i in range(len(df)):
+        if i < peak_type or i >= len(df) - peak_type:
+            continue
+        is_peak = True
+        is_dip = True
+        for j in range(peak_type):
+            if df['high'][i] <= df['high'][i-j] or df['high'][i] <= df['high'][i+j]:
+                is_peak = False
+            if df['low'][i] >= df['low'][i-j] or df['low'][i] >= df['low'][i+j]:
+                is_dip = False
+        if is_peak:
+            peaks.append(df['high'][i])
+        if is_dip:
+            dips.append(df['low'][i])
+    return peaks, dips
+
+peak_type = 21
+peaks, dips = detect_peaks_and_dips(df, peak_type)
+
+print("Peaks:")
+print(peaks[:5])
+print("Dips:")
+print(dips[:5])
+
+# Implementing liquidation levels
+def find_last_peak_dip(peaks, dips, current_price, min_threshold):
+    last_peak = np.nan
+    last_dip = np.nan
+    for peak in reversed(peaks):
+        if peak > current_price + min_threshold:
+            last_peak = peak
+            break
+    for dip in reversed(dips):
+        if dip < current_price - min_threshold:
+            last_dip = dip
+            break
+    return last_peak, last_dip
+
+min_threshold = 100  # Adjust this value based on the user input
+
+# Implementing entry conditions
+def check_entry_conditions(row, peaks, dips):
+    buy_condition = (
+        row['close'] > max(row['wavy_c'], row['wavy_h'], row['wavy_l']) and
+        min(row['wavy_c'], row['wavy_h'], row['wavy_l']) > max(row['tunnel1'], row['tunnel2']) and
+        row['close'] in peaks  # Check if the current close price is a peak
+    )
+    sell_condition = (
+        row['close'] < min(row['wavy_c'], row['wavy_h'], row['wavy_l']) and
+        max(row['wavy_c'], row['wavy_h'], row['wavy_l']) < min(row['tunnel1'], row['tunnel2']) and
+        row['close'] in dips  # Check if the current close price is a dip
+    )
+
+    if apply_threshold:
+        threshold = threshold_values.get(symbol[:3], threshold_values['default']) * mt5.symbol_info(symbol).trade_tick_size
+        buy_condition &= row['close'] > max(row['wavy_c'], row['wavy_h'], row['wavy_l']) + threshold
+        sell_condition &= row['close'] < min(row['wavy_c'], row['wavy_h'], row['wavy_l']) - threshold
+
+    return buy_condition, sell_condition
+
+df['buy_signal'], df['sell_signal'] = zip(*df.apply(lambda x: check_entry_conditions(x, peaks, dips), axis=1))
+
+print("Entry Signals:")
+print(df[['time', 'close', 'buy_signal', 'sell_signal']].head())
+
+# Implementing support and resistance proximity
+def sma(data, period):
+    sma_values = []
+    for i in range(len(data)):
+        if i < period or None in data[i - period + 1: i + 1]:
+            sma_values.append(None)
+        else:
+            sma_values.append(sum(filter(None, data[i - period + 1: i + 1])) / period)
+    return sma_values
+
+def min_low(low_data, period):
+    min_low_values = []
+    for i in range(len(low_data)):
+        if i < period:
+            min_low_values.append(None)
+        else:
+            min_low_values.append(min(low_data[i - period + 1: i + 1]))
+    return min_low_values
+
+def max_high(high_data, period):
+    max_high_values = []
+    for i in range(len(high_data)):
+        if i < period:
+            max_high_values.append(None)
+        else:
+            max_high_values.append(max(high_data[i - period + 1: i + 1]))
+    return max_high_values
+
+def check_support_resistance_proximity(row):
+    support_level = sma(min_low(df['low'], 18), 5)
+    resistance_level = sma(max_high(df['high'], 18), 5)
+    proximity_threshold = 0.01  # Adjust this value based on user input
+    
+    if support_level[-1] is not None:
+        near_support = row['close'] <= support_level[-1] * (1 + proximity_threshold)
+    else:
+        near_support = False
+    
+    if resistance_level[-1] is not None:
+        near_resistance = row['close'] >= resistance_level[-1] * (1 - proximity_threshold)
+    else:
+        near_resistance = False
+    
+    return near_support, near_resistance
+
+df['near_support'], df['near_resistance'] = zip(*df.apply(check_support_resistance_proximity, axis=1))
+
+print("Support and Resistance Proximity:")
+print(df[['time', 'close', 'near_support', 'near_resistance']].head())
+
+# Implementing position management
+def calculate_position_size(row):
+    balance = mt5.account_info().balance
+    risk_percent = 0.01  # Adjust this value based on user input
+    position_size = (balance * risk_percent) / (row['close'] * mt5.symbol_info(symbol).trade_tick_size)
+    return position_size
+
+def open_position(row):
+    if row['buy_signal'] and not row['near_resistance']:
+        lot_size = calculate_position_size(row)
+        last_peak, _ = find_last_peak_dip(peaks, dips, row['close'], min_threshold)
+        stop_loss = last_peak - (row['close'] - last_peak) * 1.5  # Set stop-loss level based on last peak
+        take_profit = row['close'] + (row['close'] - last_peak) * 2  # Set take-profit level based on last peak
+        
+        request = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": symbol,
+            "volume": lot_size,
+            "type": mt5.ORDER_TYPE_BUY,
+            "price": row['close'],
+            "sl": stop_loss,  # Set stop-loss price
+            "tp": take_profit,  # Set take-profit price
+            "magic": 12345,
+            "comment": "Python Buy Order",
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_IOC,
+        }
+        result = mt5.order_send(request)
+        print(f"Buy Order Sent: {result}")
+    
+    elif row['sell_signal'] and not row['near_support']:
+        lot_size = calculate_position_size(row)
+        _, last_dip = find_last_peak_dip(peaks, dips, row['close'], min_threshold)
+        stop_loss = last_dip + (last_dip - row['close']) * 1.5  # Set stop-loss level based on last dip
+        take_profit = row['close'] - (last_dip - row['close']) * 2  # Set take-profit level based on last dip
+        
+        request = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": symbol,
+            "volume": lot_size,
+            "type": mt5.ORDER_TYPE_SELL,
+            "price": row['close'],
+            "sl": stop_loss,  # Set stop-loss price
+            "tp": take_profit,  # Set take-profit price
+            "magic": 12345,
+            "comment": "Python Sell Order",
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_IOC,
+        }
+        result = mt5.order_send(request)
+        print(f"Sell Order Sent: {result}")
+
+def close_positions():
+    positions = mt5.positions_get(symbol=symbol)
+    for position in positions:
+        if position.type == mt5.POSITION_TYPE_BUY:
+            close_request = {
+                "action": mt5.TRADE_ACTION_DEAL,
+                "symbol": symbol,
+                "volume": position.volume,
+                "type": mt5.ORDER_TYPE_SELL,
+                "position": position.ticket,
+                "price": mt5.symbol_info_tick(symbol).bid,
+                "magic": 12345,
+                "comment": "Python Close Buy Order",
+                "type_time": mt5.ORDER_TIME_GTC,
+                "type_filling": mt5.ORDER_FILLING_IOC,
+            }
+            result = mt5.order_send(close_request)
+            print(f"Closed Buy Position: {result}")
+        
+        elif position.type == mt5.POSITION_TYPE_SELL:
+            close_request = {
+                "action": mt5.TRADE_ACTION_DEAL,
+                "symbol": symbol,
+                "volume": position.volume,
+                "type": mt5.ORDER_TYPE_BUY,
+                "position": position.ticket,
+                "price": mt5.symbol_info_tick(symbol).ask,
+                "magic": 12345,
+                "comment": "Python Close Sell Order",
+                "type_time": mt5.ORDER_TIME_GTC,
+                "type_filling": mt5.ORDER_FILLING_IOC,
+            }
+            result = mt5.order_send(close_request)
+            print(f"Closed Sell Position: {result}")
+
+# Implementing the second strategy
+def check_second_strategy_conditions(row):
+    fully_crossed_above = (
+        row['close'] > max(row['wavy_c'], row['wavy_h'], row['wavy_l']) and
+        row['close'] < min(row['tunnel1'], row['tunnel2'])
+    )
+    fully_crossed_below = (
+        row['close'] < min(row['wavy_c'], row['wavy_h'], row['wavy_l']) and
+        row['close'] > max(row['tunnel1'], row['tunnel2'])
+    )
+    return fully_crossed_above, fully_crossed_below
+
+df['second_buy_signal'], df['second_sell_signal'] = zip(*df.apply(check_second_strategy_conditions, axis=1))
+
+# Implementing backtesting and visualization
+initial_balance = 10000
+balance = initial_balance
+position = None
+trades = []
+
+for _, row in df.iterrows():
+    if position is None:
+        if row['buy_signal']:
+            position = 'long'
+            entry_price = row['close']
+            entry_time = row['time']
+            lot_size = calculate_position_size(row)
+            balance -= lot_size * entry_price
+            trades.append(('buy', entry_time, entry_price, lot_size))
+            open_position(row)  # Open a buy position
+        elif row['sell_signal']:
+            position = 'short'
+            entry_price = row['close']
+            entry_time = row['time']
+            lot_size = calculate_position_size(row)
+            balance += lot_size * entry_price
+            trades.append(('sell', entry_time, entry_price, lot_size))
+            open_position(row)  # Open a sell position
+    else:
+        if position == 'long' and (row['sell_signal'] or row['close'] < min(row['wavy_c'], row['wavy_h'], row['wavy_l'])):
+            exit_price = row['close']
+            exit_time = row['time']
+            balance += lot_size * exit_price
+            trades.append(('sell', exit_time, exit_price, lot_size))
+            close_positions()  # Close the buy position
+            position = None
+        elif position == 'short' and (row['buy_signal'] or row['close'] > max(row['wavy_c'], row['wavy_h'], row['wavy_l'])):
+            exit_price = row['close']
+            exit_time = row['time']
+            balance -= lot_size * exit_price
+            trades.append(('buy', exit_time, exit_price, lot_size))
+            close_positions()  # Close the sell position
+            position = None
+
+final_balance = balance
+profit = final_balance - initial_balance
+print(f"Initial Balance: {initial_balance}")
+print(f"Final Balance: {final_balance}")
+print(f"Profit: {profit}")
+
+# Plotting entry and exit signals
+plt.figure(figsize=(12, 6))
+plt.plot(df['time'], df['close'], label='Price')
+
+buy_signals = df[df['buy_signal']]['close']
+sell_signals = df[df['sell_signal']]['close']
+plt.scatter(buy_signals.index, buy_signals, color='green', label='Buy Signal', marker='^')
+plt.scatter(sell_signals.index, sell_signals, color='red', label='Sell Signal', marker='v')
+
+for trade in trades:
+    if trade[0] == 'buy':
+        plt.axvline(x=trade[1], color='green', linestyle='--', alpha=0.7)
+    elif trade[0] == 'sell':
+        plt.axvline(x=trade[1], color='red', linestyle='--', alpha=0.7)
+
+plt.xlabel('Time')
+plt.ylabel('Price')
+plt.title('Entry and Exit Signals')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Disconnecting from the MetaTrader5 terminal
+mt5.shutdown()
+print("MetaTrader5 disconnected")
+</document_content>
+</document>
+
+<document index="10">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\jupyter_notebooks\script.py</source>
 <document_content>
 import os
 import json
@@ -1269,8 +1851,8 @@ if __name__ == "__main__":
 </document_content>
 </document>
 
-<document index="9">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\connection.py</source>
+<document index="11">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\metatrader\connection.py</source>
 <document_content>
 import MetaTrader5 as mt5
 # import MetaTrader4 as mt4
@@ -1335,8 +1917,8 @@ def shutdown_mt5():
 </document_content>
 </document>
 
-<document index="10">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\data_retrieval.py</source>
+<document index="12">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\metatrader\data_retrieval.py</source>
 <document_content>
 import MetaTrader5 as mt5
 import pandas as pd
@@ -1359,15 +1941,20 @@ def shutdown_mt5():
 start_time = datetime.now() - timedelta(days=30)  # Example: 30 days ago
 end_time = datetime.now()  # Current time
 
+# ...
+
 def get_historical_data(symbol, timeframe, start_time, end_time):
     try:
         # Retrieve data from MT5
         rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
-        if rates is None:
+        if rates is None or len(rates) == 0:
             raise ValueError(f"Failed to retrieve historical data for {symbol} with timeframe {timeframe} from {start_time} to {end_time}")
         
         data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
         data['time'] = pd.to_datetime(data['time'], unit='s')
+        
+        print(f"Historical data shape after retrieval: {data.shape}")
+        print(f"Historical data head after retrieval:\n{data.head()}")
         
         if data.empty:
             raise ValueError(f"No historical data retrieved for {symbol} with timeframe {timeframe} from {start_time} to {end_time}")
@@ -1376,6 +1963,8 @@ def get_historical_data(symbol, timeframe, start_time, end_time):
     except Exception as e:
         handle_error(e, f"Failed to retrieve historical data for {symbol}")
         return None
+
+# ...
 
 # def get_historical_data(symbol, timeframe, start_time, end_time):
 #     try:
@@ -1542,20 +2131,32 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="11">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\indicators.py</source>
+<document index="13">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\metatrader\indicators.py</source>
 <document_content>
 import numpy as np
 
 def calculate_ema(prices, period):
-    return np.convolve(prices, np.exp(-np.linspace(-1., 0., period)), mode='valid') / np.sum(np.exp(-np.linspace(-1., 0., period)))
-
-
+    if isinstance(prices, (float, int)):
+        # If prices is a single value, return it as is
+        return prices
+    elif isinstance(prices, (list, np.ndarray, pd.Series)):
+        # If prices is a list, array, or pandas Series, calculate the EMA
+        ema_values = np.zeros_like(prices)
+        ema_values[:period] = np.nan
+        sma = np.mean(prices[:period])
+        ema_values[period - 1] = sma
+        multiplier = 2 / (period + 1)
+        for i in range(period, len(prices)):
+            ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
+        return pd.Series(ema_values, index=prices.index)
+    else:
+        raise ValueError("Invalid input type for prices. Expected float, int, list, numpy array, or pandas Series.")
 </document_content>
 </document>
 
-<document index="12">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\trade_management.py</source>
+<document index="14">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\metatrader\trade_management.py</source>
 <document_content>
 import MetaTrader5 as mt5
 
@@ -1601,15 +2202,15 @@ def modify_order(ticket, sl=None, tp=None):
 </document_content>
 </document>
 
-<document index="13">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\__init__.py</source>
+<document index="15">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\metatrader\__init__.py</source>
 <document_content>
 from .data_retrieval import get_historical_data
 </document_content>
 </document>
 
-<document index="14">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\trade_logic.py</source>
+<document index="16">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\strategy\trade_logic.py</source>
 <document_content>
 from utils.error_handling import handle_error
 from tunnel_strategy import execute_trade, manage_position
@@ -1669,8 +2270,8 @@ def exit_trade(position_ticket):
 </document_content>
 </document>
 
-<document index="15">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\tunnel_strategy.py</source>
+<document index="17">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\strategy\tunnel_strategy.py</source>
 <document_content>
 import numpy as np
 from metatrader.data_retrieval import get_historical_data
@@ -1680,33 +2281,35 @@ from metatrader.trade_management import place_order, close_position, modify_orde
 import pandas as pd
 import MetaTrader5 as mt5
 
-def calculate_ema(data, period):
-    ema_values = [None] * (period - 1)  # Initialize with None for the first period - 1 values
-    sma = sum(data[:period]) / period
-    ema_values.append(sma)
-    multiplier = 2 / (period + 1)
-    for price in data[period:]:
-        new_ema = (price - ema_values[-1]) * multiplier + ema_values[-1]
-        ema_values.append(new_ema)
-    
-    # Ensure the length matches the input data
-    while len(ema_values) < len(data):
-        ema_values.append(None)
-    
-    return ema_values
+def calculate_ema(prices, period):
+    if isinstance(prices, (float, int)):
+        # If prices is a single value, return it as is
+        return prices
+    elif isinstance(prices, (list, np.ndarray, pd.Series)):
+        # If prices is a list, array, or pandas Series, calculate the EMA
+        ema_values = np.zeros_like(prices)
+        ema_values[:period] = np.nan
+        sma = np.mean(prices[:period])
+        ema_values[period - 1] = sma
+        multiplier = 2 / (period + 1)
+        for i in range(period, len(prices)):
+            ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
+        return pd.Series(ema_values, index=prices.index)
+    else:
+        raise ValueError("Invalid input type for prices. Expected float, int, list, numpy array, or pandas Series.")
 
 def detect_peaks_and_dips(df, peak_type):
     peaks = []
     dips = []
     for i in range(len(df)):
+        if i < peak_type or i >= len(df) - peak_type:
+            continue
         is_peak = True
         is_dip = True
         for j in range(peak_type):
-            start_index = max(0, i - j)
-            end_index = min(len(df) - 1, i + j)
-            if df['high'][i] <= df['high'][start_index] or df['high'][i] <= df['high'][end_index]:
+            if df['high'][i] <= df['high'][i-j] or df['high'][i] <= df['high'][i+j]:
                 is_peak = False
-            if df['low'][i] >= df['low'][start_index] or df['low'][i] >= df['low'][end_index]:
+            if df['low'][i] >= df['low'][i-j] or df['low'][i] >= df['low'][i+j]:
                 is_dip = False
         if is_peak:
             peaks.append(df['high'][i])
@@ -1792,12 +2395,14 @@ def calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value):
 
 def generate_trade_signal(data, period, deviation_factor):
     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
-    if data['close'].iloc[-1] > upper_bound[-1]:
-        return 'BUY'
-    elif data['close'].iloc[-1] < lower_bound[-1]:
-        return 'SELL'
-    else:
-        return None
+
+    if len(upper_bound) > 0 and len(lower_bound) > 0:
+        if data['close'].iloc[-1] > upper_bound.iloc[-1]:
+            return 'BUY'
+        elif data['close'].iloc[-1] < lower_bound.iloc[-1]:
+            return 'SELL'
+
+    return None
 
 def adjust_deviation_factor(market_conditions):
     if market_conditions == 'volatile':
@@ -1814,9 +2419,37 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
             if data is None:
                 raise Exception(f"Failed to retrieve historical data for {symbol}")
 
+            print(f"Historical data shape before calculations: {data.shape}")
+            print(f"Historical data head before calculations:\n{data.head()}")
+            print(f"Historical data for {symbol}:")
+            print(data.head())
+            print(f"Data types: {data.dtypes}")
+
             period = 20
             market_conditions = 'volatile'  # Placeholder for determining market conditions
             deviation_factor = adjust_deviation_factor(market_conditions)
+
+            print("Calculating Wavy Tunnel indicators...")
+            data['wavy_h'] = calculate_ema(data['high'], 34)
+            data['wavy_c'] = calculate_ema(data['close'], 34)
+            data['wavy_l'] = calculate_ema(data['low'], 34)
+            data['tunnel1'] = calculate_ema(data['close'], 144)
+            data['tunnel2'] = calculate_ema(data['close'], 169)
+            data['long_term_ema'] = calculate_ema(data['close'], 200)
+            print("Indicators calculated.")
+
+            print("Detecting peaks and dips...")
+            peak_type = 21  # Define the peak_type variable
+            peaks, dips = detect_peaks_and_dips(data, peak_type)
+            print(f"Peaks: {peaks[:5]}")
+            print(f"Dips: {dips[:5]}")
+
+            print(f"Historical data shape after calculations: {data.shape}")
+            print(f"Historical data head after calculations:\n{data.head()}")
+            
+            print("Generating entry signals...")
+            data['buy_signal'], data['sell_signal'] = zip(*data.apply(lambda x: check_entry_conditions(x, peaks, dips, symbol), axis=1))
+            print("Entry signals generated.")
 
             signal = generate_trade_signal(data, period, deviation_factor)
 
@@ -1835,6 +2468,7 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                     'type_filling': 'ORDER_FILLING_FOK',
                     'type_time': 'ORDER_TIME_GTC'
                 }
+                print(f"Executing BUY trade for {symbol}...")
                 execute_trade(trade_request)
             elif signal == 'SELL':
                 trade_request = {
@@ -1851,25 +2485,27 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                     'type_filling': 'ORDER_FILLING_FOK',
                     'type_time': 'ORDER_TIME_GTC'
                 }
+                print(f"Executing SELL trade for {symbol}...")
                 execute_trade(trade_request)
 
             manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
 
     except Exception as e:
         handle_error(e, "Failed to run the strategy")
+        raise
 
 </document_content>
 </document>
 
-<document index="16">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\__init__.py</source>
+<document index="18">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\strategy\__init__.py</source>
 <document_content>
 from .tunnel_strategy import run_strategy
 </document_content>
 </document>
 
-<document index="17">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_connection.py</source>
+<document index="19">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\test_connection.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -1894,8 +2530,8 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="18">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_data_retrieval.py</source>
+<document index="20">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\test_data_retrieval.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -1926,8 +2562,8 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="19">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_indicators.py</source>
+<document index="21">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\test_indicators.py</source>
 <document_content>
 import unittest
 from metatrader.indicators import calculate_ema
@@ -1945,8 +2581,8 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="20">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_strategy.py</source>
+<document index="22">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\test_strategy.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -1971,8 +2607,8 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="21">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_trade_management.py</source>
+<document index="23">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\test_trade_management.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -2036,22 +2672,20 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="22">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\__init__.py</source>
+<document index="24">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\__init__.py</source>
 <document_content>
 
 </document_content>
 </document>
 
-<document index="23">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\data_validation.py</source>
+<document index="25">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\data_validation.py</source>
 <document_content>
 from typing import Any
 from pydantic import BaseModel, ValidationError
-from .logger import setup_logging
+import logging
 from .error_handling import handle_error
-
-setup_logging()
 
 class TradeRequestSchema(BaseModel):
     action: str
@@ -2103,7 +2737,7 @@ def sanitize_data(data: Any) -> Any:
     except Exception as e:
         handle_error(e, "Data sanitization failed")
         return None
-    
+
 def validate_trade_request(trade_request):
     required_fields = ['action', 'symbol', 'volume', 'price', 'sl', 'tp', 'deviation', 'magic', 'comment', 'type', 'type_filling', 'type_time']
     for field in required_fields:
@@ -2139,25 +2773,14 @@ def validate_close_request(close_request):
 
     if close_request['type_time'] != 'ORDER_TIME_GTC':
         raise ValueError("Invalid order time type. Must be 'ORDER_TIME_GTC'")
+
 </document_content>
 </document>
 
-<document index="24">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\error_handling.py</source>
+<document index="26">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\error_handling.py</source>
 <document_content>
 import logging
-
-def setup_logging():
-    logging.basicConfig(
-        level=logging.ERROR,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(),
-            logging.FileHandler('error.log')
-        ]
-    )
-
-setup_logging()
 
 def handle_error(error, message):
     logging.error(f"{message}: {str(error)}")
@@ -2168,34 +2791,39 @@ def critical_error(error, message):
 
 def warn_error(error, message):
     logging.warning(f"{message}: {str(error)}")
+
 </document_content>
 </document>
 
-<document index="25">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\logger.py</source>
+<document index="27">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\logger.py</source>
 <document_content>
 import logging
 import os
-from logging.handlers import RotatingFileHandler
 
-def setup_logging(log_level=logging.INFO, log_file="app.log", max_size=10485760, backup_count=10):
+def setup_logging(log_level=logging.INFO, log_file="app.log"):
     """
     Set up logging configuration.
     """
     log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 
-    file_handler = RotatingFileHandler(log_file, maxBytes=max_size, backupCount=backup_count)
+    file_handler = logging.FileHandler(log_file)
     file_handler.setFormatter(log_formatter)
 
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(log_formatter)
 
+    # Ensure no duplicate handlers
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+
     logging.basicConfig(level=log_level, handlers=[file_handler, console_handler])
+
 </document_content>
 </document>
 
-<document index="26">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\plotting.py</source>
+<document index="28">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\plotting.py</source>
 <document_content>
 import matplotlib.pyplot as plt
 
@@ -2237,8 +2865,8 @@ def plot_backtest_results(data, trades):
 </document_content>
 </document>
 
-<document index="27">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\types.py</source>
+<document index="29">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\types.py</source>
 <document_content>
 from typing import NewType
 
@@ -2253,8 +2881,8 @@ LotSize = NewType("LotSize", float)
 </document_content>
 </document>
 
-<document index="28">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\__init__.py</source>
+<document index="30">
+<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\__init__.py</source>
 <document_content>
 from .data_validation import validate_data, sanitize_data, validate_trade_request, validate_close_request
 from .logger import setup_logging

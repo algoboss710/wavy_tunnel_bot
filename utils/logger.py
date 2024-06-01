@@ -1,17 +1,20 @@
 import logging
 import os
-from logging.handlers import RotatingFileHandler
 
-def setup_logging(log_level=logging.INFO, log_file="app.log", max_size=10485760, backup_count=10):
+def setup_logging(log_level=logging.INFO, log_file="app.log"):
     """
     Set up logging configuration.
     """
     log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 
-    file_handler = RotatingFileHandler(log_file, maxBytes=max_size, backupCount=backup_count)
+    file_handler = logging.FileHandler(log_file)
     file_handler.setFormatter(log_formatter)
 
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(log_formatter)
+
+    # Ensure no duplicate handlers
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
 
     logging.basicConfig(level=log_level, handlers=[file_handler, console_handler])

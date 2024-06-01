@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from utils.error_handling import handle_error, critical_error
+import logging
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 project_dir = os.path.dirname(script_dir)
@@ -101,6 +102,13 @@ class Config:
         except ValueError as e:
             handle_error(e, "Configuration validation failed")
             critical_error(e, "Invalid configuration settings")
+
+
+    @classmethod
+    def log_config(cls):
+        for attr, value in cls.__dict__.items():
+            if not callable(value) and not attr.startswith("__") and not isinstance(value, classmethod):
+                logging.info(f"{attr}: {value}")
 
 try:
     Config.validate()

@@ -1,8 +1,12 @@
 from utils.error_handling import handle_error
 from tunnel_strategy import execute_trade, manage_position
+import logging
 
 def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value):
     risk_amount = account_balance * risk_per_trade
+    if stop_loss_pips == 0 or pip_value == 0:
+        logging.error("Division by zero: stop_loss_pips or pip_value is zero in calculate_position_size")
+        raise ZeroDivisionError("stop_loss_pips or pip_value cannot be zero")
     position_size = risk_amount / (stop_loss_pips * pip_value)
     return position_size
 

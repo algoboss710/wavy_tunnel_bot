@@ -1,9 +1,7 @@
 from typing import Any
 from pydantic import BaseModel, ValidationError
-from .logger import setup_logging
+import logging
 from .error_handling import handle_error
-
-setup_logging()
 
 class TradeRequestSchema(BaseModel):
     action: str
@@ -55,7 +53,7 @@ def sanitize_data(data: Any) -> Any:
     except Exception as e:
         handle_error(e, "Data sanitization failed")
         return None
-    
+
 def validate_trade_request(trade_request):
     required_fields = ['action', 'symbol', 'volume', 'price', 'sl', 'tp', 'deviation', 'magic', 'comment', 'type', 'type_filling', 'type_time']
     for field in required_fields:

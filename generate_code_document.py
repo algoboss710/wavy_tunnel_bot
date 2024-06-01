@@ -24,7 +24,7 @@ def generate_code_document(root_dir):
 
 if __name__ == "__main__":
     # Specify the root directory of your repository
-    root_directory = r"C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot"
+    root_directory = r"C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot"
 
     # Generate the code document
     code_document = generate_code_document(root_directory)

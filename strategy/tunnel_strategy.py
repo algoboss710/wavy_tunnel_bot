@@ -5,19 +5,21 @@ from metatrader.indicators import calculate_ema
 from metatrader.trade_management import place_order, close_position, modify_order
 import pandas as pd
 import MetaTrader5 as mt5
+import logging
 
 def calculate_ema(prices, period):
     if isinstance(prices, (float, int)):
-        # If prices is a single value, return it as is
         return prices
     elif isinstance(prices, (list, np.ndarray, pd.Series)):
-        # If prices is a list, array, or pandas Series, calculate the EMA
         ema_values = np.zeros_like(prices)
         ema_values[:period] = np.nan
         sma = np.mean(prices[:period])
         ema_values[period - 1] = sma
         multiplier = 2 / (period + 1)
         for i in range(period, len(prices)):
+            if ema_values[i - 1] == 0:
+                logging.error("Division by zero: ema_values[i - 1] is zero in calculate_ema")
+                continue
             ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
         return pd.Series(ema_values, index=prices.index)
     else:
@@ -27,14 +29,14 @@ def detect_peaks_and_dips(df, peak_type):
     peaks = []
     dips = []
     for i in range(len(df)):
+        if i < peak_type or i >= len(df) - peak_type:
+            continue
         is_peak = True
         is_dip = True
         for j in range(peak_type):
-            start_index = max(0, i - j)
-            end_index = min(len(df) - 1, i + j)
-            if df['high'][i] <= df['high'][start_index] or df['high'][i] <= df['high'][end_index]:
+            if df['high'][i] <= df['high'][i-j] or df['high'][i] <= df['high'][i+j]:
                 is_peak = False
-            if df['low'][i] >= df['low'][start_index] or df['low'][i] >= df['low'][end_index]:
+            if df['low'][i] >= df['low'][i-j] or df['low'][i] >= df['low'][i+j]:
                 is_dip = False
         if is_peak:
             peaks.append(df['high'][i])
@@ -65,6 +67,9 @@ def check_entry_conditions(row, peaks, dips, symbol):
     apply_threshold = True
     if apply_threshold:
         threshold = threshold_values.get(symbol[:3], threshold_values['default']) * mt5.symbol_info(symbol).trade_tick_size
+        if threshold == 0:
+            logging.error("Division by zero: threshold value is zero in check_entry_conditions")
+            return False, False
         buy_condition &= row['close'] > max(row['wavy_c'], row['wavy_h'], row['wavy_l']) + threshold
         sell_condition &= row['close'] < min(row['wavy_c'], row['wavy_h'], row['wavy_l']) - threshold
     return buy_condition, sell_condition
@@ -112,9 +117,11 @@ def calculate_tunnel_bounds(data, period, deviation_factor):
     lower_bound = ema - deviation
     return upper_bound, lower_bound
 
-def calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value):
-    # Calculate position size based on balance and risk percentage
-    risk_amount = balance * risk_percent
+def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value):
+    risk_amount = account_balance * risk_per_trade
+    if stop_loss_pips == 0 or pip_value == 0:
+        logging.error("Division by zero: stop_loss_pips or pip_value is zero in calculate_position_size")
+        raise ZeroDivisionError("stop_loss_pips or pip_value cannot be zero")
     position_size = risk_amount / (stop_loss_pips * pip_value)
     return position_size
 
