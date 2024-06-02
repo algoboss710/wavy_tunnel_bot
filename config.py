@@ -76,7 +76,7 @@ class Config:
         raise ValueError(f"RISK_PER_TRADE value must be between 0 and 1. Current value: {RISK_PER_TRADE}")
 
     try:
-        PIP_VALUE = float(os.getenv("PIP_VALUE", 0.0001))
+        PIP_VALUE = float(os.getenv("PIP_VALUE", 1))
     except ValueError:
         raise ValueError(f"Invalid PIP_VALUE value: {os.getenv('PIP_VALUE')}. Expected a numeric value.")
 

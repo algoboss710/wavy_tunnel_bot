@@ -66,7 +66,8 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
     logging.info(f"Number of Trades: {num_trades}")
     logging.info(f"Win Rate: {win_rate:.2%}")
     logging.info(f"Maximum Drawdown: {max_drawdown:.2f}")
-
+    print(f"stop_loss_pips: {stop_loss_pips}")
+    print(f"pip_value: {pip_value}")
     # Plot backtest results
     plot_backtest_results(data, trades)
 
@@ -83,10 +84,13 @@ def calculate_max_drawdown(trades, initial_balance):
 
     return max_drawdown
 
-def calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value):
-    risk_amount = balance * risk_percent
+
+def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value):
+    risk_amount = account_balance * risk_per_trade
     if stop_loss_pips == 0 or pip_value == 0:
-        raise ZeroDivisionError("stop_loss_pips or pip_value cannot be zero")
+        logging.error("stop_loss_pips or pip_value cannot be zero.")
+        return 0  # Return 0 or handle the error appropriately
+
     position_size = risk_amount / (stop_loss_pips * pip_value)
     return position_size
 
