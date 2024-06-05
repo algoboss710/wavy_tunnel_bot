@@ -137,16 +137,11 @@ from backtesting.backtest import run_backtest
 from utils.logger import setup_logging
 from utils.error_handling import handle_error
 import logging
+import argparse
+from ui import run_ui
 
-def main():
+def run_backtest_func():
     try:
-        setup_logging()
-        logging.info("STARTING APPLICATION")
-
-        # Log configuration settings
-        logging.info("LOGGING ALL THE CONFIG SETTINGS")
-        Config.log_config()
-
         # Initialize MetaTrader5
         logging.info("Initializing MetaTrader5...")
         if not initialize_mt5(Config.MT5_PATH):
@@ -154,45 +149,6 @@ def main():
         logging.info("MetaTrader5 initialized successfully.")
 
         for symbol in Config.SYMBOLS:
-            # Check symbol availability
-            logging.info(f"Selecting symbol {symbol}...")
-            if not mt5.symbol_select(symbol, True):
-                raise ValueError(f"Symbol {symbol} not available")
-            logging.info(f"Symbol {symbol} selected successfully.")
-
-            # # Retrieve historical price data
-            # logging.info(f"Retrieving historical price data for {symbol}...")
-            # historical_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, datetime.now() - pd.Timedelta(days=30), datetime.now())
-            # if historical_data is None or historical_data.empty:
-            #     raise ValueError(f"No historical data retrieved for {symbol}")
-            # print(f"Historical data shape after retrieval: {historical_data.shape}")
-            # print(f"Historical data head after retrieval:\n{historical_data.head()}")
-            # logging.info("Historical price data retrieved successfully.")
-            # logging.info(historical_data.head())
-
-            # # Calculate indicators
-            # logging.info("Calculating Wavy Tunnel indicator...")
-            # historical_data['wavy_h'] = calculate_ema(historical_data['high'], 34)
-            # historical_data['wavy_c'] = calculate_ema(historical_data['close'], 34)
-            # historical_data['wavy_l'] = calculate_ema(historical_data['low'], 34)
-            # historical_data['tunnel1'] = calculate_ema(historical_data['close'], 144)
-            # historical_data['tunnel2'] = calculate_ema(historical_data['close'], 169)
-            # historical_data['long_term_ema'] = calculate_ema(historical_data['close'], 200)
-            # logging.info("Indicators calculated.")
-
-            # # Detect peaks and dips
-            # logging.info("Detecting peaks and dips...")
-            # peaks, dips = detect_peaks_and_dips(historical_data, peak_type=21)
-            # logging.info(f"Peaks: {peaks[:5]}")
-            # logging.info(f"Dips: {dips[:5]}")
-
-            # # Generate entry signals
-            # logging.info("Generating entry signals...")
-            # historical_data['buy_signal'], historical_data['sell_signal'] = zip(*historical_data.apply(lambda x: check_entry_conditions(x, peaks, dips, symbol), axis=1))
-            # logging.info("Entry signals generated.")
-            # logging.info(historical_data[['time', 'close', 'buy_signal', 'sell_signal']].head())
-
-            # Run backtesting
             logging.info("Running backtest...")
             start_date = datetime(2022, 1, 1)
             end_date = datetime(2022, 1, 5)
@@ -207,8 +163,8 @@ def main():
                 logging.error(f"No historical data retrieved for {symbol} for backtesting")
                 continue
 
-             # Ensure there are enough data points for the indicators
-            if len(backtest_data) < 20:  
+            # Ensure there are enough data points for the indicators
+            if len(backtest_data) < 20:
                 logging.error(f"Not enough data for symbol {symbol} to perform backtest")
                 continue
 
@@ -226,144 +182,86 @@ def main():
                 logging.info("Backtest completed successfully.")
             except Exception as e:
                 handle_error(e, f"An error occurred during backtesting for {symbol}")
-            # # Run trading strategy
-            # logging.info("Running trading strategy...")
-            # run_strategy(
-            #     symbols=[symbol],
-            #     mt5_init=mt5,
-            #     timeframe=mt5.TIMEFRAME_M1,
-            #     lot_size=0.01,
-            #     min_take_profit=Config.MIN_TP_PROFIT,
-            #     max_loss_per_day=Config.MAX_LOSS_PER_DAY,
-            #     starting_equity=Config.STARTING_EQUITY,
-            #     max_trades_per_day=Config.LIMIT_NO_OF_TRADES
-            # )
-            # print(f"Historical data shape after running strategy: {historical_data.shape}")
-            # print(f"Historical data head after running strategy:\n{historical_data.head()}")
-            # logging.info("Trading strategy completed.")
-
-            # # Run backtesting
-            # logging.info("Running backtest...")
-            # start_date = datetime(2022, 1, 1)
-            # end_date = datetime(2022, 12, 31)
-            # initial_balance = 10000
-            # risk_percent = 0.02
-
-            # backtest_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, start_date, end_date)
-            # if backtest_data is None or backtest_data.empty:
-            #     raise ValueError(f"No historical data retrieved for {symbol} for backtesting")
-            # logging.info("Backtest data retrieved successfully.")
-
-            # run_backtest(
-            #     symbol=symbol,
-            #     start_date=start_date,
-            #     end_date=end_date,
-            #     timeframe=mt5.TIMEFRAME_H1,
-            #     initial_balance=initial_balance,
-            #     risk_percent=risk_percent,
-            #     min_take_profit=Config.MIN_TP_PROFIT,
-            #     max_loss_per_day=Config.MAX_LOSS_PER_DAY,
-            #     starting_equity=Config.STARTING_EQUITY,
-            #     max_trades_per_day=Config.LIMIT_NO_OF_TRADES
-            # )
-            # logging.info("Backtest completed successfully.")
 
     except Exception as e:
         error_code = mt5.last_error()
         error_message = "An error occurred"
-        handle_error(e, f"An error occurred in the main function: {error_code} - {error_message}")
+        handle_error(e, f"An error occurred in the run_backtest_func: {error_code} - {error_message}")
 
     finally:
         logging.info("Shutting down MetaTrader5...")
         shutdown_mt5()
         logging.info("MetaTrader5 connection gracefully shut down.")
 
+def run_live_trading_func():
+    try:
+        # Initialize MetaTrader5
+        logging.info("Initializing MetaTrader5...")
+        if not initialize_mt5(Config.MT5_PATH):
+            raise Exception("Failed to initialize MetaTrader5")
+        logging.info("MetaTrader5 initialized successfully.")
+
+        for symbol in Config.SYMBOLS:
+            logging.info("Running live trading...")
+            run_strategy(
+                symbols=[symbol],
+                mt5_init=mt5,
+                timeframe=mt5.TIMEFRAME_M1,
+                lot_size=0.01,
+                min_take_profit=Config.MIN_TP_PROFIT,
+                max_loss_per_day=Config.MAX_LOSS_PER_DAY,
+                starting_equity=Config.STARTING_EQUITY,
+                max_trades_per_day=Config.LIMIT_NO_OF_TRADES,
+                run_backtest=False
+            )
+            logging.info("Live trading completed.")
+
+    except Exception as e:
+        error_code = mt5.last_error()
+        error_message = "An error occurred"
+        handle_error(e, f"An error occurred in the run_live_trading_func: {error_code} - {error_message}")
+
+    finally:
+        logging.info("Shutting down MetaTrader5...")
+        shutdown_mt5()
+        logging.info("MetaTrader5 connection gracefully shut down.")
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ui", action="store_true", help="Run the UI")
+    args = parser.parse_args()
+
+    try:
+        setup_logging()
+        logging.info("STARTING APPLICATION")
+
+        # Log configuration settings
+        logging.info("LOGGING ALL THE CONFIG SETTINGS")
+        Config.log_config()
+
+        if args.ui:
+            run_ui(run_backtest_func, run_live_trading_func)
+        else:
+            # Prompt the user to choose between backtesting and live trading
+            print("Choose an option:")
+            print("1. Run Backtesting")
+            print("2. Run Live Trading")
+            choice = input("Enter your choice (1 or 2): ")
+
+            if choice == "1":
+                run_backtest_func()
+            elif choice == "2":
+                run_live_trading_func()
+            else:
+                print("Invalid choice. Exiting...")
+
+    except Exception as e:
+        error_code = mt5.last_error()
+        error_message = "An error occurred"
+        handle_error(e, f"An error occurred in the main function: {error_code} - {error_message}")
+
 if __name__ == '__main__':
     main()
-
-# import MetaTrader5 as mt5
-# from datetime import datetime
-# from config import Config
-# from metatrader.connection import initialize_mt5, shutdown_mt5
-# from metatrader.data_retrieval import get_historical_data
-# from strategy.tunnel_strategy import run_strategy
-# from backtesting.backtest import run_backtest
-# from utils.logger import setup_logging
-# from utils.error_handling import handle_error
-# import logging
-
-# def main():
-#     try:
-#         # Set up logging
-#         setup_logging()
-#         logging.info("Logging setup complete.")
-
-#         # Initialize MetaTrader5
-#         logging.info("Initializing MetaTrader5...")
-#         if not initialize_mt5(Config.MT5_PATH):
-#             raise Exception("Failed to initialize MetaTrader5")
-#         logging.info("MetaTrader5 initialized successfully.")
-
-#         # Check symbol availability
-#         symbol = 'EURUSD'
-#         logging.info(f"Selecting symbol {symbol}...")
-#         if not mt5.symbol_select(symbol, True):
-#             raise ValueError(f"Symbol {symbol} not available")
-#         logging.info(f"Symbol {symbol} selected successfully.")
-
-#         # Run the trading strategy
-#         logging.info("Running trading strategy...")
-#         run_strategy(
-#             symbols=Config.SYMBOLS,
-#             mt5_init=mt5,
-#             timeframe=mt5.TIMEFRAME_M1,  # Correct timeframe
-#             lot_size=0.01,
-#             min_take_profit=Config.MIN_TP_PROFIT,
-#             max_loss_per_day=Config.MAX_LOSS_PER_DAY,
-#             starting_equity=Config.STARTING_EQUITY,
-#             max_trades_per_day=Config.LIMIT_NO_OF_TRADES
-#         )
-#         logging.info("Trading strategy completed.")
-
-#         # Run backtesting
-#         logging.info("Running backtest...")
-#         start_date = datetime(2022, 1, 1)
-#         end_date = datetime(2022, 12, 31)
-#         timeframe = mt5.TIMEFRAME_H1  # Correct timeframe
-#         initial_balance = 10000
-#         risk_percent = 0.02
-
-#         historical_data = get_historical_data(symbol, timeframe, start_date, end_date)
-#         if historical_data is None or len(historical_data) == 0:
-#             raise ValueError(f"No historical data retrieved for {symbol}")
-#         logging.info("Historical data retrieved successfully.")
-    
-#         run_backtest(
-#             symbol=symbol,
-#             start_date=start_date,
-#             end_date=end_date,
-#             timeframe=timeframe,
-#             initial_balance=initial_balance,
-#             risk_percent=risk_percent,
-#             min_take_profit=Config.MIN_TP_PROFIT,
-#             max_loss_per_day=Config.MAX_LOSS_PER_DAY,
-#             starting_equity=Config.STARTING_EQUITY,
-#             max_trades_per_day=Config.LIMIT_NO_OF_TRADES
-#         )
-#         logging.info("Backtest completed successfully.")
-
-#     except Exception as e:
-#         handle_error(e, "An error occurred in the main function")
-
-#     finally:
-#         # Shutdown MetaTrader5
-#         logging.info("Shutting down MetaTrader5...")
-#         shutdown_mt5()
-#         logging.info("MetaTrader5 connection gracefully shut down.")
-
-# if __name__ == '__main__':
-#     main()
-
 </document_content>
 </document>
 
@@ -469,6 +367,226 @@ adjust_schedule(market_conditions)
 </document>
 
 <document index="4">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\ui.py</source>
+<document_content>
+# import tkinter as tk
+# from tkinter import ttk
+# from config import Config
+# import ast
+
+# def run_ui(run_backtest_func, run_live_trading_func):
+#     window = tk.Tk()
+#     window.title("Wavy Tunnel Bot")
+#     window.geometry("600x400")
+#     window.withdraw()
+
+#     def update_config():
+#         config_values = {}
+#         for attr, entry in config_entries.items():
+#             value = entry.get()
+#             if value != "":
+#                 try:
+#                     config_values[attr] = ast.literal_eval(value)
+#                 except (ValueError, SyntaxError):
+#                     config_values[attr] = value
+
+#         for attr, value in config_values.items():
+#             setattr(Config, attr, value)
+
+#         config_window.destroy()
+#         mode_window.deiconify()
+
+#     def open_config_window():
+#         mode_window.withdraw()
+#         config_window.deiconify()
+
+#     def run_backtest():
+#         mode_window.destroy()
+#         window.destroy()
+#         run_backtest_func()
+
+#     def run_live_trading():
+#         mode_window.destroy()
+#         window.destroy()
+#         run_live_trading_func()
+
+#     # Mode Selection Window
+#     mode_window = tk.Toplevel(window)
+#     mode_window.title("Select Mode")
+#     mode_window.geometry("600x400")
+#     mode_window.withdraw()
+
+#     mode_label = ttk.Label(mode_window, text="Select Mode", font=("Arial", 16))
+#     mode_label.pack(pady=20)
+
+#     backtest_button = ttk.Button(mode_window, text="Run Backtesting", command=run_backtest)
+#     backtest_button.pack(pady=10)
+
+#     live_trading_button = ttk.Button(mode_window, text="Run Live Trading", command=run_live_trading)
+#     live_trading_button.pack(pady=10)
+
+#     config_button = ttk.Button(mode_window, text="Configuration Settings", command=open_config_window)
+#     config_button.pack(pady=10)
+
+#     # Configuration Settings Window
+#     config_window = tk.Toplevel(window)
+#     config_window.title("Configuration Settings")
+#     config_window.geometry("600x400")
+
+#     config_label = ttk.Label(config_window, text="Configuration Settings", font=("Arial", 16))
+#     config_label.pack(pady=20)
+
+#     config_canvas = tk.Canvas(config_window)
+#     config_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+#     scrollbar = ttk.Scrollbar(config_window, orient=tk.VERTICAL, command=config_canvas.yview)
+#     scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+#     config_canvas.configure(yscrollcommand=scrollbar.set)
+#     config_canvas.bind('<Configure>', lambda e: config_canvas.configure(scrollregion=config_canvas.bbox('all')))
+
+#     config_frame = ttk.Frame(config_canvas)
+#     config_canvas.create_window((0, 0), window=config_frame, anchor='nw')
+
+#     config_entries = {}
+#     for attr, value in Config.__dict__.items():
+#         if not callable(value) and not attr.startswith("__"):
+#             attr_label = ttk.Label(config_frame, text=attr)
+#             attr_label.grid(row=len(config_entries), column=0, padx=5, pady=5, sticky="e")
+
+#             attr_entry = ttk.Entry(config_frame, width=40)
+#             attr_entry.insert(0, str(value))
+#             attr_entry.grid(row=len(config_entries), column=1, padx=5, pady=5)
+
+#             config_entries[attr] = attr_entry
+
+#     update_button = ttk.Button(config_window, text="Update Settings", command=update_config)
+#     update_button.pack(pady=10)
+
+#     config_window.deiconify()
+
+#     window.mainloop()
+
+import tkinter as tk
+from tkinter import ttk
+from config import Config
+import ast
+
+def run_ui(run_backtest_func, run_live_trading_func):
+    window = tk.Tk()
+    window.title("Wavy Tunnel Bot")
+    window.geometry("600x400")
+    window.withdraw()
+
+    def update_config():
+        config_values = {}
+        for attr, entry in config_entries.items():
+            value = entry.get()
+            if value != "":
+                try:
+                    config_values[attr] = ast.literal_eval(value)
+                except (ValueError, SyntaxError):
+                    config_values[attr] = value
+
+        for attr, value in config_values.items():
+            setattr(Config, attr, value)
+
+        config_window.destroy()
+        mode_window.deiconify()
+
+    def open_config_window():
+        mode_window.withdraw()
+        config_window.deiconify()
+
+    def run_backtest():
+        mode_window.destroy()
+        window.destroy()
+        run_backtest_func()
+
+    def run_live_trading():
+        mode_window.destroy()
+        window.destroy()
+        run_live_trading_func()
+
+    def open_mode_window():
+        welcome_window.destroy()
+        mode_window.deiconify()
+
+    # Apply a theme
+    style = ttk.Style()
+    style.theme_use('clam')
+
+    # Welcome Screen Window
+    welcome_window = tk.Toplevel(window)
+    welcome_window.title("Welcome")
+    welcome_window.geometry("600x400")
+
+    welcome_label = ttk.Label(welcome_window, text="Welcome to the Wavy Tunnel Bot", font=("Arial", 20))
+    welcome_label.pack(pady=50)
+
+    proceed_button = ttk.Button(welcome_window, text="Proceed", command=open_mode_window)
+    proceed_button.pack(pady=20)
+
+    # Mode Selection Window
+    mode_window = tk.Toplevel(window)
+    mode_window.title("Select Mode")
+    mode_window.geometry("600x400")
+    mode_window.withdraw()
+
+    mode_label = ttk.Label(mode_window, text="Select Mode", font=("Arial", 16))
+    mode_label.pack(pady=20)
+
+    backtest_button = ttk.Button(mode_window, text="Run Backtesting", command=run_backtest)
+    backtest_button.pack(pady=10)
+
+    live_trading_button = ttk.Button(mode_window, text="Run Live Trading", command=run_live_trading)
+    live_trading_button.pack(pady=10)
+
+    config_button = ttk.Button(mode_window, text="Configuration Settings", command=open_config_window)
+    config_button.pack(pady=10)
+
+    # Configuration Settings Window
+    config_window = tk.Toplevel(window)
+    config_window.title("Configuration Settings")
+    config_window.geometry("600x400")
+    config_window.withdraw()
+
+    config_label = ttk.Label(config_window, text="Configuration Settings", font=("Arial", 16))
+    config_label.pack(pady=20)
+
+    config_canvas = tk.Canvas(config_window)
+    config_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+    scrollbar = ttk.Scrollbar(config_window, orient=tk.VERTICAL, command=config_canvas.yview)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+    config_canvas.configure(yscrollcommand=scrollbar.set)
+    config_canvas.bind('<Configure>', lambda e: config_canvas.configure(scrollregion=config_canvas.bbox('all')))
+
+    config_frame = ttk.Frame(config_canvas)
+    config_canvas.create_window((0, 0), window=config_frame, anchor='nw')
+
+    config_entries = {}
+    for attr, value in Config.__dict__.items():
+        if not callable(value) and not attr.startswith("__") and attr not in ["validate", "log_config"]:
+            attr_label = ttk.Label(config_frame, text=attr)
+            attr_label.grid(row=len(config_entries), column=0, padx=5, pady=5, sticky="e")
+
+            attr_entry = ttk.Entry(config_frame, width=40)
+            attr_entry.insert(0, str(value))
+            attr_entry.grid(row=len(config_entries), column=1, padx=5, pady=5)
+
+            config_entries[attr] = attr_entry
+
+    update_button = ttk.Button(config_window, text="Update Settings", command=update_config)
+    update_button.pack(pady=10)
+
+    window.mainloop()
+
+</document_content>
+</document>
+
+<document index="5">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\backtesting\backtest.py</source>
 <document_content>
 import pandas as pd
@@ -480,11 +598,15 @@ from utils.error_handling import handle_error
 from config import Config
 import logging
 
+import logging
+
 def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
     balance = initial_balance
     trades = []
     stop_loss_pips = 20  # Example value for stop loss in pips
     pip_value = Config.PIP_VALUE
+
+    logging.info(f"Initial balance: {balance}")
 
     # Validate critical parameters
     if stop_loss_pips == 0:
@@ -517,6 +639,7 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
             }
             trades.append(trade)
             execute_trade(trade)
+            logging.info(f"Balance after BUY trade: {balance}")
 
         elif signal == 'SELL':
             # Simulate trade exit
@@ -524,15 +647,21 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                 trade = trades[-1]
                 trade['exit_time'] = data.iloc[i]['time']
                 trade['exit_price'] = data.iloc[i]['close']
-                trade['profit'] = (trade['exit_price'] - trade['entry_price']) * trade['volume']
-                balance += trade['profit']
+                trade['profit'] = (trade['exit_price'] - trade['entry_price']) * trade['volume'] * pip_value
+                try:
+                    balance += trade['profit']
+                except KeyError as e:
+                    logging.error(f"KeyError occurred while updating balance: {e}")
                 execute_trade(trade)
+                logging.info(f"Balance after SELL trade: {balance}")
 
         manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
 
+    logging.info(f"Final balance: {balance}")
+
     total_profit = sum(trade['profit'] for trade in trades if 'profit' in trade)
     num_trades = len(trades)
-    win_rate = sum(1 for trade in trades if 'profit' in trade and trade['profit'] > 0) / num_trades
+    win_rate = sum(1 for trade in trades if 'profit' in trade and trade['profit'] > 0) / num_trades if num_trades > 0 else 0
     max_drawdown = calculate_max_drawdown(trades, initial_balance)
 
     logging.info(f"Total Profit: {total_profit:.2f}")
@@ -542,7 +671,7 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
     print(f"stop_loss_pips: {stop_loss_pips}")
     print(f"pip_value: {pip_value}")
     # Plot backtest results
-    plot_backtest_results(data, trades)
+    #plot_backtest_results(data, trades)
 
 def calculate_max_drawdown(trades, initial_balance):
     balance = initial_balance
@@ -550,13 +679,13 @@ def calculate_max_drawdown(trades, initial_balance):
     max_drawdown = 0
 
     for trade in trades:
-        balance += trade['profit']
-        max_balance = max(max_balance, balance)
-        drawdown = max_balance - balance
-        max_drawdown = max(max_drawdown, drawdown)
+        if 'profit' in trade:
+            balance += trade['profit']
+            max_balance = max(max_balance, balance)
+            drawdown = max_balance - balance
+            max_drawdown = max(max_drawdown, drawdown)
 
     return max_drawdown
-
 
 def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value):
     risk_amount = account_balance * risk_per_trade
@@ -582,7 +711,7 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
 </document_content>
 </document>
 
-<document index="5">
+<document index="6">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\connection.py</source>
 <document_content>
 import MetaTrader5 as mt5
@@ -648,7 +777,7 @@ def shutdown_mt5():
 </document_content>
 </document>
 
-<document index="6">
+<document index="7">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\data_retrieval.py</source>
 <document_content>
 import MetaTrader5 as mt5
@@ -862,7 +991,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="7">
+<document index="8">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\indicators.py</source>
 <document_content>
 import logging
@@ -890,7 +1019,7 @@ def calculate_ema(prices, period):
 </document_content>
 </document>
 
-<document index="8">
+<document index="9">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\trade_management.py</source>
 <document_content>
 import MetaTrader5 as mt5
@@ -937,14 +1066,14 @@ def modify_order(ticket, sl=None, tp=None):
 </document_content>
 </document>
 
-<document index="9">
+<document index="10">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\__init__.py</source>
 <document_content>
 from .data_retrieval import get_historical_data
 </document_content>
 </document>
 
-<document index="10">
+<document index="11">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\trade_logic.py</source>
 <document_content>
 from utils.error_handling import handle_error
@@ -1010,9 +1139,10 @@ def exit_trade(position_ticket):
 </document_content>
 </document>
 
-<document index="11">
+<document index="12">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\tunnel_strategy.py</source>
 <document_content>
+
 import numpy as np
 from metatrader.data_retrieval import get_historical_data
 from utils.error_handling import handle_error
@@ -1101,11 +1231,12 @@ def execute_trade(trade_request):
         )
         if result == 'Order failed':
             raise Exception("Failed to execute trade")
+        trade_request['profit'] = 0  # Initialize profit to 0
         return result
     except Exception as e:
         handle_error(e, "Failed to execute trade")
         return None
-
+    
 def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
     try:
         positions = mt5.positions_get(symbol=symbol)
@@ -1157,7 +1288,7 @@ def adjust_deviation_factor(market_conditions):
     else:
         return 2.0
 
-def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
+def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, run_backtest=False):
     try:
         for symbol in symbols:
             start_time = pd.Timestamp.now() - pd.Timedelta(days=30)  # Example: 30 days ago
@@ -1193,65 +1324,70 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
 
             print(f"Historical data shape after calculations: {data.shape}")
             print(f"Historical data head after calculations:\n{data.head()}")
-            
+
             print("Generating entry signals...")
             data['buy_signal'], data['sell_signal'] = zip(*data.apply(lambda x: check_entry_conditions(x, peaks, dips, symbol), axis=1))
             print("Entry signals generated.")
 
-            signal = generate_trade_signal(data, period, deviation_factor)
+            if run_backtest:
+                # Run backtest
+                print("Running backtest...")
+                # Backtest logic here
+            else:
+                # Run live trading
+                signal = generate_trade_signal(data, period, deviation_factor)
 
-            if signal == 'BUY':
-                trade_request = {
-                    'action': 'BUY',
-                    'symbol': symbol,
-                    'volume': lot_size,
-                    'price': data['close'].iloc[-1],
-                    'sl': data['close'].iloc[-1] - (1.5 * np.std(data['close'])),
-                    'tp': data['close'].iloc[-1] + (2 * np.std(data['close'])),
-                    'deviation': 10,
-                    'magic': 12345,
-                    'comment': 'Tunnel Strategy',
-                    'type': 'ORDER_TYPE_BUY',
-                    'type_filling': 'ORDER_FILLING_FOK',
-                    'type_time': 'ORDER_TIME_GTC'
-                }
-                print(f"Executing BUY trade for {symbol}...")
-                execute_trade(trade_request)
-            elif signal == 'SELL':
-                trade_request = {
-                    'action': 'SELL',
-                    'symbol': symbol,
-                    'volume': lot_size,
-                    'price': data['close'].iloc[-1],
-                    'sl': data['close'].iloc[-1] + (1.5 * np.std(data['close'])),
-                    'tp': data['close'].iloc[-1] - (2 * np.std(data['close'])),
-                    'deviation': 10,
-                    'magic': 12345,
-                    'comment': 'Tunnel Strategy',
-                    'type': 'ORDER_TYPE_SELL',
-                    'type_filling': 'ORDER_FILLING_FOK',
-                    'type_time': 'ORDER_TIME_GTC'
-                }
-                print(f"Executing SELL trade for {symbol}...")
-                execute_trade(trade_request)
+                if signal == 'BUY':
+                    trade_request = {
+                        'action': 'BUY',
+                        'symbol': symbol,
+                        'volume': lot_size,
+                        'price': data['close'].iloc[-1],
+                        'sl': data['close'].iloc[-1] - (1.5 * np.std(data['close'])),
+                        'tp': data['close'].iloc[-1] + (2 * np.std(data['close'])),
+                        'deviation': 10,
+                        'magic': 12345,
+                        'comment': 'Tunnel Strategy',
+                        'type': 'ORDER_TYPE_BUY',
+                        'type_filling': 'ORDER_FILLING_FOK',
+                        'type_time': 'ORDER_TIME_GTC'
+                    }
+                    print(f"Executing BUY trade for {symbol}...")
+                    execute_trade(trade_request)
+                elif signal == 'SELL':
+                    trade_request = {
+                        'action': 'SELL',
+                        'symbol': symbol,
+                        'volume': lot_size,
+                        'price': data['close'].iloc[-1],
+                        'sl': data['close'].iloc[-1] + (1.5 * np.std(data['close'])),
+                        'tp': data['close'].iloc[-1] - (2 * np.std(data['close'])),
+                        'deviation': 10,
+                        'magic': 12345,
+                        'comment': 'Tunnel Strategy',
+                        'type': 'ORDER_TYPE_SELL',
+                        'type_filling': 'ORDER_FILLING_FOK',
+                        'type_time': 'ORDER_TIME_GTC'
+                    }
+                    print(f"Executing SELL trade for {symbol}...")
+                    execute_trade(trade_request)
 
-            manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+                manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
 
     except Exception as e:
         handle_error(e, "Failed to run the strategy")
         raise
-
 </document_content>
 </document>
 
-<document index="12">
+<document index="13">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\__init__.py</source>
 <document_content>
 from .tunnel_strategy import run_strategy
 </document_content>
 </document>
 
-<document index="13">
+<document index="14">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_connection.py</source>
 <document_content>
 import unittest
@@ -1277,7 +1413,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="14">
+<document index="15">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_data_retrieval.py</source>
 <document_content>
 import unittest
@@ -1309,7 +1445,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="15">
+<document index="16">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_indicators.py</source>
 <document_content>
 import unittest
@@ -1328,7 +1464,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="16">
+<document index="17">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_strategy.py</source>
 <document_content>
 import unittest
@@ -1354,7 +1490,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="17">
+<document index="18">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_trade_management.py</source>
 <document_content>
 import unittest
@@ -1419,14 +1555,14 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="18">
+<document index="19">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\__init__.py</source>
 <document_content>
 
 </document_content>
 </document>
 
-<document index="19">
+<document index="20">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\data_validation.py</source>
 <document_content>
 from typing import Any
@@ -1524,7 +1660,7 @@ def validate_close_request(close_request):
 </document_content>
 </document>
 
-<document index="20">
+<document index="21">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\error_handling.py</source>
 <document_content>
 import logging
@@ -1542,7 +1678,7 @@ def warn_error(error, message):
 </document_content>
 </document>
 
-<document index="21">
+<document index="22">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\logger.py</source>
 <document_content>
 import logging
@@ -1569,7 +1705,7 @@ def setup_logging(log_level=logging.INFO, log_file="app.log"):
 </document_content>
 </document>
 
-<document index="22">
+<document index="23">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\plotting.py</source>
 <document_content>
 import matplotlib.pyplot as plt
@@ -1612,7 +1748,7 @@ def plot_backtest_results(data, trades):
 </document_content>
 </document>
 
-<document index="23">
+<document index="24">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\types.py</source>
 <document_content>
 from typing import NewType
@@ -1628,7 +1764,7 @@ LotSize = NewType("LotSize", float)
 </document_content>
 </document>
 
-<document index="24">
+<document index="25">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\__init__.py</source>
 <document_content>
 from .data_validation import validate_data, sanitize_data, validate_trade_request, validate_close_request

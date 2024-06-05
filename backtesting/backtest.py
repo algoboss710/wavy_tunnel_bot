@@ -7,11 +7,15 @@ from utils.error_handling import handle_error
 from config import Config
 import logging
 
+import logging
+
 def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
     balance = initial_balance
     trades = []
     stop_loss_pips = 20  # Example value for stop loss in pips
     pip_value = Config.PIP_VALUE
+
+    logging.info(f"Initial balance: {balance}")
 
     # Validate critical parameters
     if stop_loss_pips == 0:
@@ -44,6 +48,7 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
             }
             trades.append(trade)
             execute_trade(trade)
+            logging.info(f"Balance after BUY trade: {balance}")
 
         elif signal == 'SELL':
             # Simulate trade exit
@@ -51,15 +56,21 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                 trade = trades[-1]
                 trade['exit_time'] = data.iloc[i]['time']
                 trade['exit_price'] = data.iloc[i]['close']
-                trade['profit'] = (trade['exit_price'] - trade['entry_price']) * trade['volume']
-                balance += trade['profit']
+                trade['profit'] = (trade['exit_price'] - trade['entry_price']) * trade['volume'] * pip_value
+                try:
+                    balance += trade['profit']
+                except KeyError as e:
+                    logging.error(f"KeyError occurred while updating balance: {e}")
                 execute_trade(trade)
+                logging.info(f"Balance after SELL trade: {balance}")
 
         manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
 
+    logging.info(f"Final balance: {balance}")
+
     total_profit = sum(trade['profit'] for trade in trades if 'profit' in trade)
     num_trades = len(trades)
-    win_rate = sum(1 for trade in trades if 'profit' in trade and trade['profit'] > 0) / num_trades
+    win_rate = sum(1 for trade in trades if 'profit' in trade and trade['profit'] > 0) / num_trades if num_trades > 0 else 0
     max_drawdown = calculate_max_drawdown(trades, initial_balance)
 
     logging.info(f"Total Profit: {total_profit:.2f}")
@@ -69,7 +80,7 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
     print(f"stop_loss_pips: {stop_loss_pips}")
     print(f"pip_value: {pip_value}")
     # Plot backtest results
-    plot_backtest_results(data, trades)
+    #plot_backtest_results(data, trades)
 
 def calculate_max_drawdown(trades, initial_balance):
     balance = initial_balance
@@ -77,13 +88,13 @@ def calculate_max_drawdown(trades, initial_balance):
     max_drawdown = 0
 
     for trade in trades:
-        balance += trade['profit']
-        max_balance = max(max_balance, balance)
-        drawdown = max_balance - balance
-        max_drawdown = max(max_drawdown, drawdown)
+        if 'profit' in trade:
+            balance += trade['profit']
+            max_balance = max(max_balance, balance)
+            drawdown = max_balance - balance
+            max_drawdown = max(max_drawdown, drawdown)
 
     return max_drawdown
-
 
 def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value):
     risk_amount = account_balance * risk_per_trade
