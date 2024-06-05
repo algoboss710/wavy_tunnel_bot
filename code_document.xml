@@ -1,6 +1,6 @@
 <documents>
 <document index="1">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\config.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\config.py</source>
 <document_content>
 import os
 from dotenv import load_dotenv
@@ -80,7 +80,7 @@ class Config:
         raise ValueError(f"RISK_PER_TRADE value must be between 0 and 1. Current value: {RISK_PER_TRADE}")
 
     try:
-        PIP_VALUE = float(os.getenv("PIP_VALUE", 0.0001))
+        PIP_VALUE = float(os.getenv("PIP_VALUE", 1))
     except ValueError:
         raise ValueError(f"Invalid PIP_VALUE value: {os.getenv('PIP_VALUE')}. Expected a numeric value.")
 
@@ -124,7 +124,7 @@ except Exception as e:
 </document>
 
 <document index="2">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\main.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\main.py</source>
 <document_content>
 import MetaTrader5 as mt5
 import pandas as pd
@@ -368,7 +368,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="3">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\scheduler.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\scheduler.py</source>
 <document_content>
 import schedule
 import time
@@ -469,7 +469,7 @@ adjust_schedule(market_conditions)
 </document>
 
 <document index="4">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\backtesting\backtest.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\backtesting\backtest.py</source>
 <document_content>
 import pandas as pd
 from datetime import datetime
@@ -539,7 +539,8 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
     logging.info(f"Number of Trades: {num_trades}")
     logging.info(f"Win Rate: {win_rate:.2%}")
     logging.info(f"Maximum Drawdown: {max_drawdown:.2f}")
-
+    print(f"stop_loss_pips: {stop_loss_pips}")
+    print(f"pip_value: {pip_value}")
     # Plot backtest results
     plot_backtest_results(data, trades)
 
@@ -556,10 +557,13 @@ def calculate_max_drawdown(trades, initial_balance):
 
     return max_drawdown
 
-def calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value):
-    risk_amount = balance * risk_percent
+
+def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value):
+    risk_amount = account_balance * risk_per_trade
     if stop_loss_pips == 0 or pip_value == 0:
-        raise ZeroDivisionError("stop_loss_pips or pip_value cannot be zero")
+        logging.error("stop_loss_pips or pip_value cannot be zero.")
+        return 0  # Return 0 or handle the error appropriately
+
     position_size = risk_amount / (stop_loss_pips * pip_value)
     return position_size
 
@@ -579,7 +583,7 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
 </document>
 
 <document index="5">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\metatrader\connection.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\connection.py</source>
 <document_content>
 import MetaTrader5 as mt5
 # import MetaTrader4 as mt4
@@ -645,7 +649,7 @@ def shutdown_mt5():
 </document>
 
 <document index="6">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\metatrader\data_retrieval.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\data_retrieval.py</source>
 <document_content>
 import MetaTrader5 as mt5
 import pandas as pd
@@ -859,7 +863,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="7">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\metatrader\indicators.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\indicators.py</source>
 <document_content>
 import logging
 import pandas as pd
@@ -887,7 +891,7 @@ def calculate_ema(prices, period):
 </document>
 
 <document index="8">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\metatrader\trade_management.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\trade_management.py</source>
 <document_content>
 import MetaTrader5 as mt5
 
@@ -934,24 +938,25 @@ def modify_order(ticket, sl=None, tp=None):
 </document>
 
 <document index="9">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\metatrader\__init__.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\__init__.py</source>
 <document_content>
 from .data_retrieval import get_historical_data
 </document_content>
 </document>
 
 <document index="10">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\strategy\trade_logic.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\trade_logic.py</source>
 <document_content>
 from utils.error_handling import handle_error
 from tunnel_strategy import execute_trade, manage_position
 import logging
 
-def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value):
-    risk_amount = account_balance * risk_per_trade
+def calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value):
+    risk_amount = balance * risk_percent
     if stop_loss_pips == 0 or pip_value == 0:
-        logging.error("Division by zero: stop_loss_pips or pip_value is zero in calculate_position_size")
-        raise ZeroDivisionError("stop_loss_pips or pip_value cannot be zero")
+        logging.error("stop_loss_pips or pip_value cannot be zero.")
+        return 0  # Return 0 or handle the error appropriately
+
     position_size = risk_amount / (stop_loss_pips * pip_value)
     return position_size
 
@@ -1006,7 +1011,7 @@ def exit_trade(position_ticket):
 </document>
 
 <document index="11">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\strategy\tunnel_strategy.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\tunnel_strategy.py</source>
 <document_content>
 import numpy as np
 from metatrader.data_retrieval import get_historical_data
@@ -1240,14 +1245,14 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
 </document>
 
 <document index="12">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\strategy\__init__.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\__init__.py</source>
 <document_content>
 from .tunnel_strategy import run_strategy
 </document_content>
 </document>
 
 <document index="13">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\test_connection.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_connection.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -1273,7 +1278,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="14">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\test_data_retrieval.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_data_retrieval.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -1305,7 +1310,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="15">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\test_indicators.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_indicators.py</source>
 <document_content>
 import unittest
 from metatrader.indicators import calculate_ema
@@ -1324,7 +1329,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="16">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\test_strategy.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_strategy.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -1350,7 +1355,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="17">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\test_trade_management.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_trade_management.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -1415,14 +1420,14 @@ if __name__ == '__main__':
 </document>
 
 <document index="18">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\__init__.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\__init__.py</source>
 <document_content>
 
 </document_content>
 </document>
 
 <document index="19">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\data_validation.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\data_validation.py</source>
 <document_content>
 from typing import Any
 from pydantic import BaseModel, ValidationError
@@ -1520,7 +1525,7 @@ def validate_close_request(close_request):
 </document>
 
 <document index="20">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\error_handling.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\error_handling.py</source>
 <document_content>
 import logging
 
@@ -1538,7 +1543,7 @@ def warn_error(error, message):
 </document>
 
 <document index="21">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\logger.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\logger.py</source>
 <document_content>
 import logging
 import os
@@ -1565,7 +1570,7 @@ def setup_logging(log_level=logging.INFO, log_file="app.log"):
 </document>
 
 <document index="22">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\plotting.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\plotting.py</source>
 <document_content>
 import matplotlib.pyplot as plt
 
@@ -1608,7 +1613,7 @@ def plot_backtest_results(data, trades):
 </document>
 
 <document index="23">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\types.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\types.py</source>
 <document_content>
 from typing import NewType
 
@@ -1624,7 +1629,7 @@ LotSize = NewType("LotSize", float)
 </document>
 
 <document index="24">
-<source>C:\Users\Owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\__init__.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\__init__.py</source>
 <document_content>
 from .data_validation import validate_data, sanitize_data, validate_trade_request, validate_close_request
 from .logger import setup_logging
