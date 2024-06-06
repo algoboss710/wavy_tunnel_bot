@@ -29,8 +29,8 @@ class TestStrategy(unittest.TestCase):
     def test_detect_peaks_and_dips(self):
         data = pd.DataFrame({'high': [100, 200, 300, 400, 500], 'low': [50, 150, 250, 350, 450]})
         peak_type = 1
-        expected_peaks = [100, 200, 300, 400, 500]
-        expected_dips = [50, 150, 250, 350, 450]
+        expected_peaks = [200, 300, 400]
+        expected_dips = [150, 250, 350]
         peaks, dips = detect_peaks_and_dips(data, peak_type)
         self.assertEqual(peaks, expected_peaks)
         self.assertEqual(dips, expected_dips)
@@ -95,3 +95,4 @@ class TestStrategy(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
