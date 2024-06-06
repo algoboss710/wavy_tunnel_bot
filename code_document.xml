@@ -1070,6 +1070,18 @@ def modify_order(ticket, sl=None, tp=None):
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\__init__.py</source>
 <document_content>
 from .data_retrieval import get_historical_data
+# tests/__init__.py
+import unittest
+
+def suite():
+    loader = unittest.TestLoader()
+    suite = unittest.TestSuite()
+    suite.addTests(loader.discover('C:\\Users\\16198\\Desktop\\automation\\upwork\\wavy\\wavy_tunnel_bot\\tests', pattern='test_*.py'))
+    return suite
+
+if __name__ == '__main__':
+    runner = unittest.TextTestRunner()
+    runner.run(suite())
 </document_content>
 </document>
 
@@ -1388,7 +1400,48 @@ from .tunnel_strategy import run_strategy
 </document>
 
 <document index="14">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_connection.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\__init__.py</source>
+<document_content>
+
+</document_content>
+</document>
+
+<document index="15">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\config\test_config.py</source>
+<document_content>
+import unittest
+from unittest.mock import patch
+from config import Config
+
+class TestConfig(unittest.TestCase):
+    @patch('os.getenv')
+    def test_mt5_login_not_set(self, mock_getenv):
+        mock_getenv.return_value = None
+        with self.assertRaises(ValueError):
+            Config.MT5_LOGIN
+
+    @patch('os.getenv', return_value='valid_value')
+    def test_mt5_login_set(self, mock_getenv):
+        self.assertEqual(Config.MT5_LOGIN, 'valid_value')
+
+    @patch('os.getenv', side_effect=lambda k, v=None: {
+        'MT5_TIMEFRAME': 'H1',
+        'SYMBOLS': 'EURUSD,GBPUSD',
+        'MIN_TP_PROFIT': '50.0',
+        'MAX_LOSS_PER_DAY': '1000.0',
+        'STARTING_EQUITY': '10000.0',
+        'LIMIT_NO_OF_TRADES': '5',
+        'RISK_PER_TRADE': '0.01',
+        'PIP_VALUE': '1'
+    }.get(k, v))
+    def test_valid_config(self, mock_getenv):
+        Config.validate()
+
+</document_content>
+</document>
+
+<document index="16">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\metatrader\test_connection.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -1413,8 +1466,8 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="15">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_data_retrieval.py</source>
+<document index="17">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\metatrader\test_data_retrieval.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -1445,8 +1498,8 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="16">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_indicators.py</source>
+<document index="18">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\metatrader\test_indicators.py</source>
 <document_content>
 import unittest
 from metatrader.indicators import calculate_ema
@@ -1464,34 +1517,8 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="17">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_strategy.py</source>
-<document_content>
-import unittest
-from unittest.mock import patch
-from strategy.tunnel_strategy import run_strategy
-
-class TestStrategy(unittest.TestCase):
-    @patch('metatrader.data_retrieval.get_historical_data', return_value=None)
-    def test_run_strategy_failure(self, mock_get_historical_data):
-        symbols = ["EURUSD"]
-        mt5_init = True
-        timeframe = 1
-        lot_size = 0.1
-        min_take_profit = 100
-        max_loss_per_day = 1000
-        starting_equity = 10000
-        max_traders_per_day = 5
-        with self.assertRaises(Exception):
-            run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_traders_per_day)
-
-if __name__ == '__main__':
-    unittest.main()
-</document_content>
-</document>
-
-<document index="18">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\test_trade_management.py</source>
+<document index="19">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\metatrader\test_trade_management.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -1555,14 +1582,280 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="19">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\__init__.py</source>
+<document index="20">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\strategy\test_strategy.py</source>
 <document_content>
+import unittest
+from unittest.mock import patch, MagicMock
+import pandas as pd
+import numpy as np
+from strategy.tunnel_strategy import (
+    calculate_ema, detect_peaks_and_dips, check_entry_conditions, execute_trade,
+    manage_position, calculate_tunnel_bounds, calculate_position_size,
+    generate_trade_signal, adjust_deviation_factor, run_strategy
+)
 
+class TestStrategy(unittest.TestCase):
+    def test_calculate_ema(self):
+        prices = pd.Series([100, 200, 300, 400, 500])
+        period = 3
+        expected_ema = pd.Series([np.nan, np.nan, 233.33333333333334, 344.44444444444446, 455.55555555555554])
+        self.assertTrue(calculate_ema(prices, period).equals(expected_ema))
+
+    def test_detect_peaks_and_dips(self):
+        df = pd.DataFrame({
+            'high': [100, 200, 300, 400, 500],
+            'low': [50, 100, 150, 200, 250]
+        })
+        peak_type = 1
+        expected_peaks = [200, 300, 400, 500]
+        expected_dips = [50, 100, 150, 200, 250]
+        peaks, dips = detect_peaks_and_dips(df, peak_type)
+        self.assertEqual(peaks, expected_peaks)
+        self.assertEqual(dips, expected_dips)
+
+    def test_check_entry_conditions(self):
+        row = {
+            'close': 250,
+            'wavy_c': 200,
+            'wavy_h': 300,
+            'wavy_l': 100,
+            'tunnel1': 150,
+            'tunnel2': 180
+        }
+        peaks = [250]
+        dips = [100]
+        symbol = "EURUSD"
+        mt5 = MagicMock()
+        mt5.symbol_info.return_value.trade_tick_size = 0.00001
+        with patch('MetaTrader5.symbol_info', mt5.symbol_info):
+            buy_condition, sell_condition = check_entry_conditions(row, peaks, dips, symbol)
+            self.assertTrue(buy_condition)
+            self.assertFalse(sell_condition)
+
+    @patch('strategy.tunnel_strategy.place_order')
+    def test_execute_trade(self, mock_place_order):
+        trade_request = {
+            'symbol': 'EURUSD',
+            'action': 'BUY',
+            'volume': 0.1,
+            'price': 1.2345,
+            'sl': 1.2300,
+            'tp': 1.2400
+        }
+        mock_place_order.return_value = 'Order placed'
+        result = execute_trade(trade_request)
+        self.assertEqual(result, 'Order placed')
+
+    @patch('MetaTrader5.positions_get')
+    @patch('MetaTrader5.account_info')
+    @patch('MetaTrader5.positions_total')
+    @patch('strategy.tunnel_strategy.close_position')
+    def test_manage_position(self, mock_close_position, mock_positions_total, mock_account_info, mock_positions_get):
+        symbol = 'EURUSD'
+        min_take_profit = 100
+        max_loss_per_day = 1000
+        starting_equity = 10000
+        max_trades_per_day = 5
+        position = MagicMock()
+        position.profit = 200
+        position.ticket = 12345
+        mock_positions_get.return_value = [position]
+        mock_account_info.return_value.equity = 9500
+        mock_positions_total.return_value = 3
+        manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+        mock_close_position.assert_called_once_with(position.ticket)
+
+    def test_calculate_tunnel_bounds(self):
+        data = pd.DataFrame({
+            'close': [100, 200, 300, 400, 500]
+        })
+        period = 3
+        deviation_factor = 2
+        expected_upper_bound = pd.Series([np.nan, np.nan, 466.66666666666663, 688.8888888888889, 911.1111111111111])
+        expected_lower_bound = pd.Series([np.nan, np.nan, 0.0, 0.0, 0.0])
+        upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
+        self.assertTrue(upper_bound.equals(expected_upper_bound))
+        self.assertTrue(lower_bound.equals(expected_lower_bound))
+
+    def test_calculate_position_size(self):
+        account_balance = 10000
+        risk_per_trade = 0.02
+        stop_loss_pips = 50
+        pip_value = 10
+        expected_position_size = 4.0
+        position_size = calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value)
+        self.assertEqual(position_size, expected_position_size)
+
+    def test_generate_trade_signal(self):
+        data = pd.DataFrame({
+            'close': [100, 200, 300, 400, 500]
+        })
+        period = 3
+        deviation_factor = 2
+        expected_signal = 'BUY'
+        signal = generate_trade_signal(data, period, deviation_factor)
+        self.assertEqual(signal, expected_signal)
+
+    def test_adjust_deviation_factor(self):
+        market_conditions = 'volatile'
+        expected_deviation_factor = 2.5
+        deviation_factor = adjust_deviation_factor(market_conditions)
+        self.assertEqual(deviation_factor, expected_deviation_factor)
+
+    @patch('strategy.tunnel_strategy.get_historical_data')
+    @patch('strategy.tunnel_strategy.execute_trade')
+    @patch('strategy.tunnel_strategy.manage_position')
+    def test_run_strategy(self, mock_manage_position, mock_execute_trade, mock_get_historical_data):
+        symbols = ['EURUSD']
+        mt5_init = MagicMock()
+        timeframe = 'H1'
+        lot_size = 0.1
+        min_take_profit = 100
+        max_loss_per_day = 1000
+        starting_equity = 10000
+        max_trades_per_day = 5
+        mock_get_historical_data.return_value = pd.DataFrame({
+            'open': [100, 200, 300, 400, 500],
+            'high': [110, 220, 330, 440, 550],
+            'low': [90, 180, 270, 360, 450],
+            'close': [105, 210, 315, 420, 525],
+            'tick_volume': [1000, 2000, 3000, 4000, 5000],
+            'spread': [10, 20, 30, 40, 50],
+            'real_volume': [100, 200, 300, 400, 500]
+        })
+        run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+        mock_execute_trade.assert_called()
+        mock_manage_position.assert_called()
+
+if __name__ == '__main__':
+    unittest.main()
 </document_content>
 </document>
 
-<document index="20">
+<document index="21">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_data_validation.py</source>
+<document_content>
+import unittest
+from utils.data_validation import validate_data, sanitize_data, validate_trade_request, validate_close_request
+
+class TestDataValidation(unittest.TestCase):
+    def test_validate_data(self):
+        data = {
+            "action": "BUY",
+            "symbol": "EURUSD",
+            "volume": 0.1,
+            "price": 1.2345,
+            "sl": 1.2300,
+            "tp": 1.2400,
+            "deviation": 10,
+            "magic": 12345,
+            "comment": "Test order",
+            "type": "ORDER_TYPE_BUY",
+            "type_filling": "ORDER_FILLING_FOK",
+            "type_time": "ORDER_TIME_GTC"
+        }
+        self.assertTrue(validate_data(data, validate_trade_request))
+
+    def test_sanitize_data(self):
+        data = {
+            "action": "  BUY  ",
+            "symbol": "EURUSD",
+            "volume": 0.1,
+            "price": 1.2345,
+            "sl": 1.2300,
+            "tp": 1.2400
+        }
+        sanitized_data = sanitize_data(data)
+        self.assertEqual(sanitized_data["action"], "BUY")
+
+if __name__ == '__main__':
+    unittest.main()
+</document_content>
+</document>
+
+<document index="22">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_error_handling.py</source>
+<document_content>
+import unittest
+from unittest.mock import patch
+from utils.error_handling import handle_error, critical_error, warn_error
+
+class TestErrorHandling(unittest.TestCase):
+    @patch('logging.error')
+    def test_handle_error(self, mock_logging_error):
+        error = ValueError("Test error")
+        message = "An error occurred"
+        handle_error(error, message)
+        mock_logging_error.assert_called_with(f"{message}: {str(error)}")
+
+    @patch('logging.critical')
+    def test_critical_error(self, mock_logging_critical):
+        error = ValueError("Test critical error")
+        message = "A critical error occurred"
+        with self.assertRaises(SystemExit):
+            critical_error(error, message)
+        mock_logging_critical.assert_called_with(f"{message}: {str(error)}")
+
+    @patch('logging.warning')
+    def test_warn_error(self, mock_logging_warning):
+        error = ValueError("Test warning")
+        message = "A warning occurred"
+        warn_error(error, message)
+        mock_logging_warning.assert_called_with(f"{message}: {str(error)}")
+
+if __name__ == '__main__':
+    unittest.main()
+</document_content>
+</document>
+
+<document index="23">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_logger.py</source>
+<document_content>
+import unittest
+from unittest.mock import patch
+from utils.logger import setup_logging
+
+class TestLogger(unittest.TestCase):
+    @patch('logging.basicConfig')
+    def test_setup_logging(self, mock_logging_basicConfig):
+        log_level = 20
+        log_file = "test.log"
+        setup_logging(log_level, log_file)
+        mock_logging_basicConfig.assert_called_once()
+
+if __name__ == '__main__':
+    unittest.main()
+</document_content>
+</document>
+
+<document index="24">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_plotting.py</source>
+<document_content>
+import unittest
+from unittest.mock import patch
+from utils.plotting import plot_backtest_results
+
+class TestPlotting(unittest.TestCase):
+    @patch('matplotlib.pyplot.show')
+    def test_plot_backtest_results(self, mock_pyplot_show):
+        data = {
+            'time': [1, 2, 3],
+            'close': [100, 200, 300]
+        }
+        trades = [
+            {'entry_time': 1, 'entry_price': 100, 'exit_time': 2, 'exit_price': 200},
+            {'entry_time': 2, 'entry_price': 200, 'exit_time': 3, 'exit_price': 300}
+        ]
+        plot_backtest_results(data, trades)
+        mock_pyplot_show.assert_called_once()
+
+if __name__ == '__main__':
+    unittest.main()
+</document_content>
+</document>
+
+<document index="25">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\data_validation.py</source>
 <document_content>
 from typing import Any
@@ -1660,7 +1953,7 @@ def validate_close_request(close_request):
 </document_content>
 </document>
 
-<document index="21">
+<document index="26">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\error_handling.py</source>
 <document_content>
 import logging
@@ -1678,7 +1971,7 @@ def warn_error(error, message):
 </document_content>
 </document>
 
-<document index="22">
+<document index="27">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\logger.py</source>
 <document_content>
 import logging
@@ -1705,7 +1998,7 @@ def setup_logging(log_level=logging.INFO, log_file="app.log"):
 </document_content>
 </document>
 
-<document index="23">
+<document index="28">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\plotting.py</source>
 <document_content>
 import matplotlib.pyplot as plt
@@ -1748,7 +2041,7 @@ def plot_backtest_results(data, trades):
 </document_content>
 </document>
 
-<document index="24">
+<document index="29">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\types.py</source>
 <document_content>
 from typing import NewType
@@ -1764,7 +2057,7 @@ LotSize = NewType("LotSize", float)
 </document_content>
 </document>
 
-<document index="25">
+<document index="30">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\__init__.py</source>
 <document_content>
 from .data_validation import validate_data, sanitize_data, validate_trade_request, validate_close_request
