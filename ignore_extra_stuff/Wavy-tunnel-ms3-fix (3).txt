@@ -1,0 +1,369 @@
+//@version=5
+strategy("Wavy Tunnel MS3", overlay=true, process_orders_on_close = true, pyramiding = 2)
+
+// Calculating EMAs for Wavy Tunnel
+wavy_h = ta.ema(high, 34)
+wavy_c = ta.ema(close, 34)
+wavy_l = ta.ema(low, 34)
+ema_12 = ta.ema(close, 12)
+tunnel1 = ta.ema(close, 144)
+tunnel2 = ta.ema(close, 169)
+
+// User inputs
+// input ApplyRsifilter from user
+ApplyRsifilter = input(false, title="Apply RSI filter" , group = "RSI filter")
+// input ApplyAtrfilter from user
+ApplyAtrfilter = input(false, title="Apply ATR filter")
+// input ApplyThreshold from user
+ApplyThreshold = input(true, title="Apply Threshold", group =  "Threshold (required min gap between price and wave for first strategy)")
+// input Threshold (required min gap between price and wave) in tick from user
+Threshold = input(100, title="Threshold default in Ticks", group =  "Threshold (required min gap between price and wave for first strategy)")
+ThresholdUSD = input(2, title="Threshold for quote USD in Ticks", group =  "Threshold (required min gap between price and wave for first strategy)")
+ThresholdEUR = input(2, title="Threshold for quote EUR in Ticks", group =  "Threshold (required min gap between price and wave for first strategy)")
+ThresholdJPY = input(300, title="Threshold for quote JPY in Ticks", group =  "Threshold (required min gap between price and wave for first strategy)")
+ThresholdGBP = input(6, title="Threshold for quote GBP in Ticks", group =  "Threshold (required min gap between price and wave for first strategy)")
+ThresholdCHF = input(2, title="Threshold for quote CHF in Ticks", group =  "Threshold (required min gap between price and wave for first strategy)")
+ThresholdAUD = input(2, title="Threshold for quote AUD in Ticks", group =  "Threshold (required min gap between price and wave for first strategy)")
+
+// minTpThresholdLiauidityLevel in percentage float (min 0, max 1) from user
+minAutoTpThreshold = input.float(100, title="default", group = "Liq. level threshold (Min required gap between price and liq. level in ticks)")
+minAutoTpThresholdUSD = input.float(5, title="USD", group = "Liq. level threshold (Min required gap between price and liq. level in ticks)")
+minAutoTpThresholdEUR = input.float(10, title="EUR", group = "Liq. level threshold (Min required gap between price and liq. level in ticks)")
+minAutoTpThresholdJPY = input.float(100, title="JPY", group = "Liq. level threshold (Min required gap between price and liq. level in ticks)")
+minAutoTpThresholdGBP = input.float(50, title="GBP", group = "Liq. level threshold (Min required gap between price and liq. level in ticks)")
+minAutoTpThresholdCHF = input.float(5, title="CHF", group = "Liq. level threshold (Min required gap between price and liq. level in ticks)")
+minAutoTpThresholdAUD = input.float(5, title="AUD", group = "Liq. level threshold (Min required gap between price and liq. level in ticks)")
+
+
+// input last take profit for manual placing from user
+lastTpLimit = input(250, title="default", group = "last take profit limit in ticks, in case liq. level not found")
+lastTpLimitUSD = input(15, title="USD", group = "last take profit limit in ticks, in case liq. level not found")
+lastTpLimitEUR = input(10, title="EUR", group = "last take profit limit in ticks, in case liq. level not found")
+lastTpLimitJPY = input(800, title="JPY", group = "last take profit limit in ticks, in case liq. level not found")
+lastTpLimitGBP = input(60, title="GBP", group = "last take profit limit in ticks, in case liq. level not found")
+lastTpLimitCHF = input(15, title="CHF", group = "last take profit limit in ticks, in case liq. level not found")
+lastTpLimitAUD = input(15, title="AUD", group = "last take profit limit in ticks, in case liq. level not found")
+
+
+var int peak_type = input.int(defval = 21, title = "peak type", minval = 3,step = 2) 
+
+// input enable second strategy from user
+enableSecondStrategy = input(true, title="Enable Second Strategy", group = "Second strategy")
+// input min gap between wave and tunnel for second
+minGapSecond = input(650, title="Default", group = "Min required gap between wave and tunnel for second strategy in ticks")
+minGapSecondUSD = input(15, title="USD", group = "Min required gap between wave and tunnel for second strategy in ticks")
+minGapSecondEUR = input(15, title="EUR", group = "Min required gap between wave and tunnel for second strategy in ticks")
+minGapSecondJPY = input(650, title="JPY", group = "Min required gap between wave and tunnel for second strategy in ticks")
+minGapSecondGBP = input(50, title="GBP", group = "Min required gap between wave and tunnel for second strategy in ticks")
+minGapSecondCHF = input(15, title="CHF", group = "Min required gap between wave and tunnel for second strategy in ticks")
+minGapSecondAUD = input(15, title="AUD", group = "Min required gap between wave and tunnel for second strategy in ticks")
+
+// input MaxAllowIntoZone from user
+MaxAllowIntoZone = input.float(0.25, title="Max percentage allowed into the Zone", group = "Second strategy", minval=0, maxval=1)
+
+// input date time form user "from date" and "to date"
+IsRange = input(false, title="Date Range", group = "Date Range")
+fromDate = input.time(timestamp("01 FEB 2024 00:00 +0000"), title="From Date", group = "Date Range")
+toDate = input.time(timestamp("16 MAR 2024 00:00 +0000"), title="To Date", group = "Date Range")
+
+// input support and resistance proximity from user in percentage
+IsProximity = input(true, title="Support and Resistance Proximity", group = "Support and Resistance Proximity")
+SupportResistanceProximity = input.float(0.01, title="Support and Resistance Proximity", group = "Support and Resistance Proximity", minval=0, maxval=1)
+
+IsWithinDateRange = not IsRange or (time >= fromDate and time <= toDate)
+
+// Additional Trend Analysis
+longTermEMA = ta.ema(close, 200) // Longer-term EMA for trend direction
+
+// Incorporating RSI for additional trade confirmation
+rsiPeriod = input(14, title="RSI Period", group = "RSI filter")
+rsi = ta.rsi(close, rsiPeriod)
+// Overbought level
+rsiUpper = input(70, title="RSI Overbought Level", group = "RSI filter")
+// Oversold level
+rsiLower = input(30, title="RSI Oversold Level", group = "RSI filter")
+overbought = rsi > rsiUpper
+oversold = rsi < rsiLower
+
+
+// liquidation levels for take profit
+
+getMinAutoTpThreshold() =>
+    switch syminfo.currency
+        "USD" => minAutoTpThresholdUSD
+        "EUR" => minAutoTpThresholdEUR
+        "JPY" => minAutoTpThresholdJPY
+        "GBP" => minAutoTpThresholdGBP
+        "CHF" => minAutoTpThresholdCHF
+        "AUD" => minAutoTpThresholdAUD
+        => minAutoTpThreshold
+
+minAutoTpThresholdValue = getMinAutoTpThreshold() * syminfo.mintick
+
+getMinGapSecond() =>
+    switch syminfo.currency
+        "USD" => minGapSecondUSD
+        "EUR" => minGapSecondEUR
+        "JPY" => minGapSecondJPY
+        "GBP" => minGapSecondGBP
+        "CHF" => minGapSecondCHF
+        "AUD" => minGapSecondAUD
+        => minGapSecond
+minGapSecondValue = getMinGapSecond() * syminfo.mintick
+
+if peak_type%2 == 0
+    peak_type := peak_type + 1
+
+peak=true
+dip=true
+
+for i = 0 to peak_type
+    centerIndex = math.floor(peak_type/2)
+    if high[i] > high[centerIndex] and not (i == centerIndex)
+        peak:=false
+for i = 0 to peak_type
+    centerIndex = math.floor(peak_type/2)
+    if low[i] < low[centerIndex] and not (i == centerIndex)
+        dip:=false
+
+var float[] peaks = array.new_float(0) 
+var float[] dips = array.new_float(0)
+
+var peakValue = 0.0
+var dipValue = 0.0
+if peak
+    peakValue := high[math.floor(peak_type/2)]
+    array.push(peaks, peakValue)
+if dip
+    dipValue := low[math.floor(peak_type/2)]
+    array.push(dips, dipValue)
+
+getoffset() =>
+    math.floor(peak_type/2)*-1
+
+plot(peakValue, color = color.lime, style = plot.style_circles , linewidth = 2, title = "Peak", offset = getoffset())
+plot(dipValue, color = color.maroon, style = plot.style_circles , linewidth = 2, title = "Dip", offset = getoffset())
+
+// get the last peak and dip that is higher than the current price
+float last_peak = na
+float last_dip = na
+found_last_peak = false
+found_last_dip = false
+
+
+if array.size(peaks) > 0
+    for i = array.size(peaks) - 1 to math.max(array.size(peaks) - 100,0)
+        if array.get(peaks, i)  > open+minAutoTpThresholdValue
+            last_peak := array.get(peaks, i)
+            found_last_peak:=true
+            break
+if array.size(dips) > 0
+    for i = array.size(dips) - 1 to math.max(array.size(dips) - 100,0)
+        if array.get(dips, i)  < open-minAutoTpThresholdValue
+            last_dip := array.get(dips, i)
+            found_last_dip:=true
+            break
+
+// end of liquidation levels for take profit
+
+// Function to determine the threshold value in the asset's quote currency
+getThresholdCurrent() =>
+    switch syminfo.currency
+        "USD" => ThresholdUSD
+        "EUR" => ThresholdEUR
+        "JPY" => ThresholdJPY
+        "GBP" => ThresholdGBP
+        "CHF" => ThresholdCHF
+        "AUD" => ThresholdAUD
+        => Threshold
+
+// value of ticks in the asset's quote currency
+ThresholdValue = getThresholdCurrent() * syminfo.mintick
+
+// lastTpLimit* and minAutoTpThreshold* in qoute currency
+getTpLimitCurrent() =>
+    switch syminfo.currency
+        "USD" => lastTpLimitUSD
+        "EUR" => lastTpLimitEUR
+        "JPY" => lastTpLimitJPY
+        "GBP" => lastTpLimitGBP
+        "CHF" => lastTpLimitCHF
+        "AUD" => lastTpLimitAUD
+        => lastTpLimit
+
+// value of ticks in the asset's quote currency
+lastTpLimitValue = getTpLimitCurrent() * syminfo.mintick
+
+// Revised Conditions with Trend and RSI Confirmation
+buyCondition = open > math.max(wavy_c, wavy_h, wavy_l) and math.min(wavy_c, wavy_h, wavy_l) > math.max(tunnel1, tunnel2)
+sellCondition = open < math.min(wavy_c, wavy_h, wavy_l) and math.max(wavy_c, wavy_h, wavy_l) < math.min(tunnel1, tunnel2)
+
+
+atrPeriod = 14
+atrMultiplier = 2
+atrValue = ta.atr(atrPeriod)
+
+longCondition = buyCondition
+shortCondition = sellCondition
+
+if (ApplyRsifilter)
+    // overbought and oversold conditions
+    longCondition := longCondition and not overbought
+    shortCondition := shortCondition and not oversold
+
+if (ApplyAtrfilter)
+    // Enhanced Entry Conditions with ATR filter
+    longCondition := longCondition and atrValue < atrMultiplier * ta.sma(atrValue, atrPeriod)
+    shortCondition := shortCondition and atrValue < atrMultiplier * ta.sma(atrValue, atrPeriod)
+
+// Apply Threshold
+if (ApplyThreshold)
+    longCondition := longCondition and (open > (math.max(wavy_c, wavy_h, wavy_l) + ThresholdValue))
+    shortCondition := shortCondition and (open < (math.min(wavy_c, wavy_h, wavy_l) - ThresholdValue))
+
+if not IsWithinDateRange
+    longCondition := false
+    shortCondition := false
+
+// Define Resistance and Support
+supportLevel = ta.sma(ta.lowest(low, 18), 5)
+resistanceLevel = ta.sma(ta.highest(high, 18), 5)
+var waitForWaveTouch = false
+
+
+
+// check if open is away (1%) from resistance or support for long or short
+if (IsProximity and longCondition)
+    if(open>=resistanceLevel)
+        longCondition := false
+        waitForWaveTouch := true
+    if(open<resistanceLevel)
+        if(open>(resistanceLevel * (1-SupportResistanceProximity)))
+            longCondition := false
+            waitForWaveTouch := true
+
+if (IsProximity and shortCondition)
+    if(open<=supportLevel)
+        shortCondition := false
+        waitForWaveTouch := true
+    if(open>supportLevel)
+        if(open<(supportLevel * (1+SupportResistanceProximity)))
+            shortCondition := false
+            waitForWaveTouch := true
+    
+    
+
+positionSize = 100 
+
+var TpLotPercent = array.from(60, 15, 10, 10)
+var TpWeitghts = array.from(0.2, 0.4, 0.6, 0.8)
+
+finalIsLong = not waitForWaveTouch and longCondition and (strategy.position_size <= 0 or not (strategy.position_entry_name == "Long"))
+finalIsShort = not waitForWaveTouch and shortCondition and (strategy.position_size >= 0 or not (strategy.position_entry_name == "Short"))
+if (finalIsLong)
+    if (found_last_peak)
+        strategy.entry("Long", strategy.long, qty=positionSize)
+        for i = 0 to 3
+            strategy.exit("Take Profit " + str.tostring(i+1) + "/4", "Long", limit = open + ((last_peak - open) * array.get(TpWeitghts, i)), qty_percent = array.get(TpLotPercent, i) , comment = "Take Profit " + str.tostring(i+1) + "/4")
+    else
+        strategy.entry("Long", strategy.long, qty=positionSize)
+        for i = 0 to 3
+            strategy.exit("Take Profit " + str.tostring(i+1) + "/4", "Long", limit = open + (lastTpLimitValue * array.get(TpWeitghts, i)), qty_percent = array.get(TpLotPercent, i), comment = "Take Profit " + str.tostring(i+1) + "/4")
+
+if (finalIsShort)
+    
+    if (found_last_dip)
+        strategy.entry("Short", strategy.short, qty=positionSize)
+        for i = 0 to 3
+            strategy.exit("Take Profit " + str.tostring(i+1) + "/4", "Short", limit = open - ((open - last_dip) * array.get(TpWeitghts, i)), qty_percent = array.get(TpLotPercent, i), comment = "Take Profit " + str.tostring(i+1) + "/4")
+    else
+        strategy.entry("Short", strategy.short, qty=positionSize)
+        for i = 0 to 3
+            strategy.exit("Take Profit " + str.tostring(i+1) + "/4", "Short", limit = open - (lastTpLimitValue * array.get(TpWeitghts, i)), qty_percent = array.get(TpLotPercent, i), comment = "Take Profit " + str.tostring(i+1) + "/4")
+
+if (finalIsLong)
+    alert(message = "Long on "+ str.tostring(value = open) , freq = alert.freq_all )
+if (finalIsShort)
+    alert(message = "Short on "+ str.tostring(value = open) , freq = alert.freq_all )
+
+if (waitForWaveTouch and (ta.cross(close, math.max(wavy_c, wavy_h, wavy_l)) or ta.cross(close, math.min(wavy_c, wavy_h, wavy_l)) or ta.cross(open, math.max(wavy_c, wavy_h, wavy_l)) or ta.cross(open, math.min(wavy_c, wavy_h, wavy_l))))
+    waitForWaveTouch := false
+
+if (close < math.min(wavy_c, wavy_h, wavy_l) and strategy.position_entry_name == "Long")
+    strategy.close("Long",comment = "close Long", immediately = true)
+    alert(message = "close Long on "+ str.tostring(value = close) , freq = alert.freq_all )
+if (close > math.max(wavy_c, wavy_h, wavy_l) and strategy.position_entry_name == "Short")
+    strategy.close("Short",comment = "close Short", immediately = true)
+    alert(message = "close Short on "+ str.tostring(value = close) , freq = alert.freq_all )
+
+// 2nd strategy, if price fully crosses the wave
+// if price fully crosses above the wave but is below the tunnel then take long untill reach tunnel
+secondLongCondition = ta.crossover(close, math.max(wavy_c, wavy_h, wavy_l)) and close < math.min(tunnel1, tunnel2)
+// if price fully crosses below the wave but is above the tunnel then take short untill reach tunnel
+secondShortCondition = ta.crossunder(close, math.min(wavy_c, wavy_h, wavy_l)) and close > math.max(tunnel1, tunnel2)
+
+var TpLotPercentSecond = array.from(60, 15, 10, 10)
+var TpWeitghtSecond = array.from(0.20, 0.40, 0.60, 0.80)
+
+priceDiffCloseTunnelLong = math.min(tunnel1, tunnel2) - close
+priceDiffCloseTunnelShort = close - math.max(tunnel1, tunnel2)
+if not IsWithinDateRange
+    secondLongCondition := false
+    secondShortCondition := false
+
+if (secondLongCondition)
+    percentageIntoZone = ((close - math.max(wavy_c, wavy_h, wavy_l)) / (math.min(tunnel1,tunnel2) - math.max(wavy_c, wavy_h, wavy_l)))
+    secondLongCondition := secondLongCondition and priceDiffCloseTunnelLong >= minGapSecondValue and enableSecondStrategy and percentageIntoZone <= MaxAllowIntoZone
+if (secondShortCondition)
+    percentageIntoZone = ((math.min(wavy_c, wavy_h, wavy_l)-close) / (math.min(wavy_c, wavy_h, wavy_l)-math.max(tunnel1,tunnel2)))
+    secondShortCondition := secondShortCondition and priceDiffCloseTunnelShort >= minGapSecondValue and enableSecondStrategy and percentageIntoZone <= MaxAllowIntoZone
+
+
+finalIsLongSecond = secondLongCondition and (strategy.position_size <= 0 or not (strategy.position_entry_name == "LongSecond"))
+finalIsShortSecond = secondShortCondition and (strategy.position_size >= 0 or not (strategy.position_entry_name == "ShortSecond"))
+
+if (finalIsLongSecond)
+    strategy.entry("LongSecond", strategy.long, qty=positionSize)
+    for i = 0 to 3
+        strategy.exit("Tp " + str.tostring(i+1) + "/4 second", "LongSecond", limit = close + (priceDiffCloseTunnelLong * array.get(TpWeitghtSecond, i)), qty_percent = array.get(TpLotPercentSecond, i), comment = "Take Profit " + str.tostring(i+1) + "/4 second")
+if (finalIsShortSecond)
+    strategy.entry("ShortSecond", strategy.short, qty=positionSize)
+    for i = 0 to 3
+        strategy.exit("Tp " + str.tostring(i+1) + "/4 second", "ShortSecond", limit = close - (priceDiffCloseTunnelShort * array.get(TpWeitghtSecond, i)), qty_percent = array.get(TpLotPercentSecond, i), comment = "Take Profit " + str.tostring(i+1) + "/4 second")
+
+if (finalIsLongSecond)
+    alert(message = "Long second on "+ str.tostring(value = close) , freq = alert.freq_all )
+if (finalIsShortSecond)
+    alert(message = "Short second on "+ str.tostring(value = close) , freq = alert.freq_all)
+    
+// close second long and short whenevery it touches to tunnel
+if (strategy.position_entry_name == "LongSecond" and (ta.cross(open,math.min(tunnel1, tunnel2)) or ta.cross(close,math.min(tunnel1, tunnel2))))
+    strategy.close("LongSecond",comment = "TP close Long Second", immediately = true)
+    alert(message = "TP close Long Second on "+ str.tostring(value = close) , freq = alert.freq_all )
+if (strategy.position_entry_name == "ShortSecond" and (ta.cross(low,math.max(tunnel1, tunnel2)) or ta.cross(close,math.max(tunnel1, tunnel2))))
+    strategy.close("ShortSecond",comment = "TP close Short Second", immediately = true)
+    alert(message = "TP close Short Second on "+ str.tostring(value = close) , freq = alert.freq_all )
+
+// close second long and short when every it touches back to wave
+if (close < math.min(wavy_c, wavy_h, wavy_l) and strategy.position_entry_name == "LongSecond")
+    strategy.close("LongSecond",comment = "close LongSecond", immediately = true)
+    alert(message = "close Long Second on "+ str.tostring(value = close) , freq = alert.freq_all )
+if (close > math.max(wavy_c, wavy_h, wavy_l) and strategy.position_entry_name == "ShortSecond")
+    strategy.close("ShortSecond",comment = "close ShortSecond", immediately = true)
+    alert(message = "close Short Second on "+ str.tostring(value = close) , freq = alert.freq_all )
+
+// Plotting
+plot(wavy_h, color=color.green, linewidth=2)
+plot(wavy_c, color=color.silver, linewidth=2)
+plot(wavy_l, color=color.navy, linewidth=2)
+
+plot(tunnel1, color=color.purple, linewidth=2)
+plot(tunnel2, color=#FF00FF, linewidth=2)
+
+// Plotting long-term EMA and RSI
+plot(longTermEMA, color=color.blue, linewidth=2)
+hline(rsiUpper, "Overbought", color=color.red)
+hline(rsiLower, "Oversold", color=color.green)
+
+plot(supportLevel, color=color.blue, title="Support Level", linewidth=1)
+plot(resistanceLevel, color=color.orange, title="Resistance Level", linewidth=1)

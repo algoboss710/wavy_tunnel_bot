@@ -27,13 +27,19 @@ class TestStrategy(unittest.TestCase):
         pd.testing.assert_series_equal(lower_bound.round(2), expected_lower_bound, check_names=False)
 
     def test_detect_peaks_and_dips(self):
-        data = pd.DataFrame({'high': [100, 200, 300, 400, 500], 'low': [50, 150, 250, 350, 450]})
-        peak_type = 1
-        expected_peaks = [200, 300, 400]
-        expected_dips = [150, 250, 350]
+        data = pd.DataFrame({
+            'high': [100, 200, 300, 400, 500, 600, 500, 400, 300, 200, 100],
+            'low': [50, 150, 250, 350, 450, 550, 450, 350, 250, 150, 50]
+        })
+        peak_type = 3
+        expected_peaks = [400, 600]
+        expected_dips = [50]
         peaks, dips = detect_peaks_and_dips(data, peak_type)
+        print(f"Detected peaks: {peaks}, Detected dips: {dips}")
         self.assertEqual(peaks, expected_peaks)
         self.assertEqual(dips, expected_dips)
+
+
 
     @mock.patch('strategy.tunnel_strategy.mt5')
     def test_check_entry_conditions(self, mock_mt5):
@@ -95,4 +101,3 @@ class TestStrategy(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

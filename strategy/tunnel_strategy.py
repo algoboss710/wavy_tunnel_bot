@@ -42,24 +42,34 @@ def calculate_ema(prices, period):
 #         return pd.Series(ema_values, index=prices.index)
 #     else:
 #         raise ValueError("Invalid input type for prices. Expected float, int, list, numpy array, or pandas Series.")
-
 def detect_peaks_and_dips(df, peak_type):
     peaks = []
     dips = []
-    for i in range(len(df)):
-        if i < peak_type or i >= len(df) - peak_type:
-            continue
-        is_peak = True
-        is_dip = True
-        for j in range(peak_type):
-            if df['high'][i] <= df['high'][i-j] or df['high'][i] <= df['high'][i+j]:
-                is_peak = False
-            if df['low'][i] >= df['low'][i-j] or df['low'][i] >= df['low'][i+j]:
-                is_dip = False
-        if is_peak:
-            peaks.append(df['high'][i])
-        if is_dip:
-            dips.append(df['low'][i])
+
+    center_index = peak_type // 2
+
+    for i in range(len(df) - peak_type):
+        segment_high = df['high'].iloc[i:i + peak_type + 1].values
+        segment_low = df['low'].iloc[i:i + peak_type + 1].values
+        
+        peak = True
+        dip = True
+
+        for j in range(peak_type + 1):
+            if j != center_index:
+                if segment_high[j] > segment_high[center_index]:
+                    peak = False
+                if segment_low[j] < segment_low[center_index]:
+                    dip = False
+
+        if peak:
+            peaks.append(segment_high[center_index])
+        if dip:
+            dips.append(segment_low[center_index])
+
+        # Debugging information
+        print(f"Segment High: {segment_high}, Segment Low: {segment_low}, Peak: {peak}, Dip: {dip}")
+
     return peaks, dips
 
 def check_entry_conditions(row, peaks, dips, symbol):

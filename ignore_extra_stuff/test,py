@@ -1,0 +1,50 @@
+import pandas as pd
+import unittest
+
+def detect_peaks_and_dips(df, peak_type):
+    peaks = []
+    dips = []
+
+    center_index = peak_type // 2
+
+    for i in range(center_index, len(df) - center_index):
+        segment_high = df['high'].iloc[i - center_index:i + center_index + 1].values
+        segment_low = df['low'].iloc[i - center_index:i + center_index + 1].values
+        
+        peak = True
+        dip = True
+
+        for j in range(len(segment_high)):
+            if j != center_index:
+                if segment_high[j] > segment_high[center_index]:
+                    peak = False
+                if segment_low[j] < segment_low[center_index]:
+                    dip = False
+
+        if peak:
+            peaks.append(segment_high[center_index])
+        if dip:
+            dips.append(segment_low[center_index])
+
+        # Debugging information
+        print(f"Segment High: {segment_high}, Segment Low: {segment_low}, Peak: {peak}, Dip: {dip}")
+
+    return peaks, dips
+
+class TestStrategy(unittest.TestCase):
+
+    def test_detect_peaks_and_dips(self):
+        data = pd.DataFrame({
+            'high': [100, 200, 300, 400, 500, 600, 500, 400, 300, 200, 100],
+            'low': [50, 150, 250, 350, 450, 550, 450, 350, 250, 150, 50]
+        })
+        peak_type = 4
+        expected_peaks = [400, 600]
+        expected_dips = [50]
+        peaks, dips = detect_peaks_and_dips(data, peak_type)
+        print(f"Detected peaks: {peaks}, Detected dips: {dips}")
+        self.assertEqual(peaks, expected_peaks)
+        self.assertEqual(dips, expected_dips)
+
+if __name__ == '__main__':
+    unittest.main()
