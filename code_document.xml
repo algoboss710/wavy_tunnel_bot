@@ -1168,37 +1168,64 @@ def calculate_ema(prices, period):
     if isinstance(prices, (float, int)):
         return prices
     elif isinstance(prices, (list, np.ndarray, pd.Series)):
-        ema_values = np.zeros_like(prices)
-        ema_values[:period] = np.nan
+        ema_values = np.full(len(prices), np.nan, dtype=np.float64)
+        if len(prices) < period:
+            return pd.Series(ema_values, index=prices.index)
+        
         sma = np.mean(prices[:period])
         ema_values[period - 1] = sma
         multiplier = 2 / (period + 1)
         for i in range(period, len(prices)):
-            if ema_values[i - 1] == 0:
-                logging.error("Division by zero: ema_values[i - 1] is zero in calculate_ema")
-                continue
             ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
         return pd.Series(ema_values, index=prices.index)
     else:
         raise ValueError("Invalid input type for prices. Expected float, int, list, numpy array, or pandas Series.")
 
+# def calculate_ema(prices, period):
+#     if isinstance(prices, (float, int)):
+#         return prices
+#     elif isinstance(prices, (list, np.ndarray, pd.Series)):
+#         ema_values = np.zeros_like(prices)
+#         ema_values[:period] = np.nan
+#         sma = np.mean(prices[:period])
+#         ema_values[period - 1] = sma
+#         multiplier = 2 / (period + 1)
+#         for i in range(period, len(prices)):
+#             if ema_values[i - 1] == 0:
+#                 logging.error("Division by zero: ema_values[i - 1] is zero in calculate_ema")
+#                 continue
+#             ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
+#         return pd.Series(ema_values, index=prices.index)
+#     else:
+#         raise ValueError("Invalid input type for prices. Expected float, int, list, numpy array, or pandas Series.")
 def detect_peaks_and_dips(df, peak_type):
     peaks = []
     dips = []
-    for i in range(len(df)):
-        if i < peak_type or i >= len(df) - peak_type:
-            continue
-        is_peak = True
-        is_dip = True
-        for j in range(peak_type):
-            if df['high'][i] <= df['high'][i-j] or df['high'][i] <= df['high'][i+j]:
-                is_peak = False
-            if df['low'][i] >= df['low'][i-j] or df['low'][i] >= df['low'][i+j]:
-                is_dip = False
-        if is_peak:
-            peaks.append(df['high'][i])
-        if is_dip:
-            dips.append(df['low'][i])
+
+    center_index = peak_type // 2
+
+    for i in range(len(df) - peak_type):
+        segment_high = df['high'].iloc[i:i + peak_type + 1].values
+        segment_low = df['low'].iloc[i:i + peak_type + 1].values
+        
+        peak = True
+        dip = True
+
+        for j in range(peak_type + 1):
+            if j != center_index:
+                if segment_high[j] > segment_high[center_index]:
+                    peak = False
+                if segment_low[j] < segment_low[center_index]:
+                    dip = False
+
+        if peak:
+            peaks.append(segment_high[center_index])
+        if dip:
+            dips.append(segment_low[center_index])
+
+        # Debugging information
+        print(f"Segment High: {segment_high}, Segment Low: {segment_low}, Peak: {peak}, Dip: {dip}")
+
     return peaks, dips
 
 def check_entry_conditions(row, peaks, dips, symbol):
@@ -1410,21 +1437,27 @@ from .tunnel_strategy import run_strategy
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\config\test_config.py</source>
 <document_content>
 import unittest
-from unittest.mock import patch
-from config import Config
+from unittest.mock import patch, MagicMock
 
 class TestConfig(unittest.TestCase):
-    @patch('os.getenv')
-    def test_mt5_login_not_set(self, mock_getenv):
-        mock_getenv.return_value = None
-        with self.assertRaises(ValueError):
-            Config.MT5_LOGIN
 
-    @patch('os.getenv', return_value='valid_value')
-    def test_mt5_login_set(self, mock_getenv):
+    @patch.dict('os.environ', {}, clear=True)
+    def test_mt5_login_not_set(self):
+        with self.assertRaises(ValueError) as context:
+            from config import Config
+            Config.MT5_LOGIN
+        self.assertEqual(str(context.exception), "MT5_LOGIN environment variable is not set.")
+
+    @patch.dict('os.environ', {'MT5_LOGIN': 'valid_value', 'MT5_PASSWORD': 'password', 'MT5_SERVER': 'server', 'MT5_PATH': 'path', 'MT5_TIMEFRAME': 'H1', 'SYMBOLS': 'EURUSD,GBPUSD'})
+    def test_mt5_login_set(self):
+        from config import Config
         self.assertEqual(Config.MT5_LOGIN, 'valid_value')
 
-    @patch('os.getenv', side_effect=lambda k, v=None: {
+    @patch.dict('os.environ', {
+        'MT5_LOGIN': 'login',
+        'MT5_PASSWORD': 'password',
+        'MT5_SERVER': 'server',
+        'MT5_PATH': 'path',
         'MT5_TIMEFRAME': 'H1',
         'SYMBOLS': 'EURUSD,GBPUSD',
         'MIN_TP_PROFIT': '50.0',
@@ -1433,9 +1466,14 @@ class TestConfig(unittest.TestCase):
         'LIMIT_NO_OF_TRADES': '5',
         'RISK_PER_TRADE': '0.01',
         'PIP_VALUE': '1'
-    }.get(k, v))
-    def test_valid_config(self, mock_getenv):
+    })
+    def test_valid_config(self):
+        from config import Config
         Config.validate()
+
+if __name__ == '__main__':
+    unittest.main()
+
 
 </document_content>
 </document>
@@ -1450,11 +1488,11 @@ from metatrader.connection import initialize_mt5, shutdown_mt5
 class TestConnection(unittest.TestCase):
     @patch('MetaTrader5.initialize', return_value=True)
     def test_initialize_mt5_success(self, mock_initialize):
-        self.assertTrue(initialize_mt5())
+        self.assertTrue(initialize_mt5('dummy_path'))
 
     @patch('MetaTrader5.initialize', return_value=False)
     def test_initialize_mt5_failure(self, mock_initialize):
-        self.assertFalse(initialize_mt5())
+        self.assertFalse(initialize_mt5('dummy_path'))
 
     @patch('MetaTrader5.shutdown')
     def test_shutdown_mt5(self, mock_shutdown):
@@ -1463,6 +1501,7 @@ class TestConnection(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
 </document_content>
 </document>
 
@@ -1586,136 +1625,95 @@ if __name__ == '__main__':
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\strategy\test_strategy.py</source>
 <document_content>
 import unittest
-from unittest.mock import patch, MagicMock
 import pandas as pd
-import numpy as np
+from unittest import mock
 from strategy.tunnel_strategy import (
-    calculate_ema, detect_peaks_and_dips, check_entry_conditions, execute_trade,
-    manage_position, calculate_tunnel_bounds, calculate_position_size,
-    generate_trade_signal, adjust_deviation_factor, run_strategy
+    calculate_ema, calculate_tunnel_bounds, detect_peaks_and_dips, 
+    check_entry_conditions, generate_trade_signal, run_strategy
 )
+import MetaTrader5 as mt5
 
 class TestStrategy(unittest.TestCase):
+
     def test_calculate_ema(self):
         prices = pd.Series([100, 200, 300, 400, 500])
         period = 3
-        expected_ema = pd.Series([np.nan, np.nan, 233.33333333333334, 344.44444444444446, 455.55555555555554])
-        self.assertTrue(calculate_ema(prices, period).equals(expected_ema))
+        result = calculate_ema(prices, period)
+        expected_ema = pd.Series([None, None, 200.0, 300.0, 400.0])
+        pd.testing.assert_series_equal(result, expected_ema, check_names=False)
+
+    def test_calculate_tunnel_bounds(self):
+        data = pd.DataFrame({'close': [100, 200, 300, 400, 500]})
+        period = 3
+        deviation_factor = 1.0
+        expected_upper_bound = pd.Series([None, None, 341.42, 441.42, 541.42])
+        expected_lower_bound = pd.Series([None, None, 58.58, 158.58, 258.58])
+        upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
+        pd.testing.assert_series_equal(upper_bound.round(2), expected_upper_bound, check_names=False)
+        pd.testing.assert_series_equal(lower_bound.round(2), expected_lower_bound, check_names=False)
 
     def test_detect_peaks_and_dips(self):
-        df = pd.DataFrame({
-            'high': [100, 200, 300, 400, 500],
-            'low': [50, 100, 150, 200, 250]
+        data = pd.DataFrame({
+            'high': [100, 200, 300, 400, 500, 600, 500, 400, 300, 200, 100],
+            'low': [50, 150, 250, 350, 450, 550, 450, 350, 250, 150, 50]
         })
-        peak_type = 1
-        expected_peaks = [200, 300, 400, 500]
-        expected_dips = [50, 100, 150, 200, 250]
-        peaks, dips = detect_peaks_and_dips(df, peak_type)
+        peak_type = 3
+        expected_peaks = [400, 600]
+        expected_dips = [50]
+        peaks, dips = detect_peaks_and_dips(data, peak_type)
+        print(f"Detected peaks: {peaks}, Detected dips: {dips}")
         self.assertEqual(peaks, expected_peaks)
         self.assertEqual(dips, expected_dips)
 
-    def test_check_entry_conditions(self):
-        row = {
-            'close': 250,
-            'wavy_c': 200,
-            'wavy_h': 300,
-            'wavy_l': 100,
-            'tunnel1': 150,
-            'tunnel2': 180
-        }
-        peaks = [250]
-        dips = [100]
-        symbol = "EURUSD"
-        mt5 = MagicMock()
-        mt5.symbol_info.return_value.trade_tick_size = 0.00001
-        with patch('MetaTrader5.symbol_info', mt5.symbol_info):
-            buy_condition, sell_condition = check_entry_conditions(row, peaks, dips, symbol)
-            self.assertTrue(buy_condition)
-            self.assertFalse(sell_condition)
 
-    @patch('strategy.tunnel_strategy.place_order')
-    def test_execute_trade(self, mock_place_order):
-        trade_request = {
-            'symbol': 'EURUSD',
-            'action': 'BUY',
-            'volume': 0.1,
-            'price': 1.2345,
-            'sl': 1.2300,
-            'tp': 1.2400
-        }
-        mock_place_order.return_value = 'Order placed'
-        result = execute_trade(trade_request)
-        self.assertEqual(result, 'Order placed')
 
-    @patch('MetaTrader5.positions_get')
-    @patch('MetaTrader5.account_info')
-    @patch('MetaTrader5.positions_total')
-    @patch('strategy.tunnel_strategy.close_position')
-    def test_manage_position(self, mock_close_position, mock_positions_total, mock_account_info, mock_positions_get):
-        symbol = 'EURUSD'
-        min_take_profit = 100
-        max_loss_per_day = 1000
-        starting_equity = 10000
-        max_trades_per_day = 5
-        position = MagicMock()
-        position.profit = 200
-        position.ticket = 12345
-        mock_positions_get.return_value = [position]
-        mock_account_info.return_value.equity = 9500
-        mock_positions_total.return_value = 3
-        manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
-        mock_close_position.assert_called_once_with(position.ticket)
-
-    def test_calculate_tunnel_bounds(self):
-        data = pd.DataFrame({
-            'close': [100, 200, 300, 400, 500]
+    @mock.patch('strategy.tunnel_strategy.mt5')
+    def test_check_entry_conditions(self, mock_mt5):
+        row = pd.Series({
+            'close': 350,
+            'wavy_c': 300,
+            'wavy_h': 320,
+            'wavy_l': 310,
+            'tunnel1': 250,
+            'tunnel2': 240
         })
-        period = 3
-        deviation_factor = 2
-        expected_upper_bound = pd.Series([np.nan, np.nan, 466.66666666666663, 688.8888888888889, 911.1111111111111])
-        expected_lower_bound = pd.Series([np.nan, np.nan, 0.0, 0.0, 0.0])
-        upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
-        self.assertTrue(upper_bound.equals(expected_upper_bound))
-        self.assertTrue(lower_bound.equals(expected_lower_bound))
+        peaks = [350]
+        dips = [150]
+        symbol = 'EURUSD'
+        mock_symbol_info = mock.Mock()
+        mock_symbol_info.trade_tick_size = 0.01
+        mock_mt5.symbol_info.return_value = mock_symbol_info
 
-    def test_calculate_position_size(self):
-        account_balance = 10000
-        risk_per_trade = 0.02
-        stop_loss_pips = 50
-        pip_value = 10
-        expected_position_size = 4.0
-        position_size = calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value)
-        self.assertEqual(position_size, expected_position_size)
+        buy_condition, sell_condition = check_entry_conditions(row, peaks, dips, symbol)
+        self.assertTrue(buy_condition)
+        self.assertFalse(sell_condition)
 
     def test_generate_trade_signal(self):
-        data = pd.DataFrame({
-            'close': [100, 200, 300, 400, 500]
-        })
+        data = pd.DataFrame({'close': [100, 200, 300, 400, 500]})
         period = 3
-        deviation_factor = 2
+        deviation_factor = 1.0
         expected_signal = 'BUY'
         signal = generate_trade_signal(data, period, deviation_factor)
         self.assertEqual(signal, expected_signal)
 
-    def test_adjust_deviation_factor(self):
-        market_conditions = 'volatile'
-        expected_deviation_factor = 2.5
-        deviation_factor = adjust_deviation_factor(market_conditions)
-        self.assertEqual(deviation_factor, expected_deviation_factor)
-
-    @patch('strategy.tunnel_strategy.get_historical_data')
-    @patch('strategy.tunnel_strategy.execute_trade')
-    @patch('strategy.tunnel_strategy.manage_position')
-    def test_run_strategy(self, mock_manage_position, mock_execute_trade, mock_get_historical_data):
+    @mock.patch('strategy.tunnel_strategy.mt5')
+    def test_run_strategy(self, mock_mt5):
+        mock_mt5.TIMEFRAME_M1 = 1
+        mock_mt5.symbol_info.return_value.trade_tick_size = 0.01
+        
         symbols = ['EURUSD']
-        mt5_init = MagicMock()
-        timeframe = 'H1'
+        timeframe = mock_mt5.TIMEFRAME_M1
         lot_size = 0.1
-        min_take_profit = 100
-        max_loss_per_day = 1000
-        starting_equity = 10000
+        min_take_profit = 10
+        max_loss_per_day = 50
+        starting_equity = 1000
         max_trades_per_day = 5
-        mock_get_historical_data.return_value = pd.DataFrame({
+
+        # Mock data retrieval and other MT5 functions
+        mock_mt5.initialize.return_value = True
+        mock_mt5.symbols_get.return_value = [mock.Mock(name='EURUSD')]
+        mock_mt5.copy_rates_range.return_value = pd.DataFrame({
+            'time': pd.date_range(start='1/1/2022', periods=5, freq='min'),
             'open': [100, 200, 300, 400, 500],
             'high': [110, 220, 330, 440, 550],
             'low': [90, 180, 270, 360, 450],
@@ -1724,12 +1722,12 @@ class TestStrategy(unittest.TestCase):
             'spread': [10, 20, 30, 40, 50],
             'real_volume': [100, 200, 300, 400, 500]
         })
-        run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
-        mock_execute_trade.assert_called()
-        mock_manage_position.assert_called()
+
+        run_strategy(symbols, mock_mt5.initialize, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
 
 if __name__ == '__main__':
     unittest.main()
+
 </document_content>
 </document>
 

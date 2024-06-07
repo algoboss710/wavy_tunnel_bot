@@ -1,50 +1,37 @@
-import pandas as pd
-import unittest
+import numpy as np
 
-def detect_peaks_and_dips(df, peak_type):
+# Sample data
+highs = np.array([10, 12, 15, 14, 13, 17, 16, 19, 18, 17])
+lows = np.array([8, 7, 6, 9, 8, 11, 10, 9, 12, 11])
+
+def detect_peaks_and_dips(highs, lows, peak_type):
+    center_index = peak_type // 2
     peaks = []
     dips = []
-
-    center_index = peak_type // 2
-
-    for i in range(center_index, len(df) - center_index):
-        segment_high = df['high'].iloc[i - center_index:i + center_index + 1].values
-        segment_low = df['low'].iloc[i - center_index:i + center_index + 1].values
+    
+    for i in range(center_index, len(highs) - center_index):
+        peak_window = highs[i - center_index:i + center_index + 1]
+        dip_window = lows[i - center_index:i + center_index + 1]
         
-        peak = True
-        dip = True
-
-        for j in range(len(segment_high)):
-            if j != center_index:
-                if segment_high[j] > segment_high[center_index]:
-                    peak = False
-                if segment_low[j] < segment_low[center_index]:
-                    dip = False
-
-        if peak:
-            peaks.append(segment_high[center_index])
-        if dip:
-            dips.append(segment_low[center_index])
-
-        # Debugging information
-        print(f"Segment High: {segment_high}, Segment Low: {segment_low}, Peak: {peak}, Dip: {dip}")
-
+        if all(peak_window[center_index] > peak_window[j] for j in range(len(peak_window)) if j != center_index):
+            peaks.append((i, highs[i]))
+        
+        if all(dip_window[center_index] < dip_window[j] for j in range(len(dip_window)) if j != center_index):
+            dips.append((i, lows[i]))
+    
     return peaks, dips
 
-class TestStrategy(unittest.TestCase):
+# Parameters
+peak_type = 5
 
-    def test_detect_peaks_and_dips(self):
-        data = pd.DataFrame({
-            'high': [100, 200, 300, 400, 500, 600, 500, 400, 300, 200, 100],
-            'low': [50, 150, 250, 350, 450, 550, 450, 350, 250, 150, 50]
-        })
-        peak_type = 4
-        expected_peaks = [400, 600]
-        expected_dips = [50]
-        peaks, dips = detect_peaks_and_dips(data, peak_type)
-        print(f"Detected peaks: {peaks}, Detected dips: {dips}")
-        self.assertEqual(peaks, expected_peaks)
-        self.assertEqual(dips, expected_dips)
+# Detect peaks and dips
+peaks, dips = detect_peaks_and_dips(highs, lows, peak_type)
 
-if __name__ == '__main__':
-    unittest.main()
+# Verifying the results
+print("Peaks detected at indices and values:")
+for peak in peaks:
+    print(f"Index: {peak[0]}, Value: {peak[1]}")
+
+print("\nDips detected at indices and values:")
+for dip in dips:
+    print(f"Index: {dip[0]}, Value: {dip[1]}")
