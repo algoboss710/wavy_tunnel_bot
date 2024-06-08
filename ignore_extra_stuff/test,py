@@ -1,37 +1,48 @@
+import pandas as pd
 import numpy as np
 
-# Sample data
-highs = np.array([10, 12, 15, 14, 13, 17, 16, 19, 18, 17])
-lows = np.array([8, 7, 6, 9, 8, 11, 10, 9, 12, 11])
+data = pd.DataFrame({'close': [100, 200, 300, 400, 450, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500]})
+period = 3
+deviation_factor = 1.0
 
-def detect_peaks_and_dips(highs, lows, peak_type):
-    center_index = peak_type // 2
-    peaks = []
-    dips = []
-    
-    for i in range(center_index, len(highs) - center_index):
-        peak_window = highs[i - center_index:i + center_index + 1]
-        dip_window = lows[i - center_index:i + center_index + 1]
-        
-        if all(peak_window[center_index] > peak_window[j] for j in range(len(peak_window)) if j != center_index):
-            peaks.append((i, highs[i]))
-        
-        if all(dip_window[center_index] < dip_window[j] for j in range(len(dip_window)) if j != center_index):
-            dips.append((i, lows[i]))
-    
-    return peaks, dips
+def calculate_ema(prices, period):
+    ema_values = np.full(len(prices), np.nan, dtype=np.float64)
+    if len(prices) < period:
+        return pd.Series(ema_values, index=prices.index)
 
-# Parameters
-peak_type = 5
+    sma = np.mean(prices[:period])
+    ema_values[period - 1] = sma
+    multiplier = 2 / (period + 1)
+    for i in range(period, len(prices)):
+        ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
+    return pd.Series(ema_values, index=prices.index)
 
-# Detect peaks and dips
-peaks, dips = detect_peaks_and_dips(highs, lows, peak_type)
+ema = calculate_ema(data['close'], period)
+print("EMA:", ema)
 
-# Verifying the results
-print("Peaks detected at indices and values:")
-for peak in peaks:
-    print(f"Index: {peak[0]}, Value: {peak[1]}")
+volatility = np.std(data['close'])
+deviation = deviation_factor * volatility
+upper_bound = ema + deviation
+lower_bound = ema - deviation
 
-print("\nDips detected at indices and values:")
-for dip in dips:
-    print(f"Index: {dip[0]}, Value: {dip[1]}")
+print("Upper Bound:", upper_bound)
+print("Lower Bound:", lower_bound)
+
+def generate_trade_signal(data, period, deviation_factor):
+    upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
+    if data['close'].iloc[-1] > upper_bound.iloc[-1]:
+        return 'BUY'
+    elif data['close'].iloc[-1] < lower_bound.iloc[-1]:
+        return 'SELL'
+    return None
+
+def calculate_tunnel_bounds(data, period, deviation_factor):
+    ema = calculate_ema(data['close'], period)
+    volatility = np.std(data['close'])
+    deviation = deviation_factor * volatility
+    upper_bound = ema + deviation
+    lower_bound = ema - deviation
+    return upper_bound, lower_bound
+
+signal = generate_trade_signal(data, period, deviation_factor)
+print("Signal:", signal)

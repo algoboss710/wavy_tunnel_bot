@@ -351,16 +351,28 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
         handle_error(e, "Failed to manage position")
 
 def calculate_tunnel_bounds(data, period, deviation_factor):
+    if len(data) < period:
+        return pd.Series([np.nan] * len(data)), pd.Series([np.nan] * len(data))
+    
     ema = calculate_ema(data['close'], period)
-    volatility = np.std(data['close'])
-    print(f"Volatility: {volatility}")
+    rolling_std = data['close'].rolling(window=period).std()
+
+    volatility = rolling_std.mean()
     deviation = deviation_factor * volatility
-    print(f"Deviation: {deviation}")
+
     upper_bound = ema + deviation
     lower_bound = ema - deviation
+
+    print(f"EMA Values for Tunnel Bounds: {ema}")
+    print(f"Rolling Std: {rolling_std}")
+    print(f"Volatility: {volatility}")
+    print(f"Deviation: {deviation}")
     print(f"Upper Bound: {upper_bound}")
     print(f"Lower Bound: {lower_bound}")
+
     return upper_bound, lower_bound
+
+
 
 def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value):
     risk_amount = account_balance * risk_per_trade
@@ -372,17 +384,21 @@ def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip
 
 def generate_trade_signal(data, period, deviation_factor):
     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
-    print(f"Upper Bound: {upper_bound}")
-    print(f"Lower Bound: {lower_bound}")
-    print(f"Close: {data['close'].iloc[-1]}")
+    last_close = data['close'].iloc[-1]
+    upper_bound_last_value = upper_bound.iloc[-1]
+    lower_bound_last_value = lower_bound.iloc[-1]
 
-    if len(upper_bound) > 0 and len(lower_bound) > 0:
-        if data['close'].iloc[-1] > upper_bound.iloc[-1]:
-            return 'BUY'
-        elif data['close'].iloc[-1] < lower_bound.iloc[-1]:
-            return 'SELL'
+    print(f"Last Close: {last_close}")
+    print(f"Upper Bound Last Value: {upper_bound_last_value}")
+    print(f"Lower Bound Last Value: {lower_bound_last_value}")
 
-    return None
+    if last_close >= upper_bound_last_value:
+        return 'BUY'
+    elif last_close <= lower_bound_last_value:
+        return 'SELL'
+    else:
+        return None
+
 
 
 def adjust_deviation_factor(market_conditions):

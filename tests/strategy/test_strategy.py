@@ -21,8 +21,8 @@ class TestStrategy(unittest.TestCase):
         data = pd.DataFrame({'close': [100, 200, 300, 400, 500]})
         period = 3
         deviation_factor = 1.0
-        expected_upper_bound = pd.Series([None, None, 341.42, 441.42, 541.42])
-        expected_lower_bound = pd.Series([None, None, 58.58, 158.58, 258.58])
+        expected_upper_bound = pd.Series([np.nan, np.nan, 300.0, 400.0, 500.0])
+        expected_lower_bound = pd.Series([np.nan, np.nan, 100.0, 200.0, 300.0])
         upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
         pd.testing.assert_series_equal(upper_bound.round(2), expected_upper_bound, check_names=False)
         pd.testing.assert_series_equal(lower_bound.round(2), expected_lower_bound, check_names=False)
@@ -62,30 +62,35 @@ class TestStrategy(unittest.TestCase):
         self.assertTrue(buy_condition)
         self.assertFalse(sell_condition)
 
-    def test_generate_trade_signal(self):
-        data = pd.DataFrame({'close': [100, 200, 300, 400, 450, 500]})
+    def test_generate_trade_signal_buy(self):
+        data = pd.DataFrame({'close': [100, 200, 300, 400, 500, 600]})
         period = 3
         deviation_factor = 1.0
-        expected_signal = None  # Correcting the expected signal based on calculations
+        expected_signal = 'BUY'
+
         signal = generate_trade_signal(data, period, deviation_factor)
-        upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
-        print(f"Upper Bound: {upper_bound}")
-        print(f"Lower Bound: {lower_bound}")
-        print(f"Close: {data['close'].iloc[-1]}")
+        print(f"Expected: {expected_signal}, Got: {signal}")
         self.assertEqual(signal, expected_signal)
 
-    def test_generate_trade_signal2(self):
-        # Added more data points to ensure valid EMA calculations
-        data = pd.DataFrame({'close': [100, 200, 300, 400, 450, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500]})
+    def test_generate_trade_signal_sell(self):
+        data = pd.DataFrame({'close': [100, 200, 300, 400, 500, 100]})  # Last close set to 100 to ensure 'SELL'
         period = 3
         deviation_factor = 1.0
-        expected_signal = 'BUY'  # Expecting a BUY signal based on the data
+        expected_signal = 'SELL'
+
         signal = generate_trade_signal(data, period, deviation_factor)
-        upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
-        print(f"Upper Bound: {upper_bound}")
-        print(f"Lower Bound: {lower_bound}")
-        print(f"Close: {data['close'].iloc[-1]}")
+        print(f"Expected: {expected_signal}, Got: {signal}")
         self.assertEqual(signal, expected_signal)
+
+    def test_generate_trade_signal_none(self):
+        data = pd.DataFrame({'close': [100, 200, 300, 400, 500, 450]})
+        period = 3
+        deviation_factor = 1.0
+        expected_signal = None
+
+        signal = generate_trade_signal(data, period, deviation_factor)
+        print(f"Expected: {expected_signal}, Got: {signal}")
+        self.assertIsNone(signal)
 
     @mock.patch('strategy.tunnel_strategy.mt5')
     @mock.patch('strategy.tunnel_strategy.get_historical_data')
