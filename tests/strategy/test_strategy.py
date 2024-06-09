@@ -330,8 +330,8 @@ class TestStrategy(unittest.TestCase):
             1.2300
         )
     
-    @mock.patch('path.to.your.module.place_order')
-    @mock.patch('path.to.your.module.handle_error')
+    @mock.patch('strategy.tunnel_strategy.place_order')
+    @mock.patch('strategy.tunnel_strategy.handle_error')
     def test_execute_trade_exception(self, mock_handle_error, mock_place_order):
         # Setup for exception scenario
         mock_place_order.side_effect = Exception("Connection error")
