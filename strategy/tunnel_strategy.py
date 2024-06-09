@@ -27,6 +27,10 @@ def calculate_ema(prices, period):
         raise ValueError("Invalid input type for prices. Expected float, int, list, numpy array, or pandas Series.")
 
 def detect_peaks_and_dips(df, peak_type):
+    
+    if not np.issubdtype(df['high'].dtype, np.number) or not np.issubdtype(df['low'].dtype, np.number):
+        raise TypeError("High and Low columns must contain numeric data.")
+    
     highs = df['high'].values
     lows = df['low'].values
     center_index = peak_type // 2
