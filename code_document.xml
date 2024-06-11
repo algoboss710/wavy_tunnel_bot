@@ -1154,245 +1154,6 @@ def exit_trade(position_ticket):
 <document index="12">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\tunnel_strategy.py</source>
 <document_content>
-
-# import numpy as np
-# from metatrader.data_retrieval import get_historical_data
-# from utils.error_handling import handle_error
-# from metatrader.indicators import calculate_ema
-# from metatrader.trade_management import place_order, close_position, modify_order
-# import pandas as pd
-# import MetaTrader5 as mt5
-# import logging
-
-# def calculate_ema(prices, period):
-#     if isinstance(prices, (float, int)):
-#         return prices
-#     elif isinstance(prices, (list, np.ndarray, pd.Series)):
-#         ema_values = np.full(len(prices), np.nan, dtype=np.float64)
-#         if len(prices) < period:
-#             return pd.Series(ema_values, index=prices.index)
-        
-#         sma = np.mean(prices[:period])
-#         ema_values[period - 1] = sma
-#         multiplier = 2 / (period + 1)
-#         for i in range(period, len(prices)):
-#             ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
-#         return pd.Series(ema_values, index=prices.index)
-#     else:
-#         raise ValueError("Invalid input type for prices. Expected float, int, list, numpy array, or pandas Series.")
-
-# def detect_peaks_and_dips(df, peak_type):
-#     highs = df['high'].values
-#     lows = df['low'].values
-#     center_index = peak_type // 2
-#     peaks = []
-#     dips = []
-    
-#     for i in range(center_index, len(highs) - center_index):
-#         peak_window = highs[i - center_index:i + center_index + 1]
-#         dip_window = lows[i - center_index:i + center_index + 1]
-        
-#         if all(peak_window[center_index] > peak_window[j] for j in range(len(peak_window)) if j != center_index):
-#             peaks.append(highs[i])
-        
-#         if all(dip_window[center_index] < dip_window[j] for j in range(len(dip_window)) if j != center_index):
-#             dips.append(lows[i])
-    
-#     return peaks, dips
-
-# def check_entry_conditions(row, peaks, dips, symbol):
-#     buy_condition = (
-#         row['close'] > max(row['wavy_c'], row['wavy_h'], row['wavy_l']) and
-#         min(row['wavy_c'], row['wavy_h'], row['wavy_l']) > max(row['tunnel1'], row['tunnel2']) and
-#         row['close'] in peaks  # Check if the current close price is a peak
-#     )
-#     sell_condition = (
-#         row['close'] < min(row['wavy_c'], row['wavy_h'], row['wavy_l']) and
-#         max(row['wavy_c'], row['wavy_h'], row['wavy_l']) < min(row['tunnel1'], row['tunnel2']) and
-#         row['close'] in dips  # Check if the current close price is a dip
-#     )
-#     threshold_values = {
-#         'USD': 2,
-#         'EUR': 2,
-#         'JPY': 300,
-#         'GBP': 6,
-#         'CHF': 2,
-#         'AUD': 2,
-#         'default': 100
-#     }
-#     apply_threshold = True
-#     if apply_threshold:
-#         threshold = threshold_values.get(symbol[:3], threshold_values['default']) * mt5.symbol_info(symbol).trade_tick_size
-#         if threshold == 0:
-#             logging.error("Division by zero: threshold value is zero in check_entry_conditions")
-#             return False, False
-#         buy_condition &= row['close'] > max(row['wavy_c'], row['wavy_h'], row['wavy_l']) + threshold
-#         sell_condition &= row['close'] < min(row['wavy_c'], row['wavy_h'], row['wavy_l']) - threshold
-#     return buy_condition, sell_condition
-
-# def execute_trade(trade_request):
-#     try:
-#         result = place_order(
-#             trade_request['symbol'],
-#             trade_request['action'].lower(),
-#             trade_request['volume'],
-#             trade_request['price'],
-#             trade_request['sl'],
-#             trade_request['tp']
-#         )
-#         if result == 'Order failed':
-#             raise Exception("Failed to execute trade")
-#         trade_request['profit'] = 0  # Initialize profit to 0
-#         return result
-#     except Exception as e:
-#         handle_error(e, "Failed to execute trade")
-#         return None
-    
-# def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
-#     try:
-#         positions = mt5.positions_get(symbol=symbol)
-#         if positions:
-#             for position in positions:
-#                 if position.profit >= min_take_profit:
-#                     close_position(position.ticket)
-#                 elif position.profit <= -max_loss_per_day:
-#                     close_position(position.ticket)
-#                 else:
-#                     current_equity = mt5.account_info().equity
-#                     if current_equity <= starting_equity * 0.9:  # Close position if equity drops by 10%
-#                         close_position(position.ticket)
-#                     elif mt5.positions_total() >= max_trades_per_day:
-#                         close_position(position.ticket)
-#     except Exception as e:
-#         handle_error(e, "Failed to manage position")
-
-# def calculate_tunnel_bounds(data, period, deviation_factor):
-#     ema = calculate_ema(data['close'], period)
-#     volatility = np.std(data['close'])
-#     deviation = deviation_factor * volatility
-#     upper_bound = ema + deviation
-#     lower_bound = ema - deviation
-#     return upper_bound, lower_bound
-
-# def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value):
-#     risk_amount = account_balance * risk_per_trade
-#     if stop_loss_pips == 0 or pip_value == 0:
-#         logging.error("Division by zero: stop_loss_pips or pip_value is zero in calculate_position_size")
-#         raise ZeroDivisionError("stop_loss_pips or pip_value cannot be zero")
-#     position_size = risk_amount / (stop_loss_pips * pip_value)
-#     return position_size
-
-# def generate_trade_signal(data, period, deviation_factor):
-#     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
-#     print(f"Upper Bound: {upper_bound}")
-#     print(f"Lower Bound: {lower_bound}")
-#     print(f"Close: {data['close'].iloc[-1]}")
-
-#     if len(upper_bound) > 0 and len(lower_bound) > 0:
-#         if data['close'].iloc[-1] > upper_bound.iloc[-1]:
-#             return 'BUY'
-#         elif data['close'].iloc[-1] < lower_bound.iloc[-1]:
-#             return 'SELL'
-
-#     return None
-
-
-# def adjust_deviation_factor(market_conditions):
-#     if market_conditions == 'volatile':
-#         return 2.5
-#     else:
-#         return 2.0
-
-# def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, run_backtest=False):
-#     try:
-#         for symbol in symbols:
-#             start_time = pd.Timestamp.now() - pd.Timedelta(days=30)  # Example: 30 days ago
-#             end_time = pd.Timestamp.now()  # Current time
-#             data = get_historical_data(symbol, timeframe, start_time, end_time)
-#             if data is None:
-#                 raise Exception(f"Failed to retrieve historical data for {symbol}")
-
-#             print(f"Historical data shape before calculations: {data.shape}")
-#             print(f"Historical data head before calculations:\n{data.head()}")
-#             print(f"Historical data for {symbol}:")
-#             print(data.head())
-#             print(f"Data types: {data.dtypes}")
-
-#             period = 20
-#             market_conditions = 'volatile'  # Placeholder for determining market conditions
-#             deviation_factor = adjust_deviation_factor(market_conditions)
-
-#             print("Calculating Wavy Tunnel indicators...")
-#             data['wavy_h'] = calculate_ema(data['high'], 34)
-#             data['wavy_c'] = calculate_ema(data['close'], 34)
-#             data['wavy_l'] = calculate_ema(data['low'], 34)
-#             data['tunnel1'] = calculate_ema(data['close'], 144)
-#             data['tunnel2'] = calculate_ema(data['close'], 169)
-#             data['long_term_ema'] = calculate_ema(data['close'], 200)
-#             print("Indicators calculated.")
-
-#             print("Detecting peaks and dips...")
-#             peak_type = 21  # Define the peak_type variable
-#             peaks, dips = detect_peaks_and_dips(data, peak_type)
-#             print(f"Peaks: {peaks[:5]}")
-#             print(f"Dips: {dips[:5]}")
-
-#             print(f"Historical data shape after calculations: {data.shape}")
-#             print(f"Historical data head after calculations:\n{data.head()}")
-
-#             print("Generating entry signals...")
-#             data['buy_signal'], data['sell_signal'] = zip(*data.apply(lambda x: check_entry_conditions(x, peaks, dips, symbol), axis=1))
-#             print("Entry signals generated.")
-
-#             if run_backtest:
-#                 # Run backtest
-#                 print("Running backtest...")
-#                 # Backtest logic here
-#             else:
-#                 # Run live trading
-#                 signal = generate_trade_signal(data, period, deviation_factor)
-
-#                 if signal == 'BUY':
-#                     trade_request = {
-#                         'action': 'BUY',
-#                         'symbol': symbol,
-#                         'volume': lot_size,
-#                         'price': data['close'].iloc[-1],
-#                         'sl': data['close'].iloc[-1] - (1.5 * np.std(data['close'])),
-#                         'tp': data['close'].iloc[-1] + (2 * np.std(data['close'])),
-#                         'deviation': 10,
-#                         'magic': 12345,
-#                         'comment': 'Tunnel Strategy',
-#                         'type': 'ORDER_TYPE_BUY',
-#                         'type_filling': 'ORDER_FILLING_FOK',
-#                         'type_time': 'ORDER_TIME_GTC'
-#                     }
-#                     print(f"Executing BUY trade for {symbol}...")
-#                     execute_trade(trade_request)
-#                 elif signal == 'SELL':
-#                     trade_request = {
-#                         'action': 'SELL',
-#                         'symbol': symbol,
-#                         'volume': lot_size,
-#                         'price': data['close'].iloc[-1],
-#                         'sl': data['close'].iloc[-1] + (1.5 * np.std(data['close'])),
-#                         'tp': data['close'].iloc[-1] - (2 * np.std(data['close'])),
-#                         'deviation': 10,
-#                         'magic': 12345,
-#                         'comment': 'Tunnel Strategy',
-#                         'type': 'ORDER_TYPE_SELL',
-#                         'type_filling': 'ORDER_FILLING_FOK',
-#                         'type_time': 'ORDER_TIME_GTC'
-#                     }
-#                     print(f"Executing SELL trade for {symbol}...")
-#                     execute_trade(trade_request)
-
-#                 manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
-
-#     except Exception as e:
-#         handle_error(e, "Failed to run the strategy")
-#         raise
-
 import numpy as np
 from metatrader.data_retrieval import get_historical_data
 from utils.error_handling import handle_error
@@ -1422,6 +1183,10 @@ def calculate_ema(prices, period):
         raise ValueError("Invalid input type for prices. Expected float, int, list, numpy array, or pandas Series.")
 
 def detect_peaks_and_dips(df, peak_type):
+    
+    if not np.issubdtype(df['high'].dtype, np.number) or not np.issubdtype(df['low'].dtype, np.number):
+        raise TypeError("High and Low columns must contain numeric data.")
+    
     highs = df['high'].values
     lows = df['low'].values
     center_index = peak_type // 2
@@ -1507,16 +1272,28 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
         handle_error(e, "Failed to manage position")
 
 def calculate_tunnel_bounds(data, period, deviation_factor):
+    if len(data) < period:
+        return pd.Series([np.nan] * len(data)), pd.Series([np.nan] * len(data))
+    
     ema = calculate_ema(data['close'], period)
-    volatility = np.std(data['close'])
-    print(f"Volatility: {volatility}")
+    rolling_std = data['close'].rolling(window=period).std()
+
+    volatility = rolling_std.mean()
     deviation = deviation_factor * volatility
-    print(f"Deviation: {deviation}")
+
     upper_bound = ema + deviation
     lower_bound = ema - deviation
+
+    print(f"EMA Values for Tunnel Bounds: {ema}")
+    print(f"Rolling Std: {rolling_std}")
+    print(f"Volatility: {volatility}")
+    print(f"Deviation: {deviation}")
     print(f"Upper Bound: {upper_bound}")
     print(f"Lower Bound: {lower_bound}")
+
     return upper_bound, lower_bound
+
+
 
 def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value):
     risk_amount = account_balance * risk_per_trade
@@ -1528,17 +1305,21 @@ def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip
 
 def generate_trade_signal(data, period, deviation_factor):
     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
-    print(f"Upper Bound: {upper_bound}")
-    print(f"Lower Bound: {lower_bound}")
-    print(f"Close: {data['close'].iloc[-1]}")
+    last_close = data['close'].iloc[-1]
+    upper_bound_last_value = upper_bound.iloc[-1]
+    lower_bound_last_value = lower_bound.iloc[-1]
 
-    if len(upper_bound) > 0 and len(lower_bound) > 0:
-        if data['close'].iloc[-1] > upper_bound.iloc[-1]:
-            return 'BUY'
-        elif data['close'].iloc[-1] < lower_bound.iloc[-1]:
-            return 'SELL'
+    print(f"Last Close: {last_close}")
+    print(f"Upper Bound Last Value: {upper_bound_last_value}")
+    print(f"Lower Bound Last Value: {lower_bound_last_value}")
 
-    return None
+    if last_close >= upper_bound_last_value:
+        return 'BUY'
+    elif last_close <= lower_bound_last_value:
+        return 'SELL'
+    else:
+        return None
+
 
 
 def adjust_deviation_factor(market_conditions):
@@ -1851,7 +1632,7 @@ import numpy as np
 from unittest import mock
 from strategy.tunnel_strategy import (
     calculate_ema, calculate_tunnel_bounds, detect_peaks_and_dips, 
-    check_entry_conditions, generate_trade_signal, run_strategy
+    check_entry_conditions, generate_trade_signal, run_strategy, execute_trade
 )
 import MetaTrader5 as mt5
 
@@ -1863,16 +1644,76 @@ class TestStrategy(unittest.TestCase):
         result = calculate_ema(prices, period)
         expected_ema = pd.Series([None, None, 200.0, 300.0, 400.0])
         pd.testing.assert_series_equal(result, expected_ema, check_names=False)
+    
+    def test_calculate_ema_empty_series(self):
+        prices = pd.Series([])
+        period = 3
+        expected_ema = pd.Series([])
+        result = calculate_ema(prices, period)
+        pd.testing.assert_series_equal(result, expected_ema, check_names=False)
+    
+    def test_calculate_ema_non_numeric(self):
+        prices = pd.Series(['a', 'b', 'c'])
+        period = 3
+        with self.assertRaises(TypeError):
+            calculate_ema(prices, period)
+
+    def test_calculate_ema_small_period(self):
+        prices = pd.Series([100, 200, 300])
+        period = 1
+        expected_ema = pd.Series([100.0, 200.0, 300.0])  # Change to float64 explicitly
+        result = calculate_ema(prices, period)
+        pd.testing.assert_series_equal(result, expected_ema, check_names=False)
+    
+    def test_calculate_ema_large_period(self):
+        prices = pd.Series(range(1, 51))
+        period = 50
+        expected_ema = pd.Series([np.nan] * 49 + [np.mean(range(1, 51))], dtype=float)
+        result = calculate_ema(prices, period)
+        pd.testing.assert_series_equal(result, expected_ema, check_names=False)
+
 
     def test_calculate_tunnel_bounds(self):
         data = pd.DataFrame({'close': [100, 200, 300, 400, 500]})
         period = 3
         deviation_factor = 1.0
-        expected_upper_bound = pd.Series([None, None, 341.42, 441.42, 541.42])
-        expected_lower_bound = pd.Series([None, None, 58.58, 158.58, 258.58])
+        expected_upper_bound = pd.Series([np.nan, np.nan, 300.0, 400.0, 500.0])
+        expected_lower_bound = pd.Series([np.nan, np.nan, 100.0, 200.0, 300.0])
         upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
         pd.testing.assert_series_equal(upper_bound.round(2), expected_upper_bound, check_names=False)
         pd.testing.assert_series_equal(lower_bound.round(2), expected_lower_bound, check_names=False)
+
+    def test_calculate_tunnel_bounds_missing_columns(self):
+        data = pd.DataFrame({'open': [100, 200, 300]})
+        period = 3
+        deviation_factor = 1.0
+        with self.assertRaises(KeyError):  # Assumes that the function needs 'close' column
+            calculate_tunnel_bounds(data, period, deviation_factor)
+
+    def test_calculate_tunnel_bounds_insufficient_length(self):
+        data = pd.DataFrame({'close': [100, 200]})
+        period = 3
+        deviation_factor = 1.0
+        expected_upper_bound = pd.Series([np.nan, np.nan])
+        expected_lower_bound = pd.Series([np.nan, np.nan])
+        upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
+        pd.testing.assert_series_equal(upper_bound, expected_upper_bound, check_names=False)
+        pd.testing.assert_series_equal(lower_bound, expected_lower_bound, check_names=False)
+
+    def test_detect_peaks_and_dips_insufficient_data(self):
+        data = pd.DataFrame({'high': [10, 12], 'low': [8, 7]})
+        peak_type = 5
+        expected_peaks = []
+        expected_dips = []
+        peaks, dips = detect_peaks_and_dips(data, peak_type)
+        self.assertEqual(peaks, expected_peaks)
+        self.assertEqual(dips, expected_dips)
+
+    def test_detect_peaks_and_dips_non_numeric(self):
+        data = pd.DataFrame({'high': ['ten', 'twelve'], 'low': ['eight', 'seven']})
+        peak_type = 3
+        with self.assertRaises(TypeError):
+            detect_peaks_and_dips(data, peak_type)
 
     def test_detect_peaks_and_dips(self):
         data = {
@@ -1887,6 +1728,37 @@ class TestStrategy(unittest.TestCase):
         print(f"Detected peaks: {peaks}, Detected dips: {dips}")
         self.assertEqual(peaks, expected_peaks)
         self.assertEqual(dips, expected_dips)
+    
+    def test_check_entry_conditions_missing_data(self):
+        row = pd.Series({
+         'close': 350,
+         # 'wavy_c' missing
+         'wavy_h': 320,
+         'wavy_l': 310,
+         'tunnel1': 250,
+         'tunnel2': 240
+        })
+        peaks = [350]
+        dips = [150]
+        symbol = 'EURUSD'
+        with self.assertRaises(KeyError):
+         check_entry_conditions(row, peaks, dips, symbol)
+    
+
+    def test_check_entry_conditions_incorrect_types(self):
+        row = pd.Series({
+            'close': 350,
+            'wavy_c': 300,
+            'wavy_h': 320,
+            'wavy_l': 310,
+            'tunnel1': 250,
+            'tunnel2': 240
+        })
+        peaks = 'not a list'
+        dips = 'also not a list'
+        symbol = 'EURUSD'
+        with self.assertRaises(TypeError):
+            check_entry_conditions(row, peaks, dips, symbol)
 
     @mock.patch('strategy.tunnel_strategy.mt5')
     def test_check_entry_conditions(self, mock_mt5):
@@ -1909,30 +1781,112 @@ class TestStrategy(unittest.TestCase):
         self.assertTrue(buy_condition)
         self.assertFalse(sell_condition)
 
-    def test_generate_trade_signal(self):
-        data = pd.DataFrame({'close': [100, 200, 300, 400, 450, 500]})
+    def test_generate_trade_signal_buy(self):
+        data = pd.DataFrame({'close': [100, 200, 300, 400, 500, 600]})
         period = 3
         deviation_factor = 1.0
-        expected_signal = None  # Correcting the expected signal based on calculations
+        expected_signal = 'BUY'
+
         signal = generate_trade_signal(data, period, deviation_factor)
-        upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
-        print(f"Upper Bound: {upper_bound}")
-        print(f"Lower Bound: {lower_bound}")
-        print(f"Close: {data['close'].iloc[-1]}")
+        print(f"Expected: {expected_signal}, Got: {signal}")
         self.assertEqual(signal, expected_signal)
 
-    def test_generate_trade_signal2(self):
-        # Added more data points to ensure valid EMA calculations
-        data = pd.DataFrame({'close': [100, 200, 300, 400, 450, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500]})
+    def test_generate_trade_signal_sell(self):
+        data = pd.DataFrame({'close': [100, 200, 300, 400, 500, 100]})  # Last close set to 100 to ensure 'SELL'
         period = 3
         deviation_factor = 1.0
-        expected_signal = 'BUY'  # Expecting a BUY signal based on the data
+        expected_signal = 'SELL'
+
         signal = generate_trade_signal(data, period, deviation_factor)
-        upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
-        print(f"Upper Bound: {upper_bound}")
-        print(f"Lower Bound: {lower_bound}")
-        print(f"Close: {data['close'].iloc[-1]}")
+        print(f"Expected: {expected_signal}, Got: {signal}")
         self.assertEqual(signal, expected_signal)
+
+    def test_generate_trade_signal_none(self):
+        data = pd.DataFrame({'close': [100, 200, 300, 400, 500, 450]})
+        period = 3
+        deviation_factor = 1.0
+        expected_signal = None
+
+        signal = generate_trade_signal(data, period, deviation_factor)
+        print(f"Expected: {expected_signal}, Got: {signal}")
+        self.assertIsNone(signal)
+
+    def test_generate_trade_signal_non_numeric_data(self):
+        data = pd.DataFrame({'close': ["one", "two", "three", "four", "five"]})
+        period = 3
+        deviation_factor = 1.0
+        with self.assertRaises(TypeError):  # Assuming your function expects numeric inputs
+            generate_trade_signal(data, period, deviation_factor)
+
+    def test_generate_trade_signal_small_dataset(self):
+        data = pd.DataFrame({'close': [100, 200]})
+        period = 3
+        deviation_factor = 1.0
+        expected_signal = None  # Not enough data to generate a signal
+        signal = generate_trade_signal(data, period, deviation_factor)
+        self.assertIsNone(signal)
+
+    @mock.patch('strategy.tunnel_strategy.mt5')
+    def test_run_strategy_initialization_failure(self, mock_mt5):
+        mock_mt5.initialize.return_value = False  # Simulate initialization failure
+        symbols = ['EURUSD']
+        timeframe = mock_mt5.TIMEFRAME_M1
+        lot_size = 0.1
+        min_take_profit = 10
+        max_loss_per_day = 50
+        starting_equity = 1000
+        max_trades_per_day = 5
+        with self.assertRaises(Exception):  # Assuming your function raises Exception on init failure
+         run_strategy(symbols, mock_mt5.initialize, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+
+    @mock.patch('strategy.tunnel_strategy.mt5')
+    def test_run_strategy_no_symbols_available(self, mock_mt5):
+        mock_mt5.initialize.return_value = True
+        mock_mt5.symbols_get.return_value = []  # No symbols returned
+        symbols = ['EURUSD']
+        timeframe = mock_mt5.TIMEFRAME_M1
+        lot_size = 0.1
+        min_take_profit = 10
+        max_loss_per_day = 50
+        starting_equity = 1000
+        max_trades_per_day = 5
+        with self.assertRaises(Exception) as context:
+            run_strategy(symbols, mock_mt5.initialize, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+        self.assertIn("Failed to retrieve historical data for EURUSD", str(context.exception))
+
+    @mock.patch('strategy.tunnel_strategy.mt5')
+    @mock.patch('strategy.tunnel_strategy.get_historical_data')
+    def test_run_strategy_data_to_signal_flow(self, mock_get_historical_data, mock_mt5):
+        mock_mt5.initialize.return_value = True
+        mock_mt5.symbols_get.return_value = [mock.Mock(name='EURUSD')]
+    
+        # Set up historical data with all required fields
+        mock_get_historical_data.return_value = pd.DataFrame({
+            'time': pd.date_range(start='1/1/2022', periods=5, freq='min'),
+            'high': [110, 220, 330, 440, 550],
+            'low': [90, 180, 270, 360, 450],
+            'close': [105, 210, 315, 420, 525]
+        })
+
+    # Mock the additional required attributes/methods
+        mock_mt5.symbol_info.return_value = mock.Mock()
+        mock_mt5.symbol_info.return_value.trade_tick_size = 0.01  # Example value
+
+        symbols = ['EURUSD']
+        timeframe = mock_mt5.TIMEFRAME_M1
+        lot_size = 0.1
+        min_take_profit = 10
+        max_loss_per_day = 50
+        starting_equity = 1000
+        max_trades_per_day = 5
+    
+    # Check to ensure strategy runs and captures the output or exceptions as expected
+        try:
+            result = run_strategy(symbols, mock_mt5.initialize, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+            print("Strategy ran successfully.")
+        except Exception as e:
+            print(f"Strategy failed with error: {str(e)}")
+
 
     @mock.patch('strategy.tunnel_strategy.mt5')
     @mock.patch('strategy.tunnel_strategy.get_historical_data')
@@ -1963,9 +1917,73 @@ class TestStrategy(unittest.TestCase):
         })
 
         run_strategy(symbols, mock_mt5.initialize, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+    
+    @mock.patch('strategy.tunnel_strategy.place_order')
+    def test_execute_trade_success(self, mock_place_order):
+        mock_place_order.return_value = 'Order placed successfully'
+        trade_request = {
+            'symbol': 'EURUSD',
+            'action': 'BUY',
+            'volume': 1.0,
+            'price': 1.2345,
+            'sl': 1.2300,
+            'tp': 1.2400
+        }
+        result = execute_trade(trade_request)
+        self.assertEqual(result, 'Order placed successfully')
+        # Adjusted to use positional arguments as shown in the actual call
+        mock_place_order.assert_called_once_with(
+            'EURUSD', 'buy', 1.0, 1.2345, 1.2300, 1.2400
+        )
+    
+    @mock.patch('strategy.tunnel_strategy.place_order')
+    def test_execute_trade_failure(self, mock_place_order):
+        mock_place_order.return_value = 'Order failed'  # Simulated failure message
+        trade_request = {
+            'symbol': 'EURUSD',
+            'action': 'SELL',
+            'volume': 1.0,
+            'price': 1.2345,
+            'sl': 1.2400,
+            'tp': 1.2300
+        }
+        result = execute_trade(trade_request)
+        self.assertIsNone(result)  # Checking if the result is None as expected
+        mock_place_order.assert_called_once_with(
+            'EURUSD',  # Ensure case and parameter order matches the actual call
+            'sell', 
+            1.0, 
+            1.2345, 
+            1.2400, 
+            1.2300
+        )
+    
+    @mock.patch('strategy.tunnel_strategy.place_order')
+    @mock.patch('strategy.tunnel_strategy.handle_error')
+    def test_execute_trade_exception(self, mock_handle_error, mock_place_order):
+        # Setup for exception scenario
+        mock_place_order.side_effect = Exception("Connection error")
+        trade_request = {
+            'symbol': 'EURUSD',
+            'action': 'BUY',
+            'volume': 1.0,
+            'price': 1.2345,
+            'sl': 1.23,
+            'tp': 1.24
+        }
+
+        result = execute_trade(trade_request)
+        mock_place_order.assert_called_once_with(
+        'EURUSD', 'buy', 1.0, 1.2345, 1.23, 1.24
+        )
+        self.assertIsNone(result)
+        mock_handle_error.assert_called_once()
+
+
 
 if __name__ == '__main__':
     unittest.main()
+
 </document_content>
 </document>
 

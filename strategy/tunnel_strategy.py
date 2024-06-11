@@ -7,7 +7,29 @@ import pandas as pd
 import MetaTrader5 as mt5
 import logging
 
+# def calculate_ema(prices, period):
+#     if isinstance(prices, (float, int)):
+#         return prices
+#     elif isinstance(prices, (list, np.ndarray, pd.Series)):
+#         ema_values = np.full(len(prices), np.nan, dtype=np.float64)
+#         if len(prices) < period:
+#             return pd.Series(ema_values, index=prices.index)
+        
+#         sma = np.mean(prices[:period])
+#         ema_values[period - 1] = sma
+#         multiplier = 2 / (period + 1)
+#         for i in range(period, len(prices)):
+#             ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
+#         ema_series = pd.Series(ema_values, index=prices.index)
+#         print(f"EMA: {ema_series}")
+#         return ema_series
+#     else:
+#         raise ValueError("Invalid input type for prices. Expected float, int, list, numpy array, or pandas Series.")
+
 def calculate_ema(prices, period):
+    # Ensure that the series is numeric
+    prices = pd.to_numeric(prices, errors='coerce')
+
     if isinstance(prices, (float, int)):
         return prices
     elif isinstance(prices, (list, np.ndarray, pd.Series)):
@@ -102,18 +124,24 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
         positions = mt5.positions_get(symbol=symbol)
         if positions:
             for position in positions:
+                print(f"Checking position {position.ticket} with profit {position.profit}")
                 if position.profit >= min_take_profit:
+                    print(f"Closing position {position.ticket} for profit")
                     close_position(position.ticket)
                 elif position.profit <= -max_loss_per_day:
+                    print(f"Closing position {position.ticket} for loss")
                     close_position(position.ticket)
                 else:
                     current_equity = mt5.account_info().equity
                     if current_equity <= starting_equity * 0.9:  # Close position if equity drops by 10%
+                        print(f"Closing position {position.ticket} due to equity drop")
                         close_position(position.ticket)
                     elif mt5.positions_total() >= max_trades_per_day:
+                        print(f"Closing position {position.ticket} due to max trades exceeded")
                         close_position(position.ticket)
     except Exception as e:
         handle_error(e, "Failed to manage position")
+
 
 def calculate_tunnel_bounds(data, period, deviation_factor):
     if len(data) < period:

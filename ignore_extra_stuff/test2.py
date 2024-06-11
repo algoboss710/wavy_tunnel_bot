@@ -1,56 +1,37 @@
-import numpy as np
 import pandas as pd
+import numpy as np
+import unittest
 
-# Updated detect_peaks_and_dips function
-def detect_peaks_and_dips(df, peak_type):
-    highs = df['high'].values
-    lows = df['low'].values
-    center_index = peak_type // 2
-    peaks = []
-    dips = []
-    
-    for i in range(center_index, len(highs) - center_index):
-        peak_window = highs[i - center_index:i + center_index + 1]
-        dip_window = lows[i - center_index:i + center_index + 1]
+def calculate_ema(prices, period):
+    # Ensure that the series is numeric
+    prices = pd.to_numeric(prices, errors='coerce')
+
+    if isinstance(prices, (float, int)):
+        return prices
+    elif isinstance(prices, (list, np.ndarray, pd.Series)):
+        ema_values = np.full(len(prices), np.nan, dtype=np.float64)
+        if len(prices) < period:
+            return pd.Series(ema_values, index=prices.index)
         
-        if all(peak_window[center_index] > peak_window[j] for j in range(len(peak_window)) if j != center_index):
-            peaks.append(highs[i])
-        
-        if all(dip_window[center_index] < dip_window[j] for j in range(len(dip_window)) if j != center_index):
-            dips.append(lows[i])
-    
-    return peaks, dips
+        sma = np.mean(prices[:period])
+        ema_values[period - 1] = sma
+        multiplier = 2 / (period + 1)
+        for i in range(period, len(prices)):
+            ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
+        ema_series = pd.Series(ema_values, index=prices.index)
+        print(f"EMA: {ema_series}")
+        return ema_series
+    else:
+        raise ValueError("Invalid input type for prices. Expected float, int, list, numpy array, or pandas Series.")
 
-# Sample data as DataFrame
-data = {
-    'high': [10, 12, 15, 14, 13, 17, 16, 19, 18, 17],
-    'low': [8, 7, 6, 9, 8, 11, 10, 9, 12, 11]
-}
-df = pd.DataFrame(data)
+class TestStrategy(unittest.TestCase):
 
-# Parameters
-peak_type = 5
+    def test_calculate_ema_non_numeric(self):
+        prices = pd.Series(['abc', 'def', 'ghi'])
+        period = 3
+        result = calculate_ema(prices, period)
+        expected_ema = pd.Series([np.nan, np.nan, np.nan])
+        pd.testing.assert_series_equal(result, expected_ema, check_names=False)
 
-# data = pd.DataFrame({
-#         'high': [100, 200, 300, 400, 500, 600, 500, 400, 300, 200, 100],
-#         'low': [50, 150, 250, 350, 450, 550, 450, 350, 250, 150, 50]
-#     })
-
-# df = pd.DataFrame(data)
-
-# peak_type = 3
-
-# Detect peaks and dips
-peaks, dips = detect_peaks_and_dips(df, peak_type)
-result = detect_peaks_and_dips(df, peak_type)
-
-# Verifying the results
-print("Peaks detected:")
-for peak in peaks:
-    print(f"Value: {peak}")
-
-print("\nDips detected:")
-for dip in dips:
-    print(f"Value: {dip}")
-
-print("\nResult:", result)
+if __name__ == '__main__':
+    unittest.main()
