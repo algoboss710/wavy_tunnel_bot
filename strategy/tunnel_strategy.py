@@ -143,10 +143,35 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
         handle_error(e, "Failed to manage position")
 
 
+# def calculate_tunnel_bounds(data, period, deviation_factor):
+#     if len(data) < period:
+#         return pd.Series([np.nan] * len(data)), pd.Series([np.nan] * len(data))
+    
+#     ema = calculate_ema(data['close'], period)
+#     rolling_std = data['close'].rolling(window=period).std()
+
+#     volatility = rolling_std.mean()
+#     deviation = deviation_factor * volatility
+
+#     upper_bound = ema + deviation
+#     lower_bound = ema - deviation
+
+#     print(f"EMA Values for Tunnel Bounds: {ema}")
+#     print(f"Rolling Std: {rolling_std}")
+#     print(f"Volatility: {volatility}")
+#     print(f"Deviation: {deviation}")
+#     print(f"Upper Bound: {upper_bound}")
+#     print(f"Lower Bound: {lower_bound}")
+
+#     return upper_bound, lower_bound
+
 def calculate_tunnel_bounds(data, period, deviation_factor):
+    # Ensure 'close' column is numeric
+    data['close'] = pd.to_numeric(data['close'], errors='coerce')
+
     if len(data) < period:
         return pd.Series([np.nan] * len(data)), pd.Series([np.nan] * len(data))
-    
+
     ema = calculate_ema(data['close'], period)
     rolling_std = data['close'].rolling(window=period).std()
 
@@ -166,7 +191,6 @@ def calculate_tunnel_bounds(data, period, deviation_factor):
     return upper_bound, lower_bound
 
 
-
 def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value):
     risk_amount = account_balance * risk_per_trade
     if stop_loss_pips == 0 or pip_value == 0:
@@ -175,15 +199,36 @@ def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip
     position_size = risk_amount / (stop_loss_pips * pip_value)
     return position_size
 
+# def generate_trade_signal(data, period, deviation_factor):
+#     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
+#     last_close = data['close'].iloc[-1]
+#     upper_bound_last_value = upper_bound.iloc[-1]
+#     lower_bound_last_value = lower_bound.iloc[-1]
+
+#     print(f"Last Close: {last_close}")
+#     print(f"Upper Bound Last Value: {upper_bound_last_value}")
+#     print(f"Lower Bound Last Value: {lower_bound_last_value}")
+
+#     if last_close >= upper_bound_last_value:
+#         return 'BUY'
+#     elif last_close <= lower_bound_last_value:
+#         return 'SELL'
+#     else:
+#         return None
 def generate_trade_signal(data, period, deviation_factor):
     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
-    last_close = data['close'].iloc[-1]
+    
+    # Ensure last_close is numeric
+    last_close = pd.to_numeric(data['close'].iloc[-1], errors='coerce')
     upper_bound_last_value = upper_bound.iloc[-1]
     lower_bound_last_value = lower_bound.iloc[-1]
 
     print(f"Last Close: {last_close}")
     print(f"Upper Bound Last Value: {upper_bound_last_value}")
     print(f"Lower Bound Last Value: {lower_bound_last_value}")
+
+    if pd.isna(last_close) or pd.isna(upper_bound_last_value) or pd.isna(lower_bound_last_value):
+        return None
 
     if last_close >= upper_bound_last_value:
         return 'BUY'

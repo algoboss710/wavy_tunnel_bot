@@ -575,12 +575,23 @@ class TestStrategy(unittest.TestCase):
         print(f"Expected: {expected_signal}, Got: {signal}")
         self.assertIsNone(signal)
 
+    # def test_generate_trade_signal_non_numeric_data(self):
+    #     data = pd.DataFrame({'close': ["one", "two", "three", "four", "five"]})
+    #     period = 3
+    #     deviation_factor = 1.0
+    #     with self.assertRaises(TypeError):  # Assuming your function expects numeric inputs
+    #         generate_trade_signal(data, period, deviation_factor)
+    
     def test_generate_trade_signal_non_numeric_data(self):
-        data = pd.DataFrame({'close': ["one", "two", "three", "four", "five"]})
+        data = pd.DataFrame({
+            'close': ['one', 'two', 'three', 4, 5, 6]
+        })
         period = 3
-        deviation_factor = 1.0
-        with self.assertRaises(TypeError):  # Assuming your function expects numeric inputs
-            generate_trade_signal(data, period, deviation_factor)
+        deviation_factor = 2
+        result = generate_trade_signal(data, period, deviation_factor)
+        expected_signal = None  # Since non-numeric data will be coerced to NaN, resulting in no valid signal
+        self.assertEqual(result, expected_signal)
+
 
     def test_generate_trade_signal_small_dataset(self):
         data = pd.DataFrame({'close': [100, 200]})
