@@ -1164,6 +1164,9 @@ import MetaTrader5 as mt5
 import logging
 
 def calculate_ema(prices, period):
+    # Ensure that the series is numeric
+    prices = pd.to_numeric(prices, errors='coerce')
+
     if isinstance(prices, (float, int)):
         return prices
     elif isinstance(prices, (list, np.ndarray, pd.Series)):
@@ -1258,23 +1261,32 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
         positions = mt5.positions_get(symbol=symbol)
         if positions:
             for position in positions:
+                print(f"Checking position {position.ticket} with profit {position.profit}")
                 if position.profit >= min_take_profit:
+                    print(f"Closing position {position.ticket} for profit")
                     close_position(position.ticket)
                 elif position.profit <= -max_loss_per_day:
+                    print(f"Closing position {position.ticket} for loss")
                     close_position(position.ticket)
                 else:
                     current_equity = mt5.account_info().equity
                     if current_equity <= starting_equity * 0.9:  # Close position if equity drops by 10%
+                        print(f"Closing position {position.ticket} due to equity drop")
                         close_position(position.ticket)
                     elif mt5.positions_total() >= max_trades_per_day:
+                        print(f"Closing position {position.ticket} due to max trades exceeded")
                         close_position(position.ticket)
     except Exception as e:
         handle_error(e, "Failed to manage position")
 
+
 def calculate_tunnel_bounds(data, period, deviation_factor):
+    # Ensure 'close' column is numeric
+    data['close'] = pd.to_numeric(data['close'], errors='coerce')
+
     if len(data) < period:
         return pd.Series([np.nan] * len(data)), pd.Series([np.nan] * len(data))
-    
+
     ema = calculate_ema(data['close'], period)
     rolling_std = data['close'].rolling(window=period).std()
 
@@ -1294,7 +1306,6 @@ def calculate_tunnel_bounds(data, period, deviation_factor):
     return upper_bound, lower_bound
 
 
-
 def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value):
     risk_amount = account_balance * risk_per_trade
     if stop_loss_pips == 0 or pip_value == 0:
@@ -1305,13 +1316,18 @@ def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip
 
 def generate_trade_signal(data, period, deviation_factor):
     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
-    last_close = data['close'].iloc[-1]
+    
+    # Ensure last_close is numeric
+    last_close = pd.to_numeric(data['close'].iloc[-1], errors='coerce')
     upper_bound_last_value = upper_bound.iloc[-1]
     lower_bound_last_value = lower_bound.iloc[-1]
 
     print(f"Last Close: {last_close}")
     print(f"Upper Bound Last Value: {upper_bound_last_value}")
     print(f"Lower Bound Last Value: {lower_bound_last_value}")
+
+    if pd.isna(last_close) or pd.isna(upper_bound_last_value) or pd.isna(lower_bound_last_value):
+        return None
 
     if last_close >= upper_bound_last_value:
         return 'BUY'
@@ -1632,13 +1648,15 @@ import numpy as np
 from unittest import mock
 from strategy.tunnel_strategy import (
     calculate_ema, calculate_tunnel_bounds, detect_peaks_and_dips, 
-    check_entry_conditions, generate_trade_signal, run_strategy, execute_trade
+    check_entry_conditions, generate_trade_signal, run_strategy, execute_trade, manage_position, adjust_deviation_factor, calculate_position_size
 )
 import MetaTrader5 as mt5
+from unittest.mock import Mock, patch
 
 class TestStrategy(unittest.TestCase):
 
     def test_calculate_ema(self):
+        print("Running test_calculate_ema")
         prices = pd.Series([100, 200, 300, 400, 500])
         period = 3
         result = calculate_ema(prices, period)
@@ -1646,34 +1664,39 @@ class TestStrategy(unittest.TestCase):
         pd.testing.assert_series_equal(result, expected_ema, check_names=False)
     
     def test_calculate_ema_empty_series(self):
-        prices = pd.Series([])
+        print("Running test_calculate_ema_empty_series")
+        prices = pd.Series([], dtype=float)
         period = 3
-        expected_ema = pd.Series([])
+        expected_ema = pd.Series([], dtype=float)
         result = calculate_ema(prices, period)
         pd.testing.assert_series_equal(result, expected_ema, check_names=False)
     
     def test_calculate_ema_non_numeric(self):
-        prices = pd.Series(['a', 'b', 'c'])
+        print("Running test_calculate_ema_non_numeric")
+        prices = pd.Series(['abc', 'def', 'ghi'])
         period = 3
-        with self.assertRaises(TypeError):
-            calculate_ema(prices, period)
+        result = calculate_ema(prices, period)
+        expected_ema = pd.Series([np.nan] * len(prices))
+        pd.testing.assert_series_equal(result, expected_ema, check_names=False)
 
     def test_calculate_ema_small_period(self):
+        print("Running test_calculate_ema_small_period")
         prices = pd.Series([100, 200, 300])
         period = 1
-        expected_ema = pd.Series([100.0, 200.0, 300.0])  # Change to float64 explicitly
+        expected_ema = pd.Series([100.0, 200.0, 300.0])
         result = calculate_ema(prices, period)
         pd.testing.assert_series_equal(result, expected_ema, check_names=False)
     
     def test_calculate_ema_large_period(self):
+        print("Running test_calculate_ema_large_period")
         prices = pd.Series(range(1, 51))
         period = 50
         expected_ema = pd.Series([np.nan] * 49 + [np.mean(range(1, 51))], dtype=float)
         result = calculate_ema(prices, period)
         pd.testing.assert_series_equal(result, expected_ema, check_names=False)
 
-
     def test_calculate_tunnel_bounds(self):
+        print("Running test_calculate_tunnel_bounds")
         data = pd.DataFrame({'close': [100, 200, 300, 400, 500]})
         period = 3
         deviation_factor = 1.0
@@ -1684,6 +1707,7 @@ class TestStrategy(unittest.TestCase):
         pd.testing.assert_series_equal(lower_bound.round(2), expected_lower_bound, check_names=False)
 
     def test_calculate_tunnel_bounds_missing_columns(self):
+        print("Running test_calculate_tunnel_bounds_missing_columns")
         data = pd.DataFrame({'open': [100, 200, 300]})
         period = 3
         deviation_factor = 1.0
@@ -1691,6 +1715,7 @@ class TestStrategy(unittest.TestCase):
             calculate_tunnel_bounds(data, period, deviation_factor)
 
     def test_calculate_tunnel_bounds_insufficient_length(self):
+        print("Running test_calculate_tunnel_bounds_insufficient_length")
         data = pd.DataFrame({'close': [100, 200]})
         period = 3
         deviation_factor = 1.0
@@ -1701,6 +1726,7 @@ class TestStrategy(unittest.TestCase):
         pd.testing.assert_series_equal(lower_bound, expected_lower_bound, check_names=False)
 
     def test_detect_peaks_and_dips_insufficient_data(self):
+        print("Running test_detect_peaks_and_dips_insufficient_data")
         data = pd.DataFrame({'high': [10, 12], 'low': [8, 7]})
         peak_type = 5
         expected_peaks = []
@@ -1710,12 +1736,14 @@ class TestStrategy(unittest.TestCase):
         self.assertEqual(dips, expected_dips)
 
     def test_detect_peaks_and_dips_non_numeric(self):
+        print("Running test_detect_peaks_and_dips_non_numeric")
         data = pd.DataFrame({'high': ['ten', 'twelve'], 'low': ['eight', 'seven']})
         peak_type = 3
         with self.assertRaises(TypeError):
             detect_peaks_and_dips(data, peak_type)
 
     def test_detect_peaks_and_dips(self):
+        print("Running test_detect_peaks_and_dips")
         data = {
             'high': [10, 12, 15, 14, 13, 17, 16, 19, 18, 17],
             'low': [8, 7, 6, 9, 8, 11, 10, 9, 12, 11]
@@ -1730,6 +1758,7 @@ class TestStrategy(unittest.TestCase):
         self.assertEqual(dips, expected_dips)
     
     def test_check_entry_conditions_missing_data(self):
+        print("Running test_check_entry_conditions_missing_data")
         row = pd.Series({
          'close': 350,
          # 'wavy_c' missing
@@ -1743,9 +1772,9 @@ class TestStrategy(unittest.TestCase):
         symbol = 'EURUSD'
         with self.assertRaises(KeyError):
          check_entry_conditions(row, peaks, dips, symbol)
-    
 
     def test_check_entry_conditions_incorrect_types(self):
+        print("Running test_check_entry_conditions_incorrect_types")
         row = pd.Series({
             'close': 350,
             'wavy_c': 300,
@@ -1762,6 +1791,7 @@ class TestStrategy(unittest.TestCase):
 
     @mock.patch('strategy.tunnel_strategy.mt5')
     def test_check_entry_conditions(self, mock_mt5):
+        print("Running test_check_entry_conditions")
         row = pd.Series({
             'close': 350,
             'wavy_c': 300,
@@ -1782,6 +1812,7 @@ class TestStrategy(unittest.TestCase):
         self.assertFalse(sell_condition)
 
     def test_generate_trade_signal_buy(self):
+        print("Running test_generate_trade_signal_buy")
         data = pd.DataFrame({'close': [100, 200, 300, 400, 500, 600]})
         period = 3
         deviation_factor = 1.0
@@ -1792,6 +1823,7 @@ class TestStrategy(unittest.TestCase):
         self.assertEqual(signal, expected_signal)
 
     def test_generate_trade_signal_sell(self):
+        print("Running test_generate_trade_signal_sell")
         data = pd.DataFrame({'close': [100, 200, 300, 400, 500, 100]})  # Last close set to 100 to ensure 'SELL'
         period = 3
         deviation_factor = 1.0
@@ -1802,6 +1834,7 @@ class TestStrategy(unittest.TestCase):
         self.assertEqual(signal, expected_signal)
 
     def test_generate_trade_signal_none(self):
+        print("Running test_generate_trade_signal_none")
         data = pd.DataFrame({'close': [100, 200, 300, 400, 500, 450]})
         period = 3
         deviation_factor = 1.0
@@ -1810,15 +1843,20 @@ class TestStrategy(unittest.TestCase):
         signal = generate_trade_signal(data, period, deviation_factor)
         print(f"Expected: {expected_signal}, Got: {signal}")
         self.assertIsNone(signal)
-
+    
     def test_generate_trade_signal_non_numeric_data(self):
-        data = pd.DataFrame({'close': ["one", "two", "three", "four", "five"]})
+        print("Running test_generate_trade_signal_non_numeric_data")
+        data = pd.DataFrame({
+            'close': ['one', 'two', 'three', 4, 5, 6]
+        })
         period = 3
-        deviation_factor = 1.0
-        with self.assertRaises(TypeError):  # Assuming your function expects numeric inputs
-            generate_trade_signal(data, period, deviation_factor)
+        deviation_factor = 2
+        result = generate_trade_signal(data, period, deviation_factor)
+        expected_signal = None  # Since non-numeric data will be coerced to NaN, resulting in no valid signal
+        self.assertEqual(result, expected_signal)
 
     def test_generate_trade_signal_small_dataset(self):
+        print("Running test_generate_trade_signal_small_dataset")
         data = pd.DataFrame({'close': [100, 200]})
         period = 3
         deviation_factor = 1.0
@@ -1828,6 +1866,7 @@ class TestStrategy(unittest.TestCase):
 
     @mock.patch('strategy.tunnel_strategy.mt5')
     def test_run_strategy_initialization_failure(self, mock_mt5):
+        print("Running test_run_strategy_initialization_failure")
         mock_mt5.initialize.return_value = False  # Simulate initialization failure
         symbols = ['EURUSD']
         timeframe = mock_mt5.TIMEFRAME_M1
@@ -1837,10 +1876,11 @@ class TestStrategy(unittest.TestCase):
         starting_equity = 1000
         max_trades_per_day = 5
         with self.assertRaises(Exception):  # Assuming your function raises Exception on init failure
-         run_strategy(symbols, mock_mt5.initialize, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+            run_strategy(symbols, mock_mt5.initialize, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
 
     @mock.patch('strategy.tunnel_strategy.mt5')
     def test_run_strategy_no_symbols_available(self, mock_mt5):
+        print("Running test_run_strategy_no_symbols_available")
         mock_mt5.initialize.return_value = True
         mock_mt5.symbols_get.return_value = []  # No symbols returned
         symbols = ['EURUSD']
@@ -1857,9 +1897,10 @@ class TestStrategy(unittest.TestCase):
     @mock.patch('strategy.tunnel_strategy.mt5')
     @mock.patch('strategy.tunnel_strategy.get_historical_data')
     def test_run_strategy_data_to_signal_flow(self, mock_get_historical_data, mock_mt5):
+        print("Running test_run_strategy_data_to_signal_flow")
         mock_mt5.initialize.return_value = True
         mock_mt5.symbols_get.return_value = [mock.Mock(name='EURUSD')]
-    
+
         # Set up historical data with all required fields
         mock_get_historical_data.return_value = pd.DataFrame({
             'time': pd.date_range(start='1/1/2022', periods=5, freq='min'),
@@ -1868,7 +1909,7 @@ class TestStrategy(unittest.TestCase):
             'close': [105, 210, 315, 420, 525]
         })
 
-    # Mock the additional required attributes/methods
+        # Mock the additional required attributes/methods
         mock_mt5.symbol_info.return_value = mock.Mock()
         mock_mt5.symbol_info.return_value.trade_tick_size = 0.01  # Example value
 
@@ -1879,18 +1920,18 @@ class TestStrategy(unittest.TestCase):
         max_loss_per_day = 50
         starting_equity = 1000
         max_trades_per_day = 5
-    
-    # Check to ensure strategy runs and captures the output or exceptions as expected
+
+        # Check to ensure strategy runs and captures the output or exceptions as expected
         try:
             result = run_strategy(symbols, mock_mt5.initialize, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
             print("Strategy ran successfully.")
         except Exception as e:
             print(f"Strategy failed with error: {str(e)}")
 
-
     @mock.patch('strategy.tunnel_strategy.mt5')
     @mock.patch('strategy.tunnel_strategy.get_historical_data')
     def test_run_strategy(self, mock_get_historical_data, mock_mt5):
+        print("Running test_run_strategy")
         mock_mt5.TIMEFRAME_M1 = 1
         mock_mt5.symbol_info.return_value.trade_tick_size = 0.01
         
@@ -1920,6 +1961,7 @@ class TestStrategy(unittest.TestCase):
     
     @mock.patch('strategy.tunnel_strategy.place_order')
     def test_execute_trade_success(self, mock_place_order):
+        print("Running test_execute_trade_success")
         mock_place_order.return_value = 'Order placed successfully'
         trade_request = {
             'symbol': 'EURUSD',
@@ -1938,6 +1980,7 @@ class TestStrategy(unittest.TestCase):
     
     @mock.patch('strategy.tunnel_strategy.place_order')
     def test_execute_trade_failure(self, mock_place_order):
+        print("Running test_execute_trade_failure")
         mock_place_order.return_value = 'Order failed'  # Simulated failure message
         trade_request = {
             'symbol': 'EURUSD',
@@ -1961,6 +2004,7 @@ class TestStrategy(unittest.TestCase):
     @mock.patch('strategy.tunnel_strategy.place_order')
     @mock.patch('strategy.tunnel_strategy.handle_error')
     def test_execute_trade_exception(self, mock_handle_error, mock_place_order):
+        print("Running test_execute_trade_exception")
         # Setup for exception scenario
         mock_place_order.side_effect = Exception("Connection error")
         trade_request = {
@@ -1979,7 +2023,61 @@ class TestStrategy(unittest.TestCase):
         self.assertIsNone(result)
         mock_handle_error.assert_called_once()
 
+    @patch('strategy.tunnel_strategy.mt5')
+    @patch('strategy.tunnel_strategy.close_position')
+    def test_manage_position(self, mock_close_position, mock_mt5):
+        print("Running test_manage_position")
+        # Mock the positions_get and account_info responses
+        mock_mt5.positions_get.return_value = [
+            Mock(ticket=1, profit=500),  # Should be closed for profit
+            Mock(ticket=2, profit=-1500),  # Should be closed for loss
+            Mock(ticket=3, profit=0)  # Should be closed due to equity drop
+        ]
+        mock_mt5.account_info.return_value = Mock(equity=8000)
+        mock_mt5.positions_total.return_value = 6  # Should close positions due to max trades exceeded
 
+        # Mock the historical data retrieval
+        mock_mt5.copy_rates_range.return_value = pd.DataFrame({
+            'time': pd.date_range(start='2022-01-01', periods=5, freq='H'),
+            'open': [1.1, 1.2, 1.3, 1.4, 1.5],
+            'high': [1.15, 1.25, 1.35, 1.45, 1.55],
+            'low': [1.05, 1.15, 1.25, 1.35, 1.45],
+            'close': [1.1, 1.2, 1.3, 1.4, 1.5],
+            'tick_volume': [100, 200, 300, 400, 500],
+            'spread': [0, 0, 0, 0, 0],
+            'real_volume': [0, 0, 0, 0, 0]
+        })
+
+        manage_position('EURUSD', min_take_profit=300, max_loss_per_day=1000, starting_equity=10000, max_trades_per_day=5)
+
+        # Assertions for close_position calls
+        mock_close_position.assert_any_call(1)  # Close position with profit > min_take_profit
+        mock_close_position.assert_any_call(2)  # Close position with loss < -max_loss_per_day
+        mock_close_position.assert_any_call(3)  # Close position due to equity drop
+        self.assertEqual(mock_close_position.call_count, 3)  # Adjust expected call count
+
+    def test_adjust_deviation_factor_volatile(self):
+        print("Running test_adjust_deviation_factor_volatile")
+        market_conditions = 'volatile'
+        result = adjust_deviation_factor(market_conditions)
+        self.assertEqual(result, 2.5)
+
+    def test_adjust_deviation_factor_calm(self):
+        print("Running test_adjust_deviation_factor_calm")
+        market_conditions = 'calm'
+        result = adjust_deviation_factor(market_conditions)
+        self.assertEqual(result, 2.0)
+    
+    def test_calculate_position_size_valid_inputs(self):
+        print("Running test_calculate_position_size_valid_inputs")
+        account_balance = 10000
+        risk_per_trade = 0.01
+        stop_loss_pips = 50
+        pip_value = 10
+
+        expected_position_size = 0.2  # Corrected expected position size
+        position_size = calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value)
+        self.assertEqual(position_size, expected_position_size)
 
 if __name__ == '__main__':
     unittest.main()
@@ -1988,6 +2086,136 @@ if __name__ == '__main__':
 </document>
 
 <document index="21">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\strategy\test_trade_logic.py</source>
+<document_content>
+import unittest
+from unittest.mock import patch, Mock
+from strategy.trade_logic import calculate_position_size, entry_long, entry_short, exit_trade
+from utils.error_handling import handle_error
+
+class TestStrategyFunctions(unittest.TestCase):
+
+    def test_calculate_position_size_valid_inputs(self):
+        print("Running test_calculate_position_size_valid_inputs")
+        balance = 10000
+        risk_percent = 0.01
+        stop_loss_pips = 50
+        pip_value = 10
+        expected_position_size = 2.0
+        result = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
+        self.assertEqual(result, expected_position_size)
+
+    def test_calculate_position_size_zero_stop_loss(self):
+        print("Running test_calculate_position_size_zero_stop_loss")
+        balance = 10000
+        risk_percent = 0.01
+        stop_loss_pips = 0
+        pip_value = 10
+        expected_position_size = 0
+        result = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
+        self.assertEqual(result, expected_position_size)
+
+    def test_calculate_position_size_zero_pip_value(self):
+        print("Running test_calculate_position_size_zero_pip_value")
+        balance = 10000
+        risk_percent = 0.01
+        stop_loss_pips = 50
+        pip_value = 0
+        expected_position_size = 0
+        result = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
+        self.assertEqual(result, expected_position_size)
+
+    @patch('strategy.execute_trade')
+    def test_entry_long_success(self, mock_execute_trade):
+        print("Running test_entry_long_success")
+        mock_execute_trade.return_value = 'Order placed successfully'
+        symbol = 'EURUSD'
+        lot_size = 1.0
+        price = 1.2345
+        sl = 1.2300
+        tp = 1.2400
+        deviation = 10
+        magic = 12345
+        comment = 'Test Long Entry'
+        result = entry_long(symbol, lot_size, price, sl, tp, deviation, magic, comment)
+        self.assertEqual(result, 'Order placed successfully')
+        mock_execute_trade.assert_called_once_with({
+            'action': 'BUY',
+            'symbol': symbol,
+            'volume': lot_size,
+            'price': price,
+            'sl': sl,
+            'tp': tp,
+            'deviation': deviation,
+            'magic': magic,
+            'comment': comment,
+            'type': 'ORDER_TYPE_BUY',
+            'type_filling': 'ORDER_FILLING_FOK',
+            'type_time': 'ORDER_TIME_GTC'
+        })
+
+    @patch('strategy.execute_trade')
+    def test_entry_short_success(self, mock_execute_trade):
+        print("Running test_entry_short_success")
+        mock_execute_trade.return_value = 'Order placed successfully'
+        symbol = 'EURUSD'
+        lot_size = 1.0
+        price = 1.2345
+        sl = 1.2400
+        tp = 1.2300
+        deviation = 10
+        magic = 12345
+        comment = 'Test Short Entry'
+        result = entry_short(symbol, lot_size, price, sl, tp, deviation, magic, comment)
+        self.assertEqual(result, 'Order placed successfully')
+        mock_execute_trade.assert_called_once_with({
+            'action': 'SELL',
+            'symbol': symbol,
+            'volume': lot_size,
+            'price': price,
+            'sl': sl,
+            'tp': tp,
+            'deviation': deviation,
+            'magic': magic,
+            'comment': comment,
+            'type': 'ORDER_TYPE_SELL',
+            'type_filling': 'ORDER_FILLING_FOK',
+            'type_time': 'ORDER_TIME_GTC'
+        })
+
+    @patch('strategy.execute_trade')
+    @patch('strategy.handle_error')
+    def test_exit_trade_success(self, mock_handle_error, mock_execute_trade):
+        print("Running test_exit_trade_success")
+        mock_execute_trade.return_value = 'Order closed successfully'
+        position_ticket = 123456
+        result = exit_trade(position_ticket)
+        self.assertEqual(result, 'Order closed successfully')
+        mock_execute_trade.assert_called_once_with({
+            'action': 'CLOSE',
+            'position': position_ticket,
+            'type': 'ORDER_TYPE_CLOSE',
+            'type_filling': 'ORDER_FILLING_FOK',
+            'type_time': 'ORDER_TIME_GTC'
+        })
+
+    @patch('strategy.execute_trade')
+    @patch('strategy.handle_error')
+    def test_exit_trade_failure(self, mock_handle_error, mock_execute_trade):
+        print("Running test_exit_trade_failure")
+        mock_execute_trade.side_effect = Exception("Failed to close the trade")
+        position_ticket = 123456
+        result = exit_trade(position_ticket)
+        self.assertFalse(result)
+        mock_handle_error.assert_called_once()
+
+if __name__ == '__main__':
+    unittest.main()
+
+</document_content>
+</document>
+
+<document index="22">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_data_validation.py</source>
 <document_content>
 import unittest
@@ -2028,7 +2256,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="22">
+<document index="23">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_error_handling.py</source>
 <document_content>
 import unittest
@@ -2063,7 +2291,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="23">
+<document index="24">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_logger.py</source>
 <document_content>
 import unittest
@@ -2083,7 +2311,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="24">
+<document index="25">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_plotting.py</source>
 <document_content>
 import unittest
@@ -2109,7 +2337,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="25">
+<document index="26">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\data_validation.py</source>
 <document_content>
 from typing import Any
@@ -2207,7 +2435,7 @@ def validate_close_request(close_request):
 </document_content>
 </document>
 
-<document index="26">
+<document index="27">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\error_handling.py</source>
 <document_content>
 import logging
@@ -2225,7 +2453,7 @@ def warn_error(error, message):
 </document_content>
 </document>
 
-<document index="27">
+<document index="28">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\logger.py</source>
 <document_content>
 import logging
@@ -2252,7 +2480,7 @@ def setup_logging(log_level=logging.INFO, log_file="app.log"):
 </document_content>
 </document>
 
-<document index="28">
+<document index="29">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\plotting.py</source>
 <document_content>
 import matplotlib.pyplot as plt
@@ -2295,7 +2523,7 @@ def plot_backtest_results(data, trades):
 </document_content>
 </document>
 
-<document index="29">
+<document index="30">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\types.py</source>
 <document_content>
 from typing import NewType
@@ -2311,7 +2539,7 @@ LotSize = NewType("LotSize", float)
 </document_content>
 </document>
 
-<document index="30">
+<document index="31">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\__init__.py</source>
 <document_content>
 from .data_validation import validate_data, sanitize_data, validate_trade_request, validate_close_request

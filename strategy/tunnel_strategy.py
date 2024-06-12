@@ -8,6 +8,9 @@ import MetaTrader5 as mt5
 import logging
 
 # def calculate_ema(prices, period):
+#     # Ensure that the series is numeric
+#     prices = pd.to_numeric(prices, errors='coerce')
+
 #     if isinstance(prices, (float, int)):
 #         return prices
 #     elif isinstance(prices, (list, np.ndarray, pd.Series)):
@@ -27,26 +30,26 @@ import logging
 #         raise ValueError("Invalid input type for prices. Expected float, int, list, numpy array, or pandas Series.")
 
 def calculate_ema(prices, period):
+    if not isinstance(prices, (list, np.ndarray, pd.Series)):
+        raise ValueError("Invalid input type for prices. Expected list, numpy array, or pandas Series.")
+    
+    # Convert input to a pandas Series to ensure consistency
+    prices = pd.Series(prices)
+    
     # Ensure that the series is numeric
     prices = pd.to_numeric(prices, errors='coerce')
 
-    if isinstance(prices, (float, int)):
-        return prices
-    elif isinstance(prices, (list, np.ndarray, pd.Series)):
-        ema_values = np.full(len(prices), np.nan, dtype=np.float64)
-        if len(prices) < period:
-            return pd.Series(ema_values, index=prices.index)
-        
-        sma = np.mean(prices[:period])
-        ema_values[period - 1] = sma
-        multiplier = 2 / (period + 1)
-        for i in range(period, len(prices)):
-            ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
-        ema_series = pd.Series(ema_values, index=prices.index)
-        print(f"EMA: {ema_series}")
-        return ema_series
-    else:
-        raise ValueError("Invalid input type for prices. Expected float, int, list, numpy array, or pandas Series.")
+    ema_values = np.full(len(prices), np.nan, dtype=np.float64)
+    if len(prices) < period:
+        return pd.Series(ema_values, index=prices.index)
+    
+    sma = np.mean(prices[:period])
+    ema_values[period - 1] = sma
+    multiplier = 2 / (period + 1)
+    for i in range(period, len(prices)):
+        ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
+    ema_series = pd.Series(ema_values, index=prices.index)
+    return ema_series
 
 def detect_peaks_and_dips(df, peak_type):
     
@@ -143,28 +146,6 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
         handle_error(e, "Failed to manage position")
 
 
-# def calculate_tunnel_bounds(data, period, deviation_factor):
-#     if len(data) < period:
-#         return pd.Series([np.nan] * len(data)), pd.Series([np.nan] * len(data))
-    
-#     ema = calculate_ema(data['close'], period)
-#     rolling_std = data['close'].rolling(window=period).std()
-
-#     volatility = rolling_std.mean()
-#     deviation = deviation_factor * volatility
-
-#     upper_bound = ema + deviation
-#     lower_bound = ema - deviation
-
-#     print(f"EMA Values for Tunnel Bounds: {ema}")
-#     print(f"Rolling Std: {rolling_std}")
-#     print(f"Volatility: {volatility}")
-#     print(f"Deviation: {deviation}")
-#     print(f"Upper Bound: {upper_bound}")
-#     print(f"Lower Bound: {lower_bound}")
-
-#     return upper_bound, lower_bound
-
 def calculate_tunnel_bounds(data, period, deviation_factor):
     # Ensure 'close' column is numeric
     data['close'] = pd.to_numeric(data['close'], errors='coerce')
@@ -199,22 +180,6 @@ def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip
     position_size = risk_amount / (stop_loss_pips * pip_value)
     return position_size
 
-# def generate_trade_signal(data, period, deviation_factor):
-#     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
-#     last_close = data['close'].iloc[-1]
-#     upper_bound_last_value = upper_bound.iloc[-1]
-#     lower_bound_last_value = lower_bound.iloc[-1]
-
-#     print(f"Last Close: {last_close}")
-#     print(f"Upper Bound Last Value: {upper_bound_last_value}")
-#     print(f"Lower Bound Last Value: {lower_bound_last_value}")
-
-#     if last_close >= upper_bound_last_value:
-#         return 'BUY'
-#     elif last_close <= lower_bound_last_value:
-#         return 'SELL'
-#     else:
-#         return None
 def generate_trade_signal(data, period, deviation_factor):
     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
     

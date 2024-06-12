@@ -1,5 +1,5 @@
+from strategy.tunnel_strategy import execute_trade, manage_position
 from utils.error_handling import handle_error
-from tunnel_strategy import execute_trade, manage_position
 import logging
 
 def calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value):

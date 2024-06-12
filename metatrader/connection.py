@@ -44,7 +44,10 @@ def check_connection(mt_version):
     #     raise ValueError("Invalid MetaTrader version. Please specify 4 or 5.")
 
 def initialize_mt5(mt5_path):
-    # Initialize MetaTrader 5
+    if not mt5_path:
+        print("Invalid path provided for MetaTrader 5 terminal.")
+        return False
+
     if not mt5.initialize(path=mt5_path):
         print("Failed to initialize MetaTrader 5 terminal.")
         mt5.shutdown()
@@ -52,6 +55,7 @@ def initialize_mt5(mt5_path):
     else:
         print("MetaTrader 5 terminal initialized successfully.")
         return True
+
 
 def shutdown_mt5():
     # Shutdown MetaTrader 5
