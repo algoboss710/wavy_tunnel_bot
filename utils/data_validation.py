@@ -24,14 +24,9 @@ class CloseRequestSchema(BaseModel):
     type_filling: str
     type_time: str
 
-def validate_data(data: Any, schema: dict) -> bool:
+def validate_data(data: Any, schema: BaseModel) -> bool:
     try:
-        if schema == TradeRequestSchema.schema():
-            TradeRequestSchema(**data)
-        elif schema == CloseRequestSchema.schema():
-            CloseRequestSchema(**data)
-        else:
-            raise ValueError("Invalid schema provided")
+        schema(**data)
         return True
     except ValidationError as e:
         handle_error(e, "Data validation failed")

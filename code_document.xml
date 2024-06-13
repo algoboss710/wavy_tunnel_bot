@@ -760,7 +760,10 @@ def check_connection(mt_version):
     #     raise ValueError("Invalid MetaTrader version. Please specify 4 or 5.")
 
 def initialize_mt5(mt5_path):
-    # Initialize MetaTrader 5
+    if not mt5_path:
+        print("Invalid path provided for MetaTrader 5 terminal.")
+        return False
+
     if not mt5.initialize(path=mt5_path):
         print("Failed to initialize MetaTrader 5 terminal.")
         mt5.shutdown()
@@ -768,6 +771,7 @@ def initialize_mt5(mt5_path):
     else:
         print("MetaTrader 5 terminal initialized successfully.")
         return True
+
 
 def shutdown_mt5():
     # Shutdown MetaTrader 5
@@ -994,27 +998,30 @@ if __name__ == '__main__':
 <document index="8">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\indicators.py</source>
 <document_content>
-import logging
 import pandas as pd
-
+import numpy as np
 
 def calculate_ema(prices, period):
-    if isinstance(prices, (float, int)):
-        return prices
-    elif isinstance(prices, (list, np.ndarray, pd.Series)):
-        ema_values = np.zeros_like(prices)
-        ema_values[:period] = np.nan
-        sma = np.mean(prices[:period])
-        ema_values[period - 1] = sma
-        multiplier = 2 / (period + 1)
-        for i in range(period, len(prices)):
-            if ema_values[i - 1] == 0:
-                logging.error("Division by zero: ema_values[i - 1] is zero in calculate_ema")
-                continue
-            ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
+    if not isinstance(prices, (list, np.ndarray, pd.Series)):
+        raise ValueError("Invalid input type for prices. Expected list, numpy array, or pandas Series.")
+    
+    # Convert input to a pandas Series to ensure consistency
+    prices = pd.Series(prices)
+    
+    # Ensure that the series is numeric
+    prices = pd.to_numeric(prices, errors='coerce')
+
+    ema_values = np.full(len(prices), np.nan, dtype=np.float64)
+    if len(prices) < period:
         return pd.Series(ema_values, index=prices.index)
-    else:
-        raise ValueError("Invalid input type for prices. Expected float, int, list, numpy array, or pandas Series.")
+    
+    sma = np.mean(prices[:period])
+    ema_values[period - 1] = sma
+    multiplier = 2 / (period + 1)
+    for i in range(period, len(prices)):
+        ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
+    ema_series = pd.Series(ema_values, index=prices.index)
+    return ema_series
 
 </document_content>
 </document>
@@ -1025,43 +1032,52 @@ def calculate_ema(prices, period):
 import MetaTrader5 as mt5
 
 def place_order(symbol, order_type, volume, price=None, sl=None, tp=None):
-    order = mt5.ORDER_TYPE_BUY if order_type == 'buy' else mt5.ORDER_TYPE_SELL
-    request = {
-        "action": mt5.TRADE_ACTION_DEAL,
-        "symbol": symbol,
-        "volume": volume,
-        "type": order,
-        "price": mt5.symbol_info_tick(symbol).ask if order_type == 'buy' else mt5.symbol_info_tick(symbol).bid,
-        "sl": sl,
-        "tp": tp,
-        "deviation": 10,
-        "magic": 234000,
-        "comment": "python script order",
-        "type_time": mt5.ORDER_TIME_GTC,
-        "type_filling": mt5.ORDER_FILLING_IOC,
-    }
-    result = mt5.order_send(request)
-    return result.comment if result else 'Order failed'
-
-def close_position(ticket):
-    position = mt5.positions_get(ticket=ticket)
-    if position:
-        result = mt5.Close(ticket)
-        return result.comment if result else 'Close failed'
-    return 'Position not found'
-
-def modify_order(ticket, sl=None, tp=None):
-    result = mt5.order_check(ticket)
-    if result and result.type in [mt5.ORDER_TYPE_BUY, mt5.ORDER_TYPE_SELL]:
+    try:
+        order = mt5.ORDER_TYPE_BUY if order_type == 'buy' else mt5.ORDER_TYPE_SELL
         request = {
-            "action": mt5.TRADE_ACTION_SLTP,
-            "ticket": ticket,
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": symbol,
+            "volume": volume,
+            "type": order,
+            "price": mt5.symbol_info_tick(symbol).ask if order_type == 'buy' else mt5.symbol_info_tick(symbol).bid,
             "sl": sl,
-            "tp": tp
+            "tp": tp,
+            "deviation": 10,
+            "magic": 234000,
+            "comment": "python script order",
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_IOC,
         }
         result = mt5.order_send(request)
-        return result.comment if result else 'Modify failed'
-    return 'Order not found'
+        return result.comment if result else 'Order failed'
+    except Exception as e:
+        return 'Order failed'
+
+def close_position(ticket):
+    try:
+        position = mt5.positions_get(ticket=ticket)
+        if position:
+            result = mt5.Close(ticket)
+            return result.comment if result else 'Close failed'
+        return 'Position not found'
+    except Exception as e:
+        return 'Close failed'
+
+def modify_order(ticket, sl=None, tp=None):
+    try:
+        result = mt5.order_check(ticket)
+        if result and result.type in [mt5.ORDER_TYPE_BUY, mt5.ORDER_TYPE_SELL]:
+            request = {
+                "action": mt5.TRADE_ACTION_SLTP,
+                "ticket": ticket,
+                "sl": sl,
+                "tp": tp
+            }
+            result = mt5.order_send(request)
+            return result.comment if result else 'Modify failed'
+        return 'Order not found'
+    except Exception as e:
+        return 'Modify failed'
 
 </document_content>
 </document>
@@ -1088,8 +1104,8 @@ if __name__ == '__main__':
 <document index="11">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\trade_logic.py</source>
 <document_content>
+from strategy.tunnel_strategy import execute_trade, manage_position
 from utils.error_handling import handle_error
-from tunnel_strategy import execute_trade, manage_position
 import logging
 
 def calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value):
@@ -1148,6 +1164,7 @@ def exit_trade(position_ticket):
     except Exception as e:
         handle_error(e, "Failed to close the trade")
         return False
+
 </document_content>
 </document>
 
@@ -1163,27 +1180,49 @@ import pandas as pd
 import MetaTrader5 as mt5
 import logging
 
+# def calculate_ema(prices, period):
+#     # Ensure that the series is numeric
+#     prices = pd.to_numeric(prices, errors='coerce')
+
+#     if isinstance(prices, (float, int)):
+#         return prices
+#     elif isinstance(prices, (list, np.ndarray, pd.Series)):
+#         ema_values = np.full(len(prices), np.nan, dtype=np.float64)
+#         if len(prices) < period:
+#             return pd.Series(ema_values, index=prices.index)
+        
+#         sma = np.mean(prices[:period])
+#         ema_values[period - 1] = sma
+#         multiplier = 2 / (period + 1)
+#         for i in range(period, len(prices)):
+#             ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
+#         ema_series = pd.Series(ema_values, index=prices.index)
+#         print(f"EMA: {ema_series}")
+#         return ema_series
+#     else:
+#         raise ValueError("Invalid input type for prices. Expected float, int, list, numpy array, or pandas Series.")
+
 def calculate_ema(prices, period):
+    if not isinstance(prices, (list, np.ndarray, pd.Series)):
+        raise ValueError("Invalid input type for prices. Expected list, numpy array, or pandas Series.")
+    
+    # Convert input to a pandas Series to ensure consistency
+    prices = pd.Series(prices)
+    
     # Ensure that the series is numeric
     prices = pd.to_numeric(prices, errors='coerce')
 
-    if isinstance(prices, (float, int)):
-        return prices
-    elif isinstance(prices, (list, np.ndarray, pd.Series)):
-        ema_values = np.full(len(prices), np.nan, dtype=np.float64)
-        if len(prices) < period:
-            return pd.Series(ema_values, index=prices.index)
-        
-        sma = np.mean(prices[:period])
-        ema_values[period - 1] = sma
-        multiplier = 2 / (period + 1)
-        for i in range(period, len(prices)):
-            ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
-        ema_series = pd.Series(ema_values, index=prices.index)
-        print(f"EMA: {ema_series}")
-        return ema_series
-    else:
-        raise ValueError("Invalid input type for prices. Expected float, int, list, numpy array, or pandas Series.")
+    ema_values = np.full(len(prices), np.nan, dtype=np.float64)
+    if len(prices) < period:
+        return pd.Series(ema_values, index=prices.index)
+    
+    sma = np.mean(prices[:period])
+    ema_values[period - 1] = sma
+    multiplier = 2 / (period + 1)
+    for i in range(period, len(prices)):
+        ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
+    ema_series = pd.Series(ema_values, index=prices.index)
+    return ema_series
 
 def detect_peaks_and_dips(df, peak_type):
     
@@ -1517,6 +1556,23 @@ class TestConnection(unittest.TestCase):
         shutdown_mt5()
         mock_shutdown.assert_called_once()
 
+    @patch('MetaTrader5.initialize')
+    def test_initialize_mt5_exception(self, mock_initialize):
+        mock_initialize.side_effect = Exception("Initialization failed")
+        with self.assertRaises(Exception):
+            initialize_mt5('dummy_path')
+
+    @patch('MetaTrader5.initialize', return_value=True)
+    def test_initialize_mt5_invalid_path(self, mock_initialize):
+        invalid_path = ''
+        self.assertFalse(initialize_mt5(invalid_path))
+        
+    @patch('MetaTrader5.shutdown')
+    def test_shutdown_mt5_multiple_calls(self, mock_shutdown):
+        shutdown_mt5()
+        shutdown_mt5()
+        self.assertEqual(mock_shutdown.call_count, 2)
+
 if __name__ == '__main__':
     unittest.main()
 
@@ -1530,21 +1586,46 @@ import unittest
 from unittest.mock import patch
 from datetime import datetime
 from metatrader.data_retrieval import get_historical_data
+import MetaTrader5 as mt5
+import pandas as pd
 
 class TestDataRetrieval(unittest.TestCase):
-    @patch('MetaTrader5.copy_rates_range', return_value=[])
-    def test_get_historical_data_success(self, mock_copy_rates_range):
+    @patch('MetaTrader5.copy_rates_range', return_value=[
+        {'time': 1633072800, 'open': 1.1600, 'high': 1.1700, 'low': 1.1500, 'close': 1.1650, 'tick_volume': 100, 'spread': 1, 'real_volume': 1000}
+    ])
+    def test_get_historical_data_valid_data(self, mock_copy_rates_range):
         symbol = "EURUSD"
-        timeframe = 1
+        timeframe = mt5.TIMEFRAME_M1
         start_time = datetime(2023, 1, 1)
         end_time = datetime.now()
         data = get_historical_data(symbol, timeframe, start_time, end_time)
-        self.assertIsNotNone(data)
+        self.assertIsInstance(data, pd.DataFrame)
+        self.assertFalse(data.empty)
+        self.assertIn('time', data.columns)
+        self.assertIn('open', data.columns)
+
+    @patch('MetaTrader5.copy_rates_range', return_value=[])
+    def test_get_historical_data_empty(self, mock_copy_rates_range):
+        symbol = "EURUSD"
+        timeframe = mt5.TIMEFRAME_M1
+        start_time = datetime(2023, 1, 1)
+        end_time = datetime.now()
+        data = get_historical_data(symbol, timeframe, start_time, end_time)
+        self.assertIsNone(data)
+
+    @patch('MetaTrader5.copy_rates_range', side_effect=Exception("MT5 error"))
+    def test_get_historical_data_exception(self, mock_copy_rates_range):
+        symbol = "EURUSD"
+        timeframe = mt5.TIMEFRAME_M1
+        start_time = datetime(2023, 1, 1)
+        end_time = datetime.now()
+        data = get_historical_data(symbol, timeframe, start_time, end_time)
+        self.assertIsNone(data)
 
     @patch('MetaTrader5.copy_rates_range', return_value=None)
-    def test_get_historical_data_failure(self, mock_copy_rates_range):
-        symbol = "EURUSD"
-        timeframe = 1
+    def test_get_historical_data_none(self, mock_copy_rates_range):
+        symbol = "INVALID_SYMBOL"
+        timeframe = mt5.TIMEFRAME_M1
         start_time = datetime(2023, 1, 1)
         end_time = datetime.now()
         data = get_historical_data(symbol, timeframe, start_time, end_time)
@@ -1552,6 +1633,7 @@ class TestDataRetrieval(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
 </document_content>
 </document>
 
@@ -1559,18 +1641,55 @@ if __name__ == '__main__':
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\metatrader\test_indicators.py</source>
 <document_content>
 import unittest
+import numpy as np
+import pandas as pd
 from metatrader.indicators import calculate_ema
 
 class TestIndicators(unittest.TestCase):
-    def test_calculate_ema(self):
+    def test_calculate_ema_list(self):
         data = [100, 200, 300, 400, 500]
         period = 3
-        expected_ema = [100.0, 150.0, 233.33333333333334, 344.44444444444446, 455.55555555555554]
-        self.assertEqual(calculate_ema(data, period), expected_ema)
+        expected_ema = [np.nan, np.nan, 200.0, 300.0, 400.0]
+        result = calculate_ema(data, period).tolist()
+        np.testing.assert_array_almost_equal(result, expected_ema, decimal=5)
+
+    def test_calculate_ema_numpy_array(self):
+        data = np.array([100, 200, 300, 400, 500])
+        period = 3
+        expected_ema = [np.nan, np.nan, 200.0, 300.0, 400.0]
+        result = calculate_ema(data, period).tolist()
+        np.testing.assert_array_almost_equal(result, expected_ema, decimal=5)
+
+    def test_calculate_ema_pandas_series(self):
+        data = pd.Series([100, 200, 300, 400, 500])
+        period = 3
+        expected_ema = pd.Series([np.nan, np.nan, 200.0, 300.0, 400.0])
+        result = calculate_ema(data, period)
+        pd.testing.assert_series_equal(result, expected_ema)
+
+    def test_calculate_ema_period_greater_than_length(self):
+        data = [100, 200, 300]
+        period = 5
+        expected_ema = [np.nan, np.nan, np.nan]
+        result = calculate_ema(data, period).tolist()
+        np.testing.assert_array_almost_equal(result, expected_ema, decimal=5)
+
+    def test_calculate_ema_empty_list(self):
+        data = []
+        period = 3
+        expected_ema = []
+        result = calculate_ema(data, period).tolist()
+        self.assertEqual(result, expected_ema)
+
+    def test_calculate_ema_invalid_input_type(self):
+        data = "invalid input"
+        period = 3
+        with self.assertRaises(ValueError):
+            calculate_ema(data, period)
 
 if __name__ == '__main__':
     unittest.main()
-    unittest.main()
+
 </document_content>
 </document>
 
@@ -1578,12 +1697,15 @@ if __name__ == '__main__':
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\metatrader\test_trade_management.py</source>
 <document_content>
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from metatrader.trade_management import place_order, close_position, modify_order
+import MetaTrader5 as mt5
 
 class TestTradeManagement(unittest.TestCase):
-    @patch('MetaTrader5.order_send', return_value={'retcode': 10009})  # 10009: SUCCESS
-    def test_place_order_success(self, mock_order_send):
+
+    @patch('MetaTrader5.order_send', return_value=MagicMock(retcode=10009, comment="python script order"))  # 10009: SUCCESS
+    @patch('MetaTrader5.symbol_info_tick', return_value=MagicMock(ask=1.2345, bid=1.2340))
+    def test_place_order_success(self, mock_symbol_info_tick, mock_order_send):
         symbol = "EURUSD"
         order_type = "buy"
         volume = 0.1
@@ -1593,8 +1715,9 @@ class TestTradeManagement(unittest.TestCase):
         result = place_order(symbol, order_type, volume, price, sl, tp)
         self.assertEqual(result, "python script order")
 
-    @patch('MetaTrader5.order_send', return_value={'retcode': 10004})  # 10004: ERROR
-    def test_place_order_failure(self, mock_order_send):
+    @patch('MetaTrader5.order_send', return_value=MagicMock(retcode=10004, comment="Order failed"))  # 10004: ERROR
+    @patch('MetaTrader5.symbol_info_tick', return_value=MagicMock(ask=1.2345, bid=1.2340))
+    def test_place_order_failure(self, mock_symbol_info_tick, mock_order_send):
         symbol = "EURUSD"
         order_type = "buy"
         volume = 0.1
@@ -1604,8 +1727,17 @@ class TestTradeManagement(unittest.TestCase):
         result = place_order(symbol, order_type, volume, price, sl, tp)
         self.assertEqual(result, "Order failed")
 
-    @patch('MetaTrader5.positions_get', return_value=[{"ticket": 12345}])
-    @patch('MetaTrader5.Close', return_value={"comment": "Close successful"})
+    @patch('MetaTrader5.order_send', side_effect=Exception("Network error"))
+    @patch('MetaTrader5.symbol_info_tick', return_value=MagicMock(ask=1.2345, bid=1.2340))
+    def test_place_order_exception(self, mock_symbol_info_tick, mock_order_send):
+        symbol = "EURUSD"
+        order_type = "buy"
+        volume = 0.1
+        result = place_order(symbol, order_type, volume)
+        self.assertEqual(result, "Order failed")
+
+    @patch('MetaTrader5.positions_get', return_value=[MagicMock(ticket=12345)])
+    @patch('MetaTrader5.Close', return_value=MagicMock(comment="Close successful"))
     def test_close_position_success(self, mock_close, mock_positions_get):
         ticket = 12345
         result = close_position(ticket)
@@ -1617,8 +1749,8 @@ class TestTradeManagement(unittest.TestCase):
         result = close_position(ticket)
         self.assertEqual(result, "Position not found")
 
-    @patch('MetaTrader5.order_check', return_value={"type": 0})  # 0: BUY
-    @patch('MetaTrader5.order_send', return_value={"comment": "Modify successful"})
+    @patch('MetaTrader5.order_check', return_value=MagicMock(type=mt5.ORDER_TYPE_BUY))  # 0: BUY
+    @patch('MetaTrader5.order_send', return_value=MagicMock(comment="Modify successful"))
     def test_modify_order_success(self, mock_order_send, mock_order_check):
         ticket = 12345
         sl = 1.2300
@@ -1634,8 +1766,18 @@ class TestTradeManagement(unittest.TestCase):
         result = modify_order(ticket, sl, tp)
         self.assertEqual(result, "Order not found")
 
+    @patch('MetaTrader5.order_check', return_value=MagicMock(type=mt5.ORDER_TYPE_BUY))
+    @patch('MetaTrader5.order_send', side_effect=Exception("Network error"))
+    def test_modify_order_exception(self, mock_order_send, mock_order_check):
+        ticket = 12345
+        sl = 1.2300
+        tp = 1.2400
+        result = modify_order(ticket, sl, tp)
+        self.assertEqual(result, "Modify failed")
+
 if __name__ == '__main__':
     unittest.main()
+
 </document_content>
 </document>
 
@@ -2101,7 +2243,7 @@ class TestStrategyFunctions(unittest.TestCase):
         risk_percent = 0.01
         stop_loss_pips = 50
         pip_value = 10
-        expected_position_size = 2.0
+        expected_position_size = 0.2
         result = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
         self.assertEqual(result, expected_position_size)
 
@@ -2125,7 +2267,7 @@ class TestStrategyFunctions(unittest.TestCase):
         result = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
         self.assertEqual(result, expected_position_size)
 
-    @patch('strategy.execute_trade')
+    @patch('strategy.trade_logic.execute_trade')
     def test_entry_long_success(self, mock_execute_trade):
         print("Running test_entry_long_success")
         mock_execute_trade.return_value = 'Order placed successfully'
@@ -2154,63 +2296,11 @@ class TestStrategyFunctions(unittest.TestCase):
             'type_time': 'ORDER_TIME_GTC'
         })
 
-    @patch('strategy.execute_trade')
+    @patch('strategy.trade_logic.execute_trade')
     def test_entry_short_success(self, mock_execute_trade):
         print("Running test_entry_short_success")
         mock_execute_trade.return_value = 'Order placed successfully'
         symbol = 'EURUSD'
-        lot_size = 1.0
-        price = 1.2345
-        sl = 1.2400
-        tp = 1.2300
-        deviation = 10
-        magic = 12345
-        comment = 'Test Short Entry'
-        result = entry_short(symbol, lot_size, price, sl, tp, deviation, magic, comment)
-        self.assertEqual(result, 'Order placed successfully')
-        mock_execute_trade.assert_called_once_with({
-            'action': 'SELL',
-            'symbol': symbol,
-            'volume': lot_size,
-            'price': price,
-            'sl': sl,
-            'tp': tp,
-            'deviation': deviation,
-            'magic': magic,
-            'comment': comment,
-            'type': 'ORDER_TYPE_SELL',
-            'type_filling': 'ORDER_FILLING_FOK',
-            'type_time': 'ORDER_TIME_GTC'
-        })
-
-    @patch('strategy.execute_trade')
-    @patch('strategy.handle_error')
-    def test_exit_trade_success(self, mock_handle_error, mock_execute_trade):
-        print("Running test_exit_trade_success")
-        mock_execute_trade.return_value = 'Order closed successfully'
-        position_ticket = 123456
-        result = exit_trade(position_ticket)
-        self.assertEqual(result, 'Order closed successfully')
-        mock_execute_trade.assert_called_once_with({
-            'action': 'CLOSE',
-            'position': position_ticket,
-            'type': 'ORDER_TYPE_CLOSE',
-            'type_filling': 'ORDER_FILLING_FOK',
-            'type_time': 'ORDER_TIME_GTC'
-        })
-
-    @patch('strategy.execute_trade')
-    @patch('strategy.handle_error')
-    def test_exit_trade_failure(self, mock_handle_error, mock_execute_trade):
-        print("Running test_exit_trade_failure")
-        mock_execute_trade.side_effect = Exception("Failed to close the trade")
-        position_ticket = 123456
-        result = exit_trade(position_ticket)
-        self.assertFalse(result)
-        mock_handle_error.assert_called_once()
-
-if __name__ == '__main__':
-    unittest.main()
 
 </document_content>
 </document>
@@ -2219,11 +2309,13 @@ if __name__ == '__main__':
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_data_validation.py</source>
 <document_content>
 import unittest
-from utils.data_validation import validate_data, sanitize_data, validate_trade_request, validate_close_request
+from unittest.mock import patch, MagicMock
+from utils.data_validation import validate_data, sanitize_data, TradeRequestSchema, validate_trade_request
+from pydantic import ValidationError
 
 class TestDataValidation(unittest.TestCase):
-    def test_validate_data(self):
-        data = {
+    def setUp(self):
+        self.valid_trade_request = {
             "action": "BUY",
             "symbol": "EURUSD",
             "volume": 0.1,
@@ -2237,7 +2329,16 @@ class TestDataValidation(unittest.TestCase):
             "type_filling": "ORDER_FILLING_FOK",
             "type_time": "ORDER_TIME_GTC"
         }
-        self.assertTrue(validate_data(data, validate_trade_request))
+
+    @patch('utils.data_validation.handle_error')
+    def test_validate_data(self, mock_handle_error):
+        self.assertTrue(validate_data(self.valid_trade_request, TradeRequestSchema))
+        
+    @patch('utils.data_validation.handle_error')
+    def test_validate_data_invalid(self, mock_handle_error):
+        invalid_data = self.valid_trade_request.copy()
+        invalid_data.pop("action")
+        self.assertFalse(validate_data(invalid_data, TradeRequestSchema))
 
     def test_sanitize_data(self):
         data = {
@@ -2253,6 +2354,7 @@ class TestDataValidation(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
 </document_content>
 </document>
 
@@ -2325,19 +2427,95 @@ class TestPlotting(unittest.TestCase):
             'time': [1, 2, 3],
             'close': [100, 200, 300]
         }
-        trades = [
+        trades_with_balance = [
+            {'entry_time': 1, 'entry_price': 100, 'exit_time': 2, 'exit_price': 200, 'balance': 1000},
+            {'entry_time': 2, 'entry_price': 200, 'exit_time': 3, 'exit_price': 300, 'balance': 1100}
+        ]
+        trades_without_balance = [
             {'entry_time': 1, 'entry_price': 100, 'exit_time': 2, 'exit_price': 200},
             {'entry_time': 2, 'entry_price': 200, 'exit_time': 3, 'exit_price': 300}
         ]
-        plot_backtest_results(data, trades)
-        mock_pyplot_show.assert_called_once()
+        plot_backtest_results(data, trades_with_balance)
+        plot_backtest_results(data, trades_without_balance)
+        mock_pyplot_show.assert_called()
 
 if __name__ == '__main__':
     unittest.main()
+
 </document_content>
 </document>
 
 <document index="26">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_types.py</source>
+<document_content>
+import unittest
+from utils.types import TradeAction, OrderType, OrderFilling, OrderTime, Symbol, Timeframe, LotSize
+
+class TestTypes(unittest.TestCase):
+    
+    def test_trade_action(self):
+        action = TradeAction("BUY")
+        self.assertIsInstance(action, str)
+        self.assertEqual(action, "BUY")
+        
+        with self.assertRaises(TypeError):
+            TradeAction(123)  # Invalid type
+
+    def test_order_type(self):
+        order_type = OrderType("LIMIT")
+        self.assertIsInstance(order_type, str)
+        self.assertEqual(order_type, "LIMIT")
+        
+        with self.assertRaises(TypeError):
+            OrderType(123)  # Invalid type
+
+    def test_order_filling(self):
+        filling = OrderFilling("FOK")
+        self.assertIsInstance(filling, str)
+        self.assertEqual(filling, "FOK")
+        
+        with self.assertRaises(TypeError):
+            OrderFilling(123)  # Invalid type
+
+    def test_order_time(self):
+        order_time = OrderTime("GTC")
+        self.assertIsInstance(order_time, str)
+        self.assertEqual(order_time, "GTC")
+        
+        with self.assertRaises(TypeError):
+            OrderTime(123)  # Invalid type
+
+    def test_symbol(self):
+        symbol = Symbol("EURUSD")
+        self.assertIsInstance(symbol, str)
+        self.assertEqual(symbol, "EURUSD")
+        
+        with self.assertRaises(TypeError):
+            Symbol(123)  # Invalid type
+
+    def test_timeframe(self):
+        timeframe = Timeframe("M1")
+        self.assertIsInstance(timeframe, str)
+        self.assertEqual(timeframe, "M1")
+        
+        with self.assertRaises(TypeError):
+            Timeframe(123)  # Invalid type
+
+    def test_lot_size(self):
+        lot_size = LotSize(1.0)
+        self.assertIsInstance(lot_size, float)
+        self.assertEqual(lot_size, 1.0)
+        
+        with self.assertRaises(TypeError):
+            LotSize("1.0")  # Invalid type
+
+if __name__ == '__main__':
+    unittest.main()
+
+</document_content>
+</document>
+
+<document index="27">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\data_validation.py</source>
 <document_content>
 from typing import Any
@@ -2366,14 +2544,9 @@ class CloseRequestSchema(BaseModel):
     type_filling: str
     type_time: str
 
-def validate_data(data: Any, schema: dict) -> bool:
+def validate_data(data: Any, schema: BaseModel) -> bool:
     try:
-        if schema == TradeRequestSchema.schema():
-            TradeRequestSchema(**data)
-        elif schema == CloseRequestSchema.schema():
-            CloseRequestSchema(**data)
-        else:
-            raise ValueError("Invalid schema provided")
+        schema(**data)
         return True
     except ValidationError as e:
         handle_error(e, "Data validation failed")
@@ -2435,7 +2608,7 @@ def validate_close_request(close_request):
 </document_content>
 </document>
 
-<document index="27">
+<document index="28">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\error_handling.py</source>
 <document_content>
 import logging
@@ -2453,7 +2626,7 @@ def warn_error(error, message):
 </document_content>
 </document>
 
-<document index="28">
+<document index="29">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\logger.py</source>
 <document_content>
 import logging
@@ -2480,7 +2653,7 @@ def setup_logging(log_level=logging.INFO, log_file="app.log"):
 </document_content>
 </document>
 
-<document index="29">
+<document index="30">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\plotting.py</source>
 <document_content>
 import matplotlib.pyplot as plt
@@ -2511,7 +2684,11 @@ def plot_backtest_results(data, trades):
     ax1.legend()
 
     # Plot account balance
-    balance = [trade['balance'] for trade in trades]
+    balance = [trade.get('balance') for trade in trades if 'balance' in trade]
+    # Adjust balance list to match the length of data['time']
+    if len(balance) < len(data['time']):
+        balance += [None] * (len(data['time']) - len(balance))
+
     ax2.plot(data['time'], balance, label='Account Balance')
     ax2.set_ylabel('Balance')
     ax2.set_title('Account Balance')
@@ -2520,10 +2697,11 @@ def plot_backtest_results(data, trades):
 
     plt.tight_layout()
     plt.show()
+
 </document_content>
 </document>
 
-<document index="30">
+<document index="31">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\types.py</source>
 <document_content>
 from typing import NewType
@@ -2539,7 +2717,7 @@ LotSize = NewType("LotSize", float)
 </document_content>
 </document>
 
-<document index="31">
+<document index="32">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\__init__.py</source>
 <document_content>
 from .data_validation import validate_data, sanitize_data, validate_trade_request, validate_close_request

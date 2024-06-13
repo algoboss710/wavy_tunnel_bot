@@ -26,7 +26,11 @@ def plot_backtest_results(data, trades):
     ax1.legend()
 
     # Plot account balance
-    balance = [trade['balance'] for trade in trades]
+    balance = [trade.get('balance') for trade in trades if 'balance' in trade]
+    # Adjust balance list to match the length of data['time']
+    if len(balance) < len(data['time']):
+        balance += [None] * (len(data['time']) - len(balance))
+
     ax2.plot(data['time'], balance, label='Account Balance')
     ax2.set_ylabel('Balance')
     ax2.set_title('Account Balance')

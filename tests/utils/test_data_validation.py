@@ -1,9 +1,11 @@
 import unittest
-from utils.data_validation import validate_data, sanitize_data, validate_trade_request, validate_close_request
+from unittest.mock import patch, MagicMock
+from utils.data_validation import validate_data, sanitize_data, TradeRequestSchema, validate_trade_request
+from pydantic import ValidationError
 
 class TestDataValidation(unittest.TestCase):
-    def test_validate_data(self):
-        data = {
+    def setUp(self):
+        self.valid_trade_request = {
             "action": "BUY",
             "symbol": "EURUSD",
             "volume": 0.1,
@@ -17,7 +19,16 @@ class TestDataValidation(unittest.TestCase):
             "type_filling": "ORDER_FILLING_FOK",
             "type_time": "ORDER_TIME_GTC"
         }
-        self.assertTrue(validate_data(data, validate_trade_request))
+
+    @patch('utils.data_validation.handle_error')
+    def test_validate_data(self, mock_handle_error):
+        self.assertTrue(validate_data(self.valid_trade_request, TradeRequestSchema))
+        
+    @patch('utils.data_validation.handle_error')
+    def test_validate_data_invalid(self, mock_handle_error):
+        invalid_data = self.valid_trade_request.copy()
+        invalid_data.pop("action")
+        self.assertFalse(validate_data(invalid_data, TradeRequestSchema))
 
     def test_sanitize_data(self):
         data = {
