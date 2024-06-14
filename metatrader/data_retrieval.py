@@ -19,8 +19,6 @@ def shutdown_mt5():
 start_time = datetime.now() - timedelta(days=30)  # Example: 30 days ago
 end_time = datetime.now()  # Current time
 
-# ...
-
 def get_historical_data(symbol, timeframe, start_time, end_time):
     try:
         # Retrieve data from MT5
@@ -37,71 +35,15 @@ def get_historical_data(symbol, timeframe, start_time, end_time):
         if data.empty:
             raise ValueError(f"No historical data retrieved for {symbol} with timeframe {timeframe} from {start_time} to {end_time}")
 
+        # Data Cleaning
+        data = data.dropna()  # Drop missing values
+        data = data[(data['open'] > 0) & (data['high'] > 0) & (data['low'] > 0) & (data['close'] > 0)]  # Remove zero/negative prices
+        
         return data
     except Exception as e:
         handle_error(e, f"Failed to retrieve historical data for {symbol}")
         return None
 
-# ...
-
-# def get_historical_data(symbol, timeframe, start_time, end_time):
-#     try:
-#         # Retrieve data from MT5
-#         rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
-#         data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
-#         data['time'] = pd.to_datetime(data['time'], unit='s')
-
-#         return data
-#     except Exception as e:
-#         handle_error(e, f"Failed to retrieve historical data for {symbol}")
-#         return None
-#requests_cache.install_cache('historical_data_cache', backend='sqlite', expire_after=3600)
-
-# def get_historical_data(symbol, timeframe, start_time, end_time):
-#     try:
-#         # Create a cached session
-#         session = CachedSession('historical_data_cache', backend='sqlite', expire_after=3600)
-
-#         # Check if data is available in cache
-#         cache_key = f"{symbol}_{timeframe}_{start_time}_{end_time}"
-        
-#         def retrieve_data():
-#             # Retrieve data from MT5
-#             rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
-#             data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
-#             data['time'] = pd.to_datetime(data['time'], unit='s')
-#             return data
-
-#         data = session.cache.get_or_set(cache_key, retrieve_data)
-
-#         return data
-#     except Exception as e:
-#         handle_error(e, f"Failed to retrieve historical data for {symbol}")
-#         return None
-# def get_historical_data(symbol, timeframe, start_time, end_time):
-#     try:
-#         # Create a cached session
-#         session = CachedSession('historical_data_cache', backend='sqlite', expire_after=3600)
-
-#         # Check if data is available in cache
-#         cache_key = f"{symbol}_{timeframe}_{start_time}_{end_time}"
-#         cached_data = session.cache.get(cache_key)
-#         if cached_data:
-#             return pd.read_json(cached_data)
-
-#         # Retrieve data from MT5
-#         rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
-#         data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
-#         data['time'] = pd.to_datetime(data['time'], unit='s')
-
-#         # Store data in cache
-#         session.cache.set(cache_key, data.to_json())
-
-#         return data
-#     except Exception as e:
-#         handle_error(e, f"Failed to retrieve historical data for {symbol}")
-#         return None
-    
 def retrieve_historical_data(symbol, start_date, end_date, timeframe):
     rates = mt5.copy_rates_range(symbol, timeframe, start_date, end_date)
     data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])

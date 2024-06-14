@@ -22,8 +22,10 @@ def run_backtest_func():
 
         for symbol in Config.SYMBOLS:
             logging.info("Running backtest...")
-            start_date = datetime(2022, 1, 1)
-            end_date = datetime(2022, 1, 5)
+            # start_date = datetime(2022, 1, 1)
+            # end_date = datetime(2022, 1, 5)
+            start_date = datetime(2023, 1, 1)
+            end_date = datetime.now()
             initial_balance = 10000
             risk_percent = Config.RISK_PER_TRADE
 
