@@ -22610,3 +22610,55 @@
 2024-06-13 10:54:44,939 - INFO - Backtest completed successfully.
 2024-06-13 10:54:44,940 - INFO - Shutting down MetaTrader5...
 2024-06-13 10:54:44,945 - INFO - MetaTrader5 connection gracefully shut down.
+2024-06-13 19:28:08,736 - INFO - STARTING APPLICATION
+2024-06-13 19:28:08,737 - INFO - LOGGING ALL THE CONFIG SETTINGS
+2024-06-13 19:28:08,737 - INFO - MT5_LOGIN: your_mt5_login
+2024-06-13 19:28:08,737 - INFO - MT5_PASSWORD: your_mt5_password
+2024-06-13 19:28:08,737 - INFO - MT5_SERVER: your_mt5_server
+2024-06-13 19:28:08,737 - INFO - MT5_PATH: C:\Program Files\MetaTrader 5\terminal64.exe
+2024-06-13 19:28:08,737 - INFO - MT5_TIMEFRAME: H1
+2024-06-13 19:28:08,737 - INFO - SYMBOLS: ['EURUSD']
+2024-06-13 19:28:08,738 - INFO - TELEGRAM_TOKEN: your_telegram_bot_token
+2024-06-13 19:28:08,738 - INFO - TELEGRAM_IDS: ['telegram_user_id_1', 'telegram_user_id_2']
+2024-06-13 19:28:08,738 - INFO - MIN_TP_PROFIT: 50.0
+2024-06-13 19:28:08,738 - INFO - MAX_LOSS_PER_DAY: 1000.0
+2024-06-13 19:28:08,738 - INFO - STARTING_EQUITY: 10000.0
+2024-06-13 19:28:08,738 - INFO - LIMIT_NO_OF_TRADES: 5
+2024-06-13 19:28:08,738 - INFO - RISK_PER_TRADE: 0.02
+2024-06-13 19:28:08,738 - INFO - PIP_VALUE: 0.0001
+2024-06-13 19:28:11,273 - INFO - Initializing MetaTrader5...
+2024-06-13 19:28:24,634 - INFO - MetaTrader5 initialized successfully.
+2024-06-13 19:28:24,634 - INFO - Running backtest...
+2024-06-13 19:28:24,650 - INFO - Backtest data shape: (57, 8)
+2024-06-13 19:28:24,655 - INFO - Backtest data head:
+                 time     open     high      low    close  tick_volume  spread  real_volume
+0 2022-01-03 00:00:00  1.13693  1.13742  1.13645  1.13726          571      17            0
+1 2022-01-03 01:00:00  1.13725  1.13778  1.13687  1.13728         1345       7            0
+2 2022-01-03 02:00:00  1.13728  1.13759  1.13608  1.13622         1054       0            0
+3 2022-01-03 03:00:00  1.13622  1.13654  1.13497  1.13588         1349       0            0
+4 2022-01-03 04:00:00  1.13588  1.13589  1.13422  1.13427         1091       0            0
+2024-06-13 19:28:24,655 - INFO - Initial balance: 10000
+2024-06-13 19:28:25,054 - INFO - Final balance: 10000
+2024-06-13 19:28:25,055 - INFO - Total Profit: 0.00
+2024-06-13 19:28:25,055 - INFO - Number of Trades: 0
+2024-06-13 19:28:25,055 - INFO - Win Rate: 0.00%
+2024-06-13 19:28:25,055 - INFO - Maximum Drawdown: 0.00
+2024-06-13 19:28:25,055 - INFO - Backtest completed successfully.
+2024-06-13 19:28:25,055 - INFO - Shutting down MetaTrader5...
+2024-06-13 19:28:25,056 - INFO - MetaTrader5 connection gracefully shut down.
+2024-06-13 19:34:20,282 - INFO - STARTING APPLICATION
+2024-06-13 19:34:20,282 - INFO - LOGGING ALL THE CONFIG SETTINGS
+2024-06-13 19:34:20,283 - INFO - MT5_LOGIN: your_mt5_login
+2024-06-13 19:34:20,283 - INFO - MT5_PASSWORD: your_mt5_password
+2024-06-13 19:34:20,283 - INFO - MT5_SERVER: your_mt5_server
+2024-06-13 19:34:20,283 - INFO - MT5_PATH: C:\Program Files\MetaTrader 5\terminal64.exe
+2024-06-13 19:34:20,283 - INFO - MT5_TIMEFRAME: H1
+2024-06-13 19:34:20,283 - INFO - SYMBOLS: ['EURUSD']
+2024-06-13 19:34:20,283 - INFO - TELEGRAM_TOKEN: your_telegram_bot_token
+2024-06-13 19:34:20,284 - INFO - TELEGRAM_IDS: ['telegram_user_id_1', 'telegram_user_id_2']
+2024-06-13 19:34:20,284 - INFO - MIN_TP_PROFIT: 50.0
+2024-06-13 19:34:20,284 - INFO - MAX_LOSS_PER_DAY: 1000.0
+2024-06-13 19:34:20,284 - INFO - STARTING_EQUITY: 10000.0
+2024-06-13 19:34:20,284 - INFO - LIMIT_NO_OF_TRADES: 5
+2024-06-13 19:34:20,284 - INFO - RISK_PER_TRADE: 0.02
+2024-06-13 19:34:20,284 - INFO - PIP_VALUE: 0.0001
