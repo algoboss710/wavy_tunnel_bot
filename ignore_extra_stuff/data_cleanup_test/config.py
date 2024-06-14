@@ -4,7 +4,7 @@ class Config:
     SYMBOLS = ["EURUSD", "GBPUSD"]  # List of instruments
     TIMEFRAME = "H1"  # Time frame, e.g., "H1", "D1"
     START_DATE = "2023-01-01"
-    END_DATE = "2023-01-10"
+    END_DATE = "2023-01-30"
     PIP_VALUE = 0.0001  # Example pip value
     STARTING_EQUITY = 10000
     RISK_PER_TRADE = 0.01
