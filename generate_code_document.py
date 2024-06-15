@@ -31,7 +31,7 @@ def generate_code_document(root_dir, excluded_folders=None, excluded_files=None)
 
 if __name__ == "__main__":
     # Specify the root directory of your repository
-    root_directory = r"C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot"
+    root_directory = r"C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot"
 
     # Lists of folders and files to exclude
     excluded_folders = ['ignore_extra_stuff', 'jupyter_notebooks', '__pycache__']

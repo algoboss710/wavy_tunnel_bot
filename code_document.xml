@@ -1,6 +1,6 @@
 <documents>
 <document index="1">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\config.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\config.py</source>
 <document_content>
 import os
 from dotenv import load_dotenv
@@ -124,7 +124,7 @@ except Exception as e:
 </document>
 
 <document index="2">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\main.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\main.py</source>
 <document_content>
 import MetaTrader5 as mt5
 import pandas as pd
@@ -150,8 +150,10 @@ def run_backtest_func():
 
         for symbol in Config.SYMBOLS:
             logging.info("Running backtest...")
-            start_date = datetime(2022, 1, 1)
-            end_date = datetime(2022, 1, 5)
+            # start_date = datetime(2022, 1, 1)
+            # end_date = datetime(2022, 1, 5)
+            start_date = datetime(2023, 1, 1)
+            end_date = datetime.now()
             initial_balance = 10000
             risk_percent = Config.RISK_PER_TRADE
 
@@ -266,7 +268,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="3">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\scheduler.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\scheduler.py</source>
 <document_content>
 import schedule
 import time
@@ -367,7 +369,7 @@ adjust_schedule(market_conditions)
 </document>
 
 <document index="4">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\ui.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\ui.py</source>
 <document_content>
 # import tkinter as tk
 # from tkinter import ttk
@@ -587,11 +589,11 @@ def run_ui(run_backtest_func, run_live_trading_func):
 </document>
 
 <document index="5">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\backtesting\backtest.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\backtesting\backtest.py</source>
 <document_content>
 import pandas as pd
 from datetime import datetime
-from metatrader.data_retrieval import get_historical_data
+#from metatrader.data_retrieval import get_historical_data
 from strategy.tunnel_strategy import generate_trade_signal, execute_trade, manage_position
 # from utils.plotting import plot_backtest_results
 # from utils.error_handling import handle_error
@@ -710,7 +712,7 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
 </document>
 
 <document index="6">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\metatrader\connection.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\connection.py</source>
 <document_content>
 import MetaTrader5 as mt5
 # import MetaTrader4 as mt4
@@ -780,7 +782,7 @@ def shutdown_mt5():
 </document>
 
 <document index="7">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\metatrader\data_retrieval.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\data_retrieval.py</source>
 <document_content>
 import MetaTrader5 as mt5
 import pandas as pd
@@ -803,8 +805,6 @@ def shutdown_mt5():
 start_time = datetime.now() - timedelta(days=30)  # Example: 30 days ago
 end_time = datetime.now()  # Current time
 
-# ...
-
 def get_historical_data(symbol, timeframe, start_time, end_time):
     try:
         # Retrieve data from MT5
@@ -821,71 +821,15 @@ def get_historical_data(symbol, timeframe, start_time, end_time):
         if data.empty:
             raise ValueError(f"No historical data retrieved for {symbol} with timeframe {timeframe} from {start_time} to {end_time}")
 
+        # Data Cleaning
+        data = data.dropna()  # Drop missing values
+        data = data[(data['open'] > 0) & (data['high'] > 0) & (data['low'] > 0) & (data['close'] > 0)]  # Remove zero/negative prices
+        
         return data
     except Exception as e:
         handle_error(e, f"Failed to retrieve historical data for {symbol}")
         return None
 
-# ...
-
-# def get_historical_data(symbol, timeframe, start_time, end_time):
-#     try:
-#         # Retrieve data from MT5
-#         rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
-#         data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
-#         data['time'] = pd.to_datetime(data['time'], unit='s')
-
-#         return data
-#     except Exception as e:
-#         handle_error(e, f"Failed to retrieve historical data for {symbol}")
-#         return None
-#requests_cache.install_cache('historical_data_cache', backend='sqlite', expire_after=3600)
-
-# def get_historical_data(symbol, timeframe, start_time, end_time):
-#     try:
-#         # Create a cached session
-#         session = CachedSession('historical_data_cache', backend='sqlite', expire_after=3600)
-
-#         # Check if data is available in cache
-#         cache_key = f"{symbol}_{timeframe}_{start_time}_{end_time}"
-        
-#         def retrieve_data():
-#             # Retrieve data from MT5
-#             rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
-#             data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
-#             data['time'] = pd.to_datetime(data['time'], unit='s')
-#             return data
-
-#         data = session.cache.get_or_set(cache_key, retrieve_data)
-
-#         return data
-#     except Exception as e:
-#         handle_error(e, f"Failed to retrieve historical data for {symbol}")
-#         return None
-# def get_historical_data(symbol, timeframe, start_time, end_time):
-#     try:
-#         # Create a cached session
-#         session = CachedSession('historical_data_cache', backend='sqlite', expire_after=3600)
-
-#         # Check if data is available in cache
-#         cache_key = f"{symbol}_{timeframe}_{start_time}_{end_time}"
-#         cached_data = session.cache.get(cache_key)
-#         if cached_data:
-#             return pd.read_json(cached_data)
-
-#         # Retrieve data from MT5
-#         rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
-#         data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
-#         data['time'] = pd.to_datetime(data['time'], unit='s')
-
-#         # Store data in cache
-#         session.cache.set(cache_key, data.to_json())
-
-#         return data
-#     except Exception as e:
-#         handle_error(e, f"Failed to retrieve historical data for {symbol}")
-#         return None
-    
 def retrieve_historical_data(symbol, start_date, end_date, timeframe):
     rates = mt5.copy_rates_range(symbol, timeframe, start_date, end_date)
     data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
@@ -994,7 +938,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="8">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\metatrader\indicators.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\indicators.py</source>
 <document_content>
 import pandas as pd
 import numpy as np
@@ -1025,7 +969,7 @@ def calculate_ema(prices, period):
 </document>
 
 <document index="9">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\metatrader\trade_management.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\trade_management.py</source>
 <document_content>
 import MetaTrader5 as mt5
 
@@ -1081,7 +1025,7 @@ def modify_order(ticket, sl=None, tp=None):
 </document>
 
 <document index="10">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\metatrader\__init__.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\__init__.py</source>
 <document_content>
 from .data_retrieval import get_historical_data
 # tests/__init__.py
@@ -1100,7 +1044,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="11">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\strategy\trade_logic.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\trade_logic.py</source>
 <document_content>
 from strategy.tunnel_strategy import execute_trade, manage_position
 from utils.error_handling import handle_error
@@ -1167,7 +1111,7 @@ def exit_trade(position_ticket):
 </document>
 
 <document index="12">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\strategy\tunnel_strategy.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\tunnel_strategy.py</source>
 <document_content>
 import numpy as np
 from metatrader.data_retrieval import get_historical_data
@@ -1453,21 +1397,21 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
 </document>
 
 <document index="13">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\strategy\__init__.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\__init__.py</source>
 <document_content>
 from .tunnel_strategy import run_strategy
 </document_content>
 </document>
 
 <document index="14">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\__init__.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\__init__.py</source>
 <document_content>
 
 </document_content>
 </document>
 
 <document index="15">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\backtesting\test_backtest.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\backtesting\test_backtest.py</source>
 <document_content>
 # tests/backtesting/test_backtest.py
 import unittest
@@ -1540,7 +1484,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="16">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\config\test_config.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\config\test_config.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch, MagicMock
@@ -1585,7 +1529,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="17">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\metatrader\test_connection.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\metatrader\test_connection.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -1629,7 +1573,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="18">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\metatrader\test_data_retrieval.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\metatrader\test_data_retrieval.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -1687,7 +1631,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="19">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\metatrader\test_indicators.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\metatrader\test_indicators.py</source>
 <document_content>
 import unittest
 import numpy as np
@@ -1743,7 +1687,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="20">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\metatrader\test_trade_management.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\metatrader\test_trade_management.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch, MagicMock
@@ -1831,7 +1775,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="21">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\strategy\test_strategy.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\strategy\test_strategy.py</source>
 <document_content>
 import unittest
 import pandas as pd
@@ -2277,7 +2221,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="22">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\strategy\test_trade_logic.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\strategy\test_trade_logic.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch, Mock
@@ -2355,7 +2299,7 @@ class TestStrategyFunctions(unittest.TestCase):
 </document>
 
 <document index="23">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\utils\test_data_validation.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_data_validation.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch, MagicMock
@@ -2408,7 +2352,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="24">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\utils\test_error_handling.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_error_handling.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -2443,7 +2387,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="25">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\utils\test_logger.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_logger.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -2463,7 +2407,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="26">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\utils\test_plotting.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_plotting.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -2495,7 +2439,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="27">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\tests\utils\test_types.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_types.py</source>
 <document_content>
 import unittest
 from utils.types import TradeAction, OrderType, OrderFilling, OrderTime, Symbol, Timeframe, LotSize
@@ -2564,7 +2508,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="28">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\data_validation.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\data_validation.py</source>
 <document_content>
 from typing import Any
 from pydantic import BaseModel, ValidationError
@@ -2657,7 +2601,7 @@ def validate_close_request(close_request):
 </document>
 
 <document index="29">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\error_handling.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\error_handling.py</source>
 <document_content>
 import logging
 
@@ -2675,7 +2619,7 @@ def warn_error(error, message):
 </document>
 
 <document index="30">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\logger.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\logger.py</source>
 <document_content>
 import logging
 import os
@@ -2702,7 +2646,7 @@ def setup_logging(log_level=logging.INFO, log_file="app.log"):
 </document>
 
 <document index="31">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\plotting.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\plotting.py</source>
 <document_content>
 import matplotlib.pyplot as plt
 
@@ -2750,7 +2694,7 @@ def plot_backtest_results(data, trades):
 </document>
 
 <document index="32">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\types.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\types.py</source>
 <document_content>
 class TradeAction(str):
     def __new__(cls, value):
@@ -2798,7 +2742,7 @@ class LotSize(float):
 </document>
 
 <document index="33">
-<source>C:\Users\owner\Desktop\upwork_projects\wavy_tunnel_bot\utils\__init__.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\__init__.py</source>
 <document_content>
 from .data_validation import validate_data, sanitize_data, validate_trade_request, validate_close_request
 from .logger import setup_logging

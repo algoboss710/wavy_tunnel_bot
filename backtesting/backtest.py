@@ -1,6 +1,6 @@
 import pandas as pd
 from datetime import datetime
-from metatrader.data_retrieval import get_historical_data
+#from metatrader.data_retrieval import get_historical_data
 from strategy.tunnel_strategy import generate_trade_signal, execute_trade, manage_position
 # from utils.plotting import plot_backtest_results
 # from utils.error_handling import handle_error
