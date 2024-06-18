@@ -12,6 +12,61 @@ import logging
 import argparse
 from ui import run_ui
 
+# def run_backtest_func():
+#     try:
+#         # Initialize MetaTrader5
+#         logging.info("Initializing MetaTrader5...")
+#         if not initialize_mt5(Config.MT5_PATH):
+#             raise Exception("Failed to initialize MetaTrader5")
+#         logging.info("MetaTrader5 initialized successfully.")
+
+#         for symbol in Config.SYMBOLS:
+#             logging.info("Running backtest...")
+#             # start_date = datetime(2022, 1, 1)
+#             # end_date = datetime(2022, 1, 5)
+#             start_date = datetime(2023, 1, 1)
+#             end_date = datetime.now()
+#             initial_balance = 10000
+#             risk_percent = Config.RISK_PER_TRADE
+
+#             backtest_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, start_date, end_date)
+#             if backtest_data is not None and not backtest_data.empty:
+#                 logging.info(f"Backtest data shape: {backtest_data.shape}")
+#                 logging.info(f"Backtest data head:\n{backtest_data.head()}")
+#             else:
+#                 logging.error(f"No historical data retrieved for {symbol} for backtesting")
+#                 continue
+
+#             # Ensure there are enough data points for the indicators
+#             if len(backtest_data) < 20:
+#                 logging.error(f"Not enough data for symbol {symbol} to perform backtest")
+#                 continue
+
+#             try:
+#                 run_backtest(
+#                     symbol=symbol,
+#                     data=backtest_data,
+#                     initial_balance=initial_balance,
+#                     risk_percent=risk_percent,
+#                     min_take_profit=Config.MIN_TP_PROFIT,
+#                     max_loss_per_day=Config.MAX_LOSS_PER_DAY,
+#                     starting_equity=Config.STARTING_EQUITY,
+#                     max_trades_per_day=Config.LIMIT_NO_OF_TRADES
+#                 )
+#                 logging.info("Backtest completed successfully.")
+#             except Exception as e:
+#                 handle_error(e, f"An error occurred during backtesting for {symbol}")
+
+#     except Exception as e:
+#         error_code = mt5.last_error()
+#         error_message = "An error occurred"
+#         handle_error(e, f"An error occurred in the run_backtest_func: {error_code} - {error_message}")
+
+#     finally:
+#         logging.info("Shutting down MetaTrader5...")
+#         shutdown_mt5()
+#         logging.info("MetaTrader5 connection gracefully shut down.")
+
 def run_backtest_func():
     try:
         # Initialize MetaTrader5
@@ -22,12 +77,12 @@ def run_backtest_func():
 
         for symbol in Config.SYMBOLS:
             logging.info("Running backtest...")
-            # start_date = datetime(2022, 1, 1)
-            # end_date = datetime(2022, 1, 5)
-            start_date = datetime(2023, 1, 1)
+            start_date = datetime(2024, 3, 1)
             end_date = datetime.now()
             initial_balance = 10000
             risk_percent = Config.RISK_PER_TRADE
+            stop_loss_pips = 20  # Example value for stop loss in pips
+            pip_value = Config.PIP_VALUE
 
             backtest_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, start_date, end_date)
             if backtest_data is not None and not backtest_data.empty:
@@ -51,7 +106,9 @@ def run_backtest_func():
                     min_take_profit=Config.MIN_TP_PROFIT,
                     max_loss_per_day=Config.MAX_LOSS_PER_DAY,
                     starting_equity=Config.STARTING_EQUITY,
-                    max_trades_per_day=Config.LIMIT_NO_OF_TRADES
+                    max_trades_per_day=Config.LIMIT_NO_OF_TRADES,
+                    stop_loss_pips=stop_loss_pips,  # Pass stop_loss_pips
+                    pip_value=pip_value              # Pass pip_value
                 )
                 logging.info("Backtest completed successfully.")
             except Exception as e:
@@ -66,6 +123,7 @@ def run_backtest_func():
         logging.info("Shutting down MetaTrader5...")
         shutdown_mt5()
         logging.info("MetaTrader5 connection gracefully shut down.")
+
 
 def run_live_trading_func():
     try:
