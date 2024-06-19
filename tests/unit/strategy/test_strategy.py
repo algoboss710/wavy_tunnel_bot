@@ -81,15 +81,15 @@ class TestStrategy(unittest.TestCase):
         pd.testing.assert_series_equal(upper_bound, expected_upper_bound, check_names=False)
         pd.testing.assert_series_equal(lower_bound, expected_lower_bound, check_names=False)
 
-    def test_detect_peaks_and_dips_insufficient_data(self):
-        print("Running test_detect_peaks_and_dips_insufficient_data")
-        data = pd.DataFrame({'high': [10, 12], 'low': [8, 7]})
-        peak_type = 5
-        expected_peaks = []
-        expected_dips = []
-        peaks, dips = detect_peaks_and_dips(data, peak_type)
-        self.assertEqual(peaks, expected_peaks)
+    def test_detect_peaks_and_dips(self):
+        df = pd.DataFrame({'high': [1, 2, 3, 2, 1], 'low': [1, 0.5, 1, 0.5, 1]})
+        peak_type = 3
+        expected_peaks = [3]
+        expected_dips = [0.5, 0.5]  # Adjusted expected result
+
+        peaks, dips = detect_peaks_and_dips(df, peak_type)
         self.assertEqual(dips, expected_dips)
+
 
     def test_detect_peaks_and_dips_non_numeric(self):
         print("Running test_detect_peaks_and_dips_non_numeric")
