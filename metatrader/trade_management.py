@@ -20,7 +20,7 @@ def place_order(symbol, order_type, volume, price=None, sl=None, tp=None):
         result = mt5.order_send(request)
         return result.comment if result else 'Order failed'
     except Exception as e:
-        return 'Order failed'
+        return f'Order failed: {str(e)}'
 
 def close_position(ticket):
     try:
@@ -30,7 +30,7 @@ def close_position(ticket):
             return result.comment if result else 'Close failed'
         return 'Position not found'
     except Exception as e:
-        return 'Close failed'
+        return f'Close failed: {str(e)}'
 
 def modify_order(ticket, sl=None, tp=None):
     try:
@@ -46,4 +46,23 @@ def modify_order(ticket, sl=None, tp=None):
             return result.comment if result else 'Modify failed'
         return 'Order not found'
     except Exception as e:
-        return 'Modify failed'
+        return f'Modify failed: {str(e)}'
+
+def execute_trade(trade):
+    """
+    Executes a trade based on the provided trade dictionary.
+    Expected dictionary keys: 'symbol', 'action', 'volume', 'price', 'sl', 'tp'.
+    """
+    symbol = trade.get('symbol')
+    action = trade.get('action')
+    volume = trade.get('volume')
+    price = trade.get('price')
+    sl = trade.get('sl')
+    tp = trade.get('tp')
+    
+    if action == 'BUY':
+        return place_order(symbol, 'buy', volume, price, sl, tp)
+    elif action == 'SELL':
+        return place_order(symbol, 'sell', volume, price, sl, tp)
+    else:
+        return 'Invalid trade action'

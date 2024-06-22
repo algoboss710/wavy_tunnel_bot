@@ -128,15 +128,29 @@
 
 # if __name__ == '__main__':
 #     unittest.main()
-
-import pandas as pd
-from datetime import datetime
-from config import Config
+# backtesting/backtest.py
 import logging
-import MetaTrader5 as mt5
+import pandas as pd
+import numpy as np
+from strategy.tunnel_strategy import check_entry_conditions, generate_trade_signal, manage_position, calculate_position_size, detect_peaks_and_dips
+from metatrader.indicators import calculate_ema
+from metatrader.trade_management import execute_trade
+
+def calculate_max_drawdown(trades, initial_balance):
+    balance = initial_balance
+    max_balance = initial_balance
+    max_drawdown = 0
+
+    for trade in trades:
+        if 'profit' in trade:
+            balance += trade['profit']
+            max_balance = max(max_balance, balance)
+            drawdown = max_balance - balance
+            max_drawdown = max(max_drawdown, drawdown)
+
+    return max_drawdown
 
 def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, stop_loss_pips, pip_value):
-    print("Entering run_backtest")
     balance = initial_balance
     trades = []
 
@@ -146,16 +160,12 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
     # Validate critical parameters
     if stop_loss_pips == 0:
         logging.error(f"stop_loss_pips is zero. This value must not be zero.")
-        print("Error: stop_loss_pips is zero. This value must not be zero.")
         return
     if pip_value == 0:
         logging.error(f"pip_value is zero. This value must not be zero.")
-        print("Error: pip_value is zero. This value must not be zero.")
         return
 
     peak_type = 21
-
-    from strategy.tunnel_strategy import calculate_ema, detect_peaks_and_dips, generate_trade_signal, execute_trade, manage_position, check_entry_conditions, calculate_position_size
 
     # Calculate indicators and peaks/dips for the entire dataset
     data['wavy_h'] = calculate_ema(data['high'], 34)
@@ -165,8 +175,6 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
     data['tunnel2'] = calculate_ema(data['close'], 169)
     data['long_term_ema'] = calculate_ema(data['close'], 200)
     peaks, dips = detect_peaks_and_dips(data, peak_type)
-
-    print("Indicators calculated and peaks/dips detected")
 
     buy_condition = False
     sell_condition = False
@@ -182,20 +190,24 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
 
         # Generate trading signals
         signal = generate_trade_signal(data.iloc[:i+1], period=20, deviation_factor=2.0)
+        print(f"Generated signal: {signal}")
 
         try:
             position_size = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
         except ZeroDivisionError as e:
             logging.error(f"Division by zero occurred in calculate_position_size: {e}. Variables - balance: {balance}, risk_percent: {risk_percent}, stop_loss_pips: {stop_loss_pips}, pip_value: {pip_value}")
-            print(f"Error: Division by zero in calculate_position_size: {e}")
             continue
 
         row = data.iloc[i]
+        print(f"Calling check_entry_conditions for row {i}")
+        logging.info(f"Calling check_entry_conditions for row {i}")
         buy_condition, sell_condition = check_entry_conditions(row, peaks, dips, symbol)
-        
-        print(f"buy_condition: {buy_condition}, sell_condition: {sell_condition}")
+        print(f"Result for check_entry_conditions at row {i}: buy_condition={buy_condition}, sell_condition={sell_condition}")
+        logging.info(f"Result for check_entry_conditions at row {i}: buy_condition={buy_condition}, sell_condition={sell_condition}")
 
         if buy_condition:
+            print(f"Buy condition met at row {i}.")
+            logging.info(f"Buy condition met at row {i}.")
             # Simulate trade entry
             trade = {
                 'entry_time': data.iloc[i]['time'],
@@ -209,9 +221,10 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
             trades.append(trade)
             execute_trade(trade)
             logging.info(f"Balance after BUY trade: {balance}")
-            print(f"Balance after BUY trade: {balance}")
 
         elif sell_condition:
+            print(f"Sell condition met at row {i}.")
+            logging.info(f"Sell condition met at row {i}.")
             # Simulate trade exit
             if trades:
                 trade = trades[-1]
@@ -222,10 +235,8 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                     balance += trade['profit']
                 except KeyError as e:
                     logging.error(f"KeyError occurred while updating balance: {e}")
-                    print(f"Error: KeyError while updating balance: {e}")
                 execute_trade(trade)
                 logging.info(f"Balance after SELL trade: {balance}")
-                print(f"Balance after SELL trade: {balance}")
 
         manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
 
@@ -255,17 +266,3 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
         'buy_condition': buy_condition,
         'sell_condition': sell_condition
     }
-
-def calculate_max_drawdown(trades, initial_balance):
-    balance = initial_balance
-    max_balance = initial_balance
-    max_drawdown = 0
-
-    for trade in trades:
-        if 'profit' in trade:
-            balance += trade['profit']
-            max_balance = max(max_balance, balance)
-            drawdown = max_balance - balance
-            max_drawdown = max(max_drawdown, drawdown)
-
-    return max_drawdown

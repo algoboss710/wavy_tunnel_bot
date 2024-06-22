@@ -53,6 +53,10 @@ def detect_peaks_and_dips(df, peak_type):
     return peaks, dips
 
 def check_entry_conditions(row, peaks, dips, symbol):
+    print(f"Checking entry conditions for row: {row}")
+    print(f"Peaks: {peaks}")
+    print(f"Dips: {dips}")
+
     buy_condition = (
         row['close'] > max(row['wavy_c'], row['wavy_h'], row['wavy_l']) and
         min(row['wavy_c'], row['wavy_h'], row['wavy_l']) > max(row['tunnel1'], row['tunnel2']) and
@@ -63,6 +67,10 @@ def check_entry_conditions(row, peaks, dips, symbol):
         max(row['wavy_c'], row['wavy_h'], row['wavy_l']) < min(row['tunnel1'], row['tunnel2']) and
         row['close'] in dips  # Check if the current close price is a dip
     )
+    
+    print(f"Initial Buy condition: {buy_condition}")
+    print(f"Initial Sell condition: {sell_condition}")
+
     threshold_values = {
         'USD': 2,
         'EUR': 2,
@@ -75,11 +83,18 @@ def check_entry_conditions(row, peaks, dips, symbol):
     apply_threshold = True
     if apply_threshold:
         threshold = threshold_values.get(symbol[:3], threshold_values['default']) * mt5.symbol_info(symbol).trade_tick_size
+        print(f"Threshold: {threshold}")
+
         if threshold == 0:
             logging.error("Division by zero: threshold value is zero in check_entry_conditions")
             return False, False
+
         buy_condition &= row['close'] > max(row['wavy_c'], row['wavy_h'], row['wavy_l']) + threshold
         sell_condition &= row['close'] < min(row['wavy_c'], row['wavy_h'], row['wavy_l']) - threshold
+
+    print(f"Final Buy condition: {buy_condition}")
+    print(f"Final Sell condition: {sell_condition}")
+
     return buy_condition, sell_condition
 
 def execute_trade(trade_request):
