@@ -30,10 +30,9 @@ def calculate_ema(prices, period):
     return ema_series
 
 def detect_peaks_and_dips(df, peak_type):
-    
     if not np.issubdtype(df['high'].dtype, np.number) or not np.issubdtype(df['low'].dtype, np.number):
         raise TypeError("High and Low columns must contain numeric data.")
-    
+
     highs = df['high'].values
     lows = df['low'].values
     center_index = peak_type // 2
@@ -52,20 +51,29 @@ def detect_peaks_and_dips(df, peak_type):
     
     return peaks, dips
 
+
 def check_entry_conditions(row, peaks, dips, symbol):
     print(f"Checking entry conditions for row: {row}")
     print(f"Peaks: {peaks}")
     print(f"Dips: {dips}")
 
+    wavy_c, wavy_h, wavy_l = row['wavy_c'], row['wavy_h'], row['wavy_l']
+    tunnel1, tunnel2 = row['tunnel1'], row['tunnel2']
+    close_price = row['close']
+
+    print(f"wavy_c: {wavy_c}, wavy_h: {wavy_h}, wavy_l: {wavy_l}")
+    print(f"tunnel1: {tunnel1}, tunnel2: {tunnel2}")
+    print(f"close_price: {close_price}")
+
     buy_condition = (
-        row['close'] > max(row['wavy_c'], row['wavy_h'], row['wavy_l']) and
-        min(row['wavy_c'], row['wavy_h'], row['wavy_l']) > max(row['tunnel1'], row['tunnel2']) and
-        row['close'] in peaks  # Check if the current close price is a peak
+        close_price > max(wavy_c, wavy_h, wavy_l) and
+        min(wavy_c, wavy_h, wavy_l) > max(tunnel1, tunnel2) and
+        close_price in peaks  # Check if the current close price is a peak
     )
     sell_condition = (
-        row['close'] < min(row['wavy_c'], row['wavy_h'], row['wavy_l']) and
-        max(row['wavy_c'], row['wavy_h'], row['wavy_l']) < min(row['tunnel1'], row['tunnel2']) and
-        row['close'] in dips  # Check if the current close price is a dip
+        close_price < min(wavy_c, wavy_h, wavy_l) and
+        max(wavy_c, wavy_h, wavy_l) < min(tunnel1, tunnel2) and
+        close_price in dips  # Check if the current close price is a dip
     )
     
     print(f"Initial Buy condition: {buy_condition}")
@@ -89,13 +97,16 @@ def check_entry_conditions(row, peaks, dips, symbol):
             logging.error("Division by zero: threshold value is zero in check_entry_conditions")
             return False, False
 
-        buy_condition &= row['close'] > max(row['wavy_c'], row['wavy_h'], row['wavy_l']) + threshold
-        sell_condition &= row['close'] < min(row['wavy_c'], row['wavy_h'], row['wavy_l']) - threshold
+        buy_condition &= close_price > max(wavy_c, wavy_h, wavy_l) + threshold
+        sell_condition &= close_price < min(wavy_c, wavy_h, wavy_l) - threshold
 
     print(f"Final Buy condition: {buy_condition}")
     print(f"Final Sell condition: {sell_condition}")
 
     return buy_condition, sell_condition
+
+
+
 
 def execute_trade(trade_request):
     try:
