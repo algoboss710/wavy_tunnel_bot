@@ -1772,6 +1772,88 @@ from .tunnel_strategy import run_strategy
 </document>
 
 <document index="15">
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\integration\backtest_new.py</source>
+<document_content>
+import unittest
+from unittest.mock import patch, MagicMock
+import pandas as pd
+from backtest import run_backtest  # Adjust the import according to the actual module path
+
+class TestRunBacktest(unittest.TestCase):
+
+    def setUp(self):
+        # Prepare sample market data
+        data = {
+            'timestamp': pd.date_range(start='2024-01-01', periods=100, freq='h'),  # Use 'h' instead of 'H'
+            'open': pd.Series([1.1000 + i*0.0001 for i in range(100)]),
+            'high': pd.Series([1.1005 + i*0.0001 for i in range(100)]),
+            'low': pd.Series([1.0995 + i*0.0001 for i in range(100)]),
+            'close': pd.Series([1.1002 + i*0.0001 for i in range(100)])
+        }
+        self.test_data = pd.DataFrame(data)
+        self.stop_loss_pips = 10
+        self.pip_value = 0.1
+        self.initial_balance = 10000
+        self.risk_percent = 1
+        self.min_take_profit = 50
+        self.max_loss_per_day = 500
+        self.starting_equity = 10000
+        self.max_trades_per_day = 5
+
+    @patch('backtest.calculate_ema')
+    @patch('backtest.detect_peaks_and_dips')
+    @patch('backtest.generate_trade_signal')
+    @patch('backtest.calculate_position_size')
+    @patch('backtest.check_entry_conditions')
+    @patch('backtest.execute_trade')
+    @patch('backtest.calculate_max_drawdown')
+    def test_run_backtest(self, mock_calculate_max_drawdown, mock_execute_trade, mock_check_entry_conditions, mock_calculate_position_size, mock_generate_trade_signal, mock_detect_peaks_and_dips, mock_calculate_ema):
+        # Mock method return values
+        mock_calculate_ema.return_value = self.test_data['close']
+        mock_detect_peaks_and_dips.return_value = (pd.Series([0]*100), pd.Series([0]*100))
+        mock_generate_trade_signal.return_value = [None]*100
+        mock_calculate_position_size.return_value = 1.0
+        mock_check_entry_conditions.return_value = (False, False)
+        mock_execute_trade.return_value = None
+        mock_calculate_max_drawdown.return_value = -0.05
+
+        # Run the backtest
+        results = run_backtest(
+            symbol='EURUSD',
+            data=self.test_data,
+            initial_balance=self.initial_balance,
+            risk_percent=self.risk_percent,
+            min_take_profit=self.min_take_profit,
+            max_loss_per_day=self.max_loss_per_day,
+            starting_equity=self.starting_equity,
+            max_trades_per_day=self.max_trades_per_day,
+            stop_loss_pips=self.stop_loss_pips,
+            pip_value=self.pip_value
+        )
+
+        # Assertions
+        mock_calculate_ema.assert_called()
+        mock_detect_peaks_and_dips.assert_called()
+        mock_generate_trade_signal.assert_called()
+        mock_calculate_position_size.assert_called()
+        mock_check_entry_conditions.assert_called()
+        mock_execute_trade.assert_called()
+        mock_calculate_max_drawdown.assert_called()
+
+        # Validate logs and performance metrics (example)
+        self.assertIn('total_profit', results)
+        self.assertIn('num_trades', results)
+        self.assertIn('win_rate', results)
+        self.assertIn('max_drawdown', results)
+        self.assertGreaterEqual(results['num_trades'], 0)
+
+if __name__ == '__main__':
+    unittest.main()
+
+</document_content>
+</document>
+
+<document index="16">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\integration\test_backtest_integration.py</source>
 <document_content>
 # import unittest
@@ -1950,14 +2032,14 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="16">
+<document index="17">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\integration\__init__.py</source>
 <document_content>
 
 </document_content>
 </document>
 
-<document index="17">
+<document index="18">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\backtesting\test_backtest.py</source>
 <document_content>
 # tests/backtesting/test_backtest.py
@@ -2030,7 +2112,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="18">
+<document index="19">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\config\test_config.py</source>
 <document_content>
 import unittest
@@ -2075,7 +2157,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="19">
+<document index="20">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\metatrader\test_connection.py</source>
 <document_content>
 import unittest
@@ -2119,7 +2201,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="20">
+<document index="21">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\metatrader\test_data_retrieval.py</source>
 <document_content>
 import unittest
@@ -2177,7 +2259,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="21">
+<document index="22">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\metatrader\test_indicators.py</source>
 <document_content>
 import unittest
@@ -2233,7 +2315,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="22">
+<document index="23">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\metatrader\test_trade_management.py</source>
 <document_content>
 import unittest
@@ -2321,7 +2403,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="23">
+<document index="24">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\strategy\test_strategy.py</source>
 <document_content>
 import unittest
@@ -2774,7 +2856,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="24">
+<document index="25">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\strategy\test_trade_logic.py</source>
 <document_content>
 import unittest
@@ -2852,7 +2934,7 @@ class TestStrategyFunctions(unittest.TestCase):
 </document_content>
 </document>
 
-<document index="25">
+<document index="26">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_data_validation.py</source>
 <document_content>
 import unittest
@@ -2905,7 +2987,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="26">
+<document index="27">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_error_handling.py</source>
 <document_content>
 import unittest
@@ -2940,7 +3022,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="27">
+<document index="28">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_logger.py</source>
 <document_content>
 import unittest
@@ -2960,7 +3042,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="28">
+<document index="29">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_plotting.py</source>
 <document_content>
 import unittest
@@ -2992,7 +3074,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="29">
+<document index="30">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_types.py</source>
 <document_content>
 import unittest
@@ -3061,7 +3143,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="30">
+<document index="31">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\data_validation.py</source>
 <document_content>
 from typing import Any
@@ -3154,7 +3236,7 @@ def validate_close_request(close_request):
 </document_content>
 </document>
 
-<document index="31">
+<document index="32">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\error_handling.py</source>
 <document_content>
 import logging
@@ -3172,7 +3254,7 @@ def warn_error(error, message):
 </document_content>
 </document>
 
-<document index="32">
+<document index="33">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\logger.py</source>
 <document_content>
 import logging
@@ -3199,7 +3281,7 @@ def setup_logging(log_level=logging.INFO, log_file="app.log"):
 </document_content>
 </document>
 
-<document index="33">
+<document index="34">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\plotting.py</source>
 <document_content>
 import matplotlib.pyplot as plt
@@ -3247,7 +3329,7 @@ def plot_backtest_results(data, trades):
 </document_content>
 </document>
 
-<document index="34">
+<document index="35">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\types.py</source>
 <document_content>
 class TradeAction(str):
@@ -3295,7 +3377,7 @@ class LotSize(float):
 </document_content>
 </document>
 
-<document index="35">
+<document index="36">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\__init__.py</source>
 <document_content>
 from .data_validation import validate_data, sanitize_data, validate_trade_request, validate_close_request
