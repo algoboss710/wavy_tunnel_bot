@@ -19,19 +19,20 @@ def calculate_max_drawdown(trades, initial_balance):
 
     return max_drawdown
 
-def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, stop_loss_pips, pip_value):
+def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, stop_loss_pips, pip_value, max_trades_per_day=None):
     balance = initial_balance
     trades = []
+    trades_today = 0
+    current_day = data.iloc[0]['time'].date()
+    max_drawdown = 0
+    daily_loss = 0
 
     logging.info(f"Initial balance: {balance}")
     print(f"Initial balance: {balance}")
 
     # Validate critical parameters
-    if stop_loss_pips == 0:
-        logging.error(f"stop_loss_pips is zero. This value must not be zero.")
-        return
-    if pip_value == 0:
-        logging.error(f"pip_value is zero. This value must not be zero.")
+    if stop_loss_pips == 0 or pip_value == 0:
+        logging.error("stop_loss_pips and pip_value must not be zero.")
         return
 
     peak_type = 21
@@ -46,24 +47,22 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
 
     peaks, dips = detect_peaks_and_dips(data, peak_type)
 
-    print(f"Peaks: {peaks}")
-    print(f"Dips: {dips}")
-
-    buy_condition = False
-    sell_condition = False
-
     for i in range(20, len(data)):  # Start after enough data points are available
-        logging.info(f"Iteration: {i}")
-        logging.info(f"Data shape: {data.iloc[:i+1].shape}")
-        logging.info(f"Data head:\n{data.iloc[:i+1].head()}")
+        logging.info(f"Iteration: {i}, trades_today: {trades_today}, current_day: {current_day}")
 
-        print(f"Iteration: {i}")
-        print(f"Data shape: {data.iloc[:i+1].shape}")
-        print(f"Data head:\n{data.iloc[:i+1].head()}")
+        # Check if it's a new day
+        if data.iloc[i]['time'].date() != current_day:
+            logging.info(f"New day detected: {data.iloc[i]['time'].date()}, resetting trades_today and daily_loss.")
+            current_day = data.iloc[i]['time'].date()
+            trades_today = 0
+            daily_loss = 0
+
+        if max_trades_per_day is not None and trades_today >= max_trades_per_day:
+            logging.info(f"Max trades per day reached at row {i}.")
+            continue
 
         # Generate trading signals
         signal = generate_trade_signal(data.iloc[:i+1], period=20, deviation_factor=2.0)
-        print(f"Generated signal: {signal}")
 
         try:
             position_size = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
@@ -72,19 +71,10 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
             continue
 
         row = data.iloc[i]
-        print(f"Row {i} data: {row}")
-        print(f"Peaks: {peaks}")
-        print(f"Dips: {dips}")
-        print(f"Calling check_entry_conditions for row {i}")
-        logging.info(f"Calling check_entry_conditions for row {i}")
         buy_condition, sell_condition = check_entry_conditions(row, peaks, dips, symbol)
-        print(f"Result for check_entry_conditions at row {i}: buy_condition={buy_condition}, sell_condition={sell_condition}")
-        logging.info(f"Result for check_entry_conditions at row {i}: buy_condition={buy_condition}, sell_condition={sell_condition}")
 
-        if buy_condition:
-            print(f"Buy condition met at row {i}.")
+        if buy_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
             logging.info(f"Buy condition met at row {i}.")
-            # Simulate trade entry
             trade = {
                 'entry_time': data.iloc[i]['time'],
                 'entry_price': data.iloc[i]['close'],
@@ -95,23 +85,20 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                 'tp': data.iloc[i]['close'] + (2 * data['close'].rolling(window=20).std().iloc[i])
             }
             trades.append(trade)
+            trades_today += 1
             execute_trade(trade)
             logging.info(f"Balance after BUY trade: {balance}")
 
-        elif sell_condition:
-            print(f"Sell condition met at row {i}.")
+        elif sell_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
             logging.info(f"Sell condition met at row {i}.")
-            # Simulate trade exit
             if trades:
                 trade = trades[-1]
                 trade['exit_time'] = data.iloc[i]['time']
                 trade['exit_price'] = data.iloc[i]['close']
                 trade['profit'] = (trade['exit_price'] - trade['entry_price']) * trade['volume'] * pip_value
-                try:
-                    balance += trade['profit']
-                except KeyError as e:
-                    logging.error(f"KeyError occurred while updating balance: {e}")
+                balance += trade['profit']
                 execute_trade(trade)
+                trades_today += 1
                 logging.info(f"Balance after SELL trade: {balance}")
 
         manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
