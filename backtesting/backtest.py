@@ -1,9 +1,6 @@
 import logging
 import pandas as pd
 import numpy as np
-from strategy.tunnel_strategy import check_entry_conditions, generate_trade_signal, manage_position, calculate_position_size, detect_peaks_and_dips
-from metatrader.indicators import calculate_ema
-from metatrader.trade_management import execute_trade
 
 def calculate_max_drawdown(trades, initial_balance):
     balance = initial_balance
@@ -20,6 +17,10 @@ def calculate_max_drawdown(trades, initial_balance):
     return max_drawdown
 
 def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, stop_loss_pips, pip_value, max_trades_per_day=None):
+    from strategy.tunnel_strategy import generate_trade_signal, manage_position, calculate_position_size, detect_peaks_and_dips
+    from metatrader.indicators import calculate_ema
+    from metatrader.trade_management import execute_trade
+
     balance = initial_balance
     trades = []
     trades_today = 0
@@ -32,8 +33,7 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
 
     # Validate critical parameters
     if stop_loss_pips == 0 or pip_value == 0:
-        logging.error("stop_loss_pips and pip_value must not be zero.")
-        return
+        raise ZeroDivisionError("stop_loss_pips and pip_value must not be zero.")
 
     peak_type = 21
 
@@ -62,7 +62,9 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
             continue
 
         # Generate trading signals
-        signal = generate_trade_signal(data.iloc[:i+1], period=20, deviation_factor=2.0)
+        buy_condition, sell_condition = generate_trade_signal(data.iloc[:i+1], period=20, deviation_factor=2.0)
+        if buy_condition is None or sell_condition is None:
+            continue
 
         try:
             position_size = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
@@ -71,7 +73,6 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
             continue
 
         row = data.iloc[i]
-        buy_condition, sell_condition = check_entry_conditions(row, peaks, dips, symbol)
 
         if buy_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
             logging.info(f"Buy condition met at row {i}.")
@@ -127,5 +128,9 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
         'win_rate': win_rate,
         'max_drawdown': max_drawdown,
         'buy_condition': buy_condition,
-        'sell_condition': sell_condition
+        'sell_condition': sell_condition,
+        'trades': trades
     }
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)

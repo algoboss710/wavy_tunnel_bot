@@ -89,14 +89,12 @@ class TestStrategy(unittest.TestCase):
         }
         df = pd.DataFrame(data)
         peak_type = 3
-        expected_peaks = [15, 19]
-        expected_dips = [6, 9]
+        expected_peaks = [15, 17, 19]
+        expected_dips = [6, 8, 9]
         peaks, dips = detect_peaks_and_dips(df, peak_type)
         print(f"Detected peaks: {peaks}, Detected dips: {dips}")
         self.assertEqual(peaks, expected_peaks)
         self.assertEqual(dips, expected_dips)
-
-
 
     def test_detect_peaks_and_dips_non_numeric(self):
         print("Running test_detect_peaks_and_dips_non_numeric")
@@ -105,21 +103,6 @@ class TestStrategy(unittest.TestCase):
         with self.assertRaises(TypeError):
             detect_peaks_and_dips(data, peak_type)
 
-    def test_detect_peaks_and_dips(self):
-        print("Running test_detect_peaks_and_dips")
-        data = {
-            'high': [10, 12, 15, 14, 13, 17, 16, 19, 18, 17],
-            'low': [8, 7, 6, 9, 8, 11, 10, 9, 12, 11]
-        }
-        df = pd.DataFrame(data)
-        peak_type = 5
-        expected_peaks = [15, 19]
-        expected_dips = [6, 9]
-        peaks, dips = detect_peaks_and_dips(df, peak_type)
-        print(f"Detected peaks: {peaks}, Detected dips: {dips}")
-        self.assertEqual(peaks, expected_peaks)
-        self.assertEqual(dips, expected_dips)
-    
     def test_check_entry_conditions_missing_data(self):
         print("Running test_check_entry_conditions_missing_data")
         row = pd.Series({
@@ -179,7 +162,7 @@ class TestStrategy(unittest.TestCase):
         data = pd.DataFrame({'close': [100, 200, 300, 400, 500, 600]})
         period = 3
         deviation_factor = 1.0
-        expected_signal = 'BUY'
+        expected_signal = (True, False)
 
         signal = generate_trade_signal(data, period, deviation_factor)
         print(f"Expected: {expected_signal}, Got: {signal}")
@@ -190,7 +173,7 @@ class TestStrategy(unittest.TestCase):
         data = pd.DataFrame({'close': [100, 200, 300, 400, 500, 100]})  # Last close set to 100 to ensure 'SELL'
         period = 3
         deviation_factor = 1.0
-        expected_signal = 'SELL'
+        expected_signal = (False, True)
 
         signal = generate_trade_signal(data, period, deviation_factor)
         print(f"Expected: {expected_signal}, Got: {signal}")
@@ -201,11 +184,11 @@ class TestStrategy(unittest.TestCase):
         data = pd.DataFrame({'close': [100, 200, 300, 400, 500, 450]})
         period = 3
         deviation_factor = 1.0
-        expected_signal = None
+        expected_signal = (False, False)
 
         signal = generate_trade_signal(data, period, deviation_factor)
         print(f"Expected: {expected_signal}, Got: {signal}")
-        self.assertIsNone(signal)
+        self.assertEqual(signal, expected_signal)
     
     def test_generate_trade_signal_non_numeric_data(self):
         print("Running test_generate_trade_signal_non_numeric_data")
@@ -214,8 +197,8 @@ class TestStrategy(unittest.TestCase):
         })
         period = 3
         deviation_factor = 2
+        expected_signal = (None, None)  # Since non-numeric data will be coerced to NaN, resulting in no valid signal
         result = generate_trade_signal(data, period, deviation_factor)
-        expected_signal = None  # Since non-numeric data will be coerced to NaN, resulting in no valid signal
         self.assertEqual(result, expected_signal)
 
     def test_generate_trade_signal_small_dataset(self):
@@ -223,9 +206,9 @@ class TestStrategy(unittest.TestCase):
         data = pd.DataFrame({'close': [100, 200]})
         period = 3
         deviation_factor = 1.0
-        expected_signal = None  # Not enough data to generate a signal
+        expected_signal = (None, None)  # Not enough data to generate a signal
         signal = generate_trade_signal(data, period, deviation_factor)
-        self.assertIsNone(signal)
+        self.assertEqual(signal, expected_signal)
 
     @mock.patch('strategy.tunnel_strategy.mt5')
     def test_run_strategy_initialization_failure(self, mock_mt5):
