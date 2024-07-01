@@ -556,22 +556,28 @@ def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip
 def generate_trade_signal(data, period, deviation_factor):
     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
     
-    # Ensure last_close is numeric
     last_close = pd.to_numeric(data['close'].iloc[-1], errors='coerce')
     upper_bound_last_value = upper_bound.iloc[-1]
     lower_bound_last_value = lower_bound.iloc[-1]
 
+    print(f"Data: {data}")
+    print(f"Upper Bound: {upper_bound}")
+    print(f"Lower Bound: {lower_bound}")
     print(f"Last Close: {last_close}")
     print(f"Upper Bound Last Value: {upper_bound_last_value}")
     print(f"Lower Bound Last Value: {lower_bound_last_value}")
 
     if pd.isna(last_close) or pd.isna(upper_bound_last_value) or pd.isna(lower_bound_last_value):
-        return None, None  # Ensure it returns a tuple
+        return None, None
 
     buy_condition = last_close >= upper_bound_last_value
     sell_condition = last_close <= lower_bound_last_value
 
+    print(f"Buy Condition: {buy_condition}")
+    print(f"Sell Condition: {sell_condition}")
+
     return buy_condition, sell_condition
+
 
 def adjust_deviation_factor(market_conditions):
     if market_conditions == 'volatile':
