@@ -11135,3 +11135,1232 @@
 2024-07-02 10:50:59,078 - INFO - Backtest completed successfully.
 2024-07-02 10:50:59,079 - INFO - Shutting down MetaTrader5...
 2024-07-02 10:50:59,079 - INFO - MetaTrader5 connection gracefully shut down.
+2024-07-02 11:38:15,750 - INFO - STARTING APPLICATION
+2024-07-02 11:38:15,752 - INFO - LOGGING ALL THE CONFIG SETTINGS
+2024-07-02 11:38:15,752 - INFO - MT5_LOGIN: your_mt5_login
+2024-07-02 11:38:15,752 - INFO - MT5_PASSWORD: your_mt5_password
+2024-07-02 11:38:15,752 - INFO - MT5_SERVER: your_mt5_server
+2024-07-02 11:38:15,752 - INFO - MT5_PATH: C:\Program Files\MetaTrader 5\terminal64.exe
+2024-07-02 11:38:15,752 - INFO - MT5_TIMEFRAME: H1
+2024-07-02 11:38:15,753 - INFO - SYMBOLS: ['EURUSD']
+2024-07-02 11:38:15,753 - INFO - TELEGRAM_TOKEN: your_telegram_bot_token
+2024-07-02 11:38:15,753 - INFO - TELEGRAM_IDS: ['telegram_user_id_1', 'telegram_user_id_2']
+2024-07-02 11:38:15,753 - INFO - MIN_TP_PROFIT: 50.0
+2024-07-02 11:38:15,753 - INFO - MAX_LOSS_PER_DAY: 1000.0
+2024-07-02 11:38:15,753 - INFO - STARTING_EQUITY: 10000.0
+2024-07-02 11:38:15,754 - INFO - LIMIT_NO_OF_TRADES: 5
+2024-07-02 11:38:15,754 - INFO - RISK_PER_TRADE: 0.02
+2024-07-02 11:38:15,754 - INFO - PIP_VALUE: 0.0001
+2024-07-02 11:39:46,489 - INFO - Initializing MetaTrader5...
+2024-07-02 11:39:46,496 - INFO - MetaTrader5 initialized successfully.
+2024-07-02 11:39:46,496 - INFO - Running backtest...
+2024-07-02 11:39:46,537 - INFO - Backtest data shape: (348, 8)
+2024-07-02 11:39:46,552 - INFO - Backtest data head:
+                 time     open     high      low    close  tick_volume  spread  real_volume
+0 2024-06-12 07:00:00  1.07403  1.07406  1.07364  1.07367          572       0            0
+1 2024-06-12 08:00:00  1.07367  1.07463  1.07360  1.07459          841       0            0
+2 2024-06-12 09:00:00  1.07462  1.07471  1.07389  1.07415         1460       0            0
+3 2024-06-12 10:00:00  1.07415  1.07455  1.07356  1.07446         1800       0            0
+4 2024-06-12 11:00:00  1.07445  1.07538  1.07445  1.07466         1562       0            0
+2024-07-02 11:39:46,555 - INFO - Initial balance: 10000
+2024-07-02 11:39:46,596 - INFO - Iteration: 34, trades_today: 0, current_day: 2024-06-12
+2024-07-02 11:39:46,597 - INFO - New day detected: 2024-06-13, resetting trades_today and daily_loss.
+2024-07-02 11:39:46,765 - INFO - Iteration: 35, trades_today: 0, current_day: 2024-06-13
+2024-07-02 11:39:46,880 - INFO - Iteration: 36, trades_today: 0, current_day: 2024-06-13
+2024-07-02 11:39:46,988 - INFO - Sell condition met at row 36.
+2024-07-02 11:39:46,989 - INFO - Iteration: 37, trades_today: 0, current_day: 2024-06-13
+2024-07-02 11:39:47,099 - INFO - Iteration: 38, trades_today: 0, current_day: 2024-06-13
+2024-07-02 11:39:47,200 - INFO - Iteration: 39, trades_today: 0, current_day: 2024-06-13
+2024-07-02 11:39:47,304 - INFO - Iteration: 40, trades_today: 0, current_day: 2024-06-13
+2024-07-02 11:39:47,411 - INFO - Iteration: 41, trades_today: 0, current_day: 2024-06-13
+2024-07-02 11:39:47,412 - INFO - New day detected: 2024-06-14, resetting trades_today and daily_loss.
+2024-07-02 11:39:47,520 - INFO - Iteration: 42, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:47,643 - INFO - Iteration: 43, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:47,768 - INFO - Iteration: 44, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:47,897 - INFO - Iteration: 45, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:48,016 - INFO - Iteration: 46, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:48,268 - INFO - Iteration: 47, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:48,434 - INFO - Iteration: 48, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:48,563 - INFO - Iteration: 49, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:48,695 - INFO - Iteration: 50, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:48,819 - INFO - Iteration: 51, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:48,958 - INFO - Iteration: 52, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:49,096 - INFO - Sell condition met at row 52.
+2024-07-02 11:39:49,096 - INFO - Iteration: 53, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:49,231 - INFO - Sell condition met at row 53.
+2024-07-02 11:39:49,232 - INFO - Iteration: 54, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:49,360 - INFO - Iteration: 55, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:49,490 - INFO - Iteration: 56, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:49,625 - INFO - Iteration: 57, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:49,797 - INFO - Sell condition met at row 57.
+2024-07-02 11:39:49,798 - INFO - Iteration: 58, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:50,167 - INFO - Iteration: 59, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:50,437 - INFO - Iteration: 60, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:50,670 - INFO - Iteration: 61, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:50,768 - INFO - Iteration: 62, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:50,870 - INFO - Iteration: 63, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:50,993 - INFO - Iteration: 64, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:51,075 - INFO - Iteration: 65, trades_today: 0, current_day: 2024-06-14
+2024-07-02 11:39:51,076 - INFO - New day detected: 2024-06-17, resetting trades_today and daily_loss.
+2024-07-02 11:39:51,177 - INFO - Iteration: 66, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:51,251 - INFO - Iteration: 67, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:51,353 - INFO - Iteration: 68, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:51,466 - INFO - Iteration: 69, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:51,547 - INFO - Iteration: 70, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:51,625 - INFO - Iteration: 71, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:51,697 - INFO - Iteration: 72, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:51,775 - INFO - Iteration: 73, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:51,852 - INFO - Iteration: 74, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:51,929 - INFO - Iteration: 75, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:52,000 - INFO - Iteration: 76, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:52,075 - INFO - Iteration: 77, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:52,191 - INFO - Iteration: 78, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:52,282 - INFO - Iteration: 79, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:52,366 - INFO - Iteration: 80, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:52,433 - INFO - Iteration: 81, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:52,511 - INFO - Iteration: 82, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:52,580 - INFO - Iteration: 83, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:52,671 - INFO - Iteration: 84, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:52,740 - INFO - Iteration: 85, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:52,805 - INFO - Iteration: 86, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:52,876 - INFO - Iteration: 87, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:52,938 - INFO - Iteration: 88, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:53,004 - INFO - Iteration: 89, trades_today: 0, current_day: 2024-06-17
+2024-07-02 11:39:53,005 - INFO - New day detected: 2024-06-18, resetting trades_today and daily_loss.
+2024-07-02 11:39:53,074 - INFO - Iteration: 90, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:53,141 - INFO - Iteration: 91, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:53,203 - INFO - Iteration: 92, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:53,260 - INFO - Iteration: 93, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:53,327 - INFO - Iteration: 94, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:53,393 - INFO - Iteration: 95, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:53,454 - INFO - Iteration: 96, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:53,551 - INFO - Iteration: 97, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:53,612 - INFO - Iteration: 98, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:53,672 - INFO - Iteration: 99, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:53,742 - INFO - Iteration: 100, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:53,808 - INFO - Iteration: 101, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:53,865 - INFO - Iteration: 102, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:53,928 - INFO - Iteration: 103, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:53,991 - INFO - Iteration: 104, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:54,050 - INFO - Iteration: 105, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:54,107 - INFO - Iteration: 106, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:54,180 - INFO - Iteration: 107, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:54,245 - INFO - Iteration: 108, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:54,310 - INFO - Iteration: 109, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:54,368 - INFO - Iteration: 110, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:54,443 - INFO - Iteration: 111, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:54,502 - INFO - Iteration: 112, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:54,565 - INFO - Iteration: 113, trades_today: 0, current_day: 2024-06-18
+2024-07-02 11:39:54,566 - INFO - New day detected: 2024-06-19, resetting trades_today and daily_loss.
+2024-07-02 11:39:54,629 - INFO - Iteration: 114, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:54,695 - INFO - Iteration: 115, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:54,772 - INFO - Iteration: 116, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:54,836 - INFO - Iteration: 117, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:54,915 - INFO - Iteration: 118, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:54,981 - INFO - Iteration: 119, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:55,053 - INFO - Iteration: 120, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:55,123 - INFO - Iteration: 121, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:55,191 - INFO - Iteration: 122, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:55,250 - INFO - Iteration: 123, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:55,317 - INFO - Iteration: 124, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:55,378 - INFO - Iteration: 125, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:55,440 - INFO - Iteration: 126, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:55,500 - INFO - Iteration: 127, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:55,600 - INFO - Iteration: 128, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:55,684 - INFO - Iteration: 129, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:55,751 - INFO - Iteration: 130, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:55,816 - INFO - Iteration: 131, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:55,882 - INFO - Iteration: 132, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:55,950 - INFO - Iteration: 133, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:56,004 - INFO - Iteration: 134, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:56,074 - INFO - Iteration: 135, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:56,137 - INFO - Iteration: 136, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:56,197 - INFO - Iteration: 137, trades_today: 0, current_day: 2024-06-19
+2024-07-02 11:39:56,198 - INFO - New day detected: 2024-06-20, resetting trades_today and daily_loss.
+2024-07-02 11:39:56,257 - INFO - Iteration: 138, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:56,321 - INFO - Iteration: 139, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:56,384 - INFO - Iteration: 140, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:56,439 - INFO - Iteration: 141, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:56,495 - INFO - Iteration: 142, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:56,559 - INFO - Iteration: 143, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:56,618 - INFO - Iteration: 144, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:56,712 - INFO - Iteration: 145, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:56,809 - INFO - Iteration: 146, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:56,915 - INFO - Iteration: 147, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:56,991 - INFO - Iteration: 148, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:57,059 - INFO - Iteration: 149, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:57,117 - INFO - Iteration: 150, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:57,182 - INFO - Iteration: 151, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:57,238 - INFO - Iteration: 152, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:57,310 - INFO - Iteration: 153, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:57,373 - INFO - Iteration: 154, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:57,436 - INFO - Iteration: 155, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:57,501 - INFO - Iteration: 156, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:57,568 - INFO - Iteration: 157, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:57,627 - INFO - Iteration: 158, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:57,692 - INFO - Iteration: 159, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:57,755 - INFO - Iteration: 160, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:57,818 - INFO - Iteration: 161, trades_today: 0, current_day: 2024-06-20
+2024-07-02 11:39:57,819 - INFO - New day detected: 2024-06-21, resetting trades_today and daily_loss.
+2024-07-02 11:39:57,879 - INFO - Iteration: 162, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:57,936 - INFO - Iteration: 163, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:57,997 - INFO - Iteration: 164, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:58,062 - INFO - Iteration: 165, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:58,117 - INFO - Iteration: 166, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:58,184 - INFO - Iteration: 167, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:58,247 - INFO - Iteration: 168, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:58,308 - INFO - Iteration: 169, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:58,374 - INFO - Iteration: 170, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:58,432 - INFO - Iteration: 171, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:58,489 - INFO - Sell condition met at row 171.
+2024-07-02 11:39:58,489 - INFO - Iteration: 172, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:58,548 - INFO - Iteration: 173, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:58,609 - INFO - Iteration: 174, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:58,674 - INFO - Iteration: 175, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:58,737 - INFO - Iteration: 176, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:58,830 - INFO - Iteration: 177, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:59,020 - INFO - Iteration: 178, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:59,156 - INFO - Iteration: 179, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:59,228 - INFO - Iteration: 180, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:59,295 - INFO - Iteration: 181, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:59,359 - INFO - Iteration: 182, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:59,423 - INFO - Iteration: 183, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:59,492 - INFO - Iteration: 184, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:59,567 - INFO - Iteration: 185, trades_today: 0, current_day: 2024-06-21
+2024-07-02 11:39:59,569 - INFO - New day detected: 2024-06-24, resetting trades_today and daily_loss.
+2024-07-02 11:39:59,634 - INFO - Iteration: 186, trades_today: 0, current_day: 2024-06-24
+2024-07-02 11:39:59,699 - INFO - Iteration: 187, trades_today: 0, current_day: 2024-06-24
+2024-07-02 11:39:59,760 - INFO - Iteration: 188, trades_today: 0, current_day: 2024-06-24
+2024-07-02 11:39:59,824 - INFO - Iteration: 189, trades_today: 0, current_day: 2024-06-24
+2024-07-02 11:39:59,888 - INFO - Iteration: 190, trades_today: 0, current_day: 2024-06-24
+2024-07-02 11:39:59,949 - INFO - Iteration: 191, trades_today: 0, current_day: 2024-06-24
+2024-07-02 11:40:00,020 - INFO - Iteration: 192, trades_today: 0, current_day: 2024-06-24
+2024-07-02 11:40:00,093 - INFO - Iteration: 193, trades_today: 0, current_day: 2024-06-24
+2024-07-02 11:40:00,156 - INFO - Iteration: 194, trades_today: 0, current_day: 2024-06-24
+2024-07-02 11:40:00,227 - INFO - Iteration: 195, trades_today: 0, current_day: 2024-06-24
+2024-07-02 11:40:00,287 - INFO - Iteration: 196, trades_today: 0, current_day: 2024-06-24
+2024-07-02 11:40:00,348 - INFO - Iteration: 197, trades_today: 0, current_day: 2024-06-24
+2024-07-02 11:40:00,432 - INFO - Iteration: 198, trades_today: 0, current_day: 2024-06-24
+2024-07-02 11:40:00,528 - INFO - Buy condition met at row 198.
+2024-07-02 11:40:00,532 - INFO - Balance after BUY trade: 10000
+2024-07-02 11:40:00,532 - INFO - Iteration: 199, trades_today: 1, current_day: 2024-06-24
+2024-07-02 11:40:00,600 - INFO - Buy condition met at row 199.
+2024-07-02 11:40:00,605 - INFO - Balance after BUY trade: 10000
+2024-07-02 11:40:00,606 - INFO - Iteration: 200, trades_today: 2, current_day: 2024-06-24
+2024-07-02 11:40:00,673 - INFO - Buy condition met at row 200.
+2024-07-02 11:40:00,676 - INFO - Balance after BUY trade: 10000
+2024-07-02 11:40:00,677 - INFO - Iteration: 201, trades_today: 3, current_day: 2024-06-24
+2024-07-02 11:40:00,734 - INFO - Buy condition met at row 201.
+2024-07-02 11:40:00,737 - INFO - Balance after BUY trade: 10000
+2024-07-02 11:40:00,738 - INFO - Iteration: 202, trades_today: 4, current_day: 2024-06-24
+2024-07-02 11:40:00,803 - INFO - Iteration: 203, trades_today: 4, current_day: 2024-06-24
+2024-07-02 11:40:00,865 - INFO - Iteration: 204, trades_today: 4, current_day: 2024-06-24
+2024-07-02 11:40:00,931 - INFO - Iteration: 205, trades_today: 4, current_day: 2024-06-24
+2024-07-02 11:40:00,993 - INFO - Iteration: 206, trades_today: 4, current_day: 2024-06-24
+2024-07-02 11:40:01,061 - INFO - Iteration: 207, trades_today: 4, current_day: 2024-06-24
+2024-07-02 11:40:01,119 - INFO - Iteration: 208, trades_today: 4, current_day: 2024-06-24
+2024-07-02 11:40:01,188 - INFO - Iteration: 209, trades_today: 4, current_day: 2024-06-24
+2024-07-02 11:40:01,189 - INFO - New day detected: 2024-06-25, resetting trades_today and daily_loss.
+2024-07-02 11:40:01,252 - INFO - Iteration: 210, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:01,319 - INFO - Iteration: 211, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:01,376 - INFO - Iteration: 212, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:01,440 - INFO - Iteration: 213, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:01,567 - INFO - Iteration: 214, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:01,686 - INFO - Iteration: 215, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:01,812 - INFO - Iteration: 216, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:01,908 - INFO - Iteration: 217, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:01,975 - INFO - Iteration: 218, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:02,045 - INFO - Iteration: 219, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:02,113 - INFO - Iteration: 220, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:02,187 - INFO - Iteration: 221, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:02,256 - INFO - Iteration: 222, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:02,329 - INFO - Iteration: 223, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:02,415 - INFO - Iteration: 224, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:02,489 - INFO - Iteration: 225, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:02,568 - INFO - Iteration: 226, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:02,643 - INFO - Iteration: 227, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:02,709 - INFO - Iteration: 228, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:02,781 - INFO - Iteration: 229, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:02,886 - INFO - Iteration: 230, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:03,209 - INFO - Iteration: 231, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:03,323 - INFO - Iteration: 232, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:03,405 - INFO - Iteration: 233, trades_today: 0, current_day: 2024-06-25
+2024-07-02 11:40:03,408 - INFO - New day detected: 2024-06-26, resetting trades_today and daily_loss.
+2024-07-02 11:40:03,484 - INFO - Iteration: 234, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:03,570 - INFO - Iteration: 235, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:03,663 - INFO - Iteration: 236, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:03,752 - INFO - Iteration: 237, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:03,836 - INFO - Iteration: 238, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:03,946 - INFO - Iteration: 239, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:04,050 - INFO - Iteration: 240, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:04,136 - INFO - Iteration: 241, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:04,218 - INFO - Iteration: 242, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:04,304 - INFO - Iteration: 243, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:04,396 - INFO - Iteration: 244, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:04,487 - INFO - Iteration: 245, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:04,581 - INFO - Iteration: 246, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:04,681 - INFO - Iteration: 247, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:04,793 - INFO - Iteration: 248, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:04,883 - INFO - Iteration: 249, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:04,964 - INFO - Iteration: 250, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:05,039 - INFO - Iteration: 251, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:05,115 - INFO - Iteration: 252, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:05,185 - INFO - Iteration: 253, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:05,258 - INFO - Iteration: 254, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:05,331 - INFO - Iteration: 255, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:05,414 - INFO - Iteration: 256, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:05,514 - INFO - Iteration: 257, trades_today: 0, current_day: 2024-06-26
+2024-07-02 11:40:05,516 - INFO - New day detected: 2024-06-27, resetting trades_today and daily_loss.
+2024-07-02 11:40:05,600 - INFO - Iteration: 258, trades_today: 0, current_day: 2024-06-27
+2024-07-02 11:40:05,680 - INFO - Iteration: 259, trades_today: 0, current_day: 2024-06-27
+2024-07-02 11:40:05,865 - INFO - Iteration: 260, trades_today: 0, current_day: 2024-06-27
+2024-07-02 11:40:05,970 - INFO - Iteration: 261, trades_today: 0, current_day: 2024-06-27
+2024-07-02 11:40:06,047 - INFO - Iteration: 262, trades_today: 0, current_day: 2024-06-27
+2024-07-02 11:40:06,219 - INFO - Iteration: 263, trades_today: 0, current_day: 2024-06-27
+2024-07-02 11:40:06,414 - INFO - Iteration: 264, trades_today: 0, current_day: 2024-06-27
+2024-07-02 11:40:06,526 - INFO - Iteration: 265, trades_today: 0, current_day: 2024-06-27
+2024-07-02 11:40:06,610 - INFO - Iteration: 266, trades_today: 0, current_day: 2024-06-27
+2024-07-02 11:40:06,700 - INFO - Iteration: 267, trades_today: 0, current_day: 2024-06-27
+2024-07-02 11:40:06,786 - INFO - Iteration: 268, trades_today: 0, current_day: 2024-06-27
+2024-07-02 11:40:06,870 - INFO - Iteration: 269, trades_today: 0, current_day: 2024-06-27
+2024-07-02 11:40:06,949 - INFO - Iteration: 270, trades_today: 0, current_day: 2024-06-27
+2024-07-02 11:40:07,029 - INFO - Iteration: 271, trades_today: 0, current_day: 2024-06-27
+2024-07-02 11:40:07,220 - INFO - Iteration: 272, trades_today: 0, current_day: 2024-06-27
+2024-07-02 11:40:07,336 - INFO - Buy condition met at row 272.
+2024-07-02 11:40:07,343 - INFO - Balance after BUY trade: 10000
+2024-07-02 11:40:07,344 - INFO - Iteration: 273, trades_today: 1, current_day: 2024-06-27
+2024-07-02 11:40:07,429 - INFO - Buy condition met at row 273.
+2024-07-02 11:40:07,431 - INFO - Balance after BUY trade: 10000
+2024-07-02 11:40:07,432 - INFO - Iteration: 274, trades_today: 2, current_day: 2024-06-27
+2024-07-02 11:40:07,508 - INFO - Iteration: 275, trades_today: 2, current_day: 2024-06-27
+2024-07-02 11:40:07,580 - INFO - Iteration: 276, trades_today: 2, current_day: 2024-06-27
+2024-07-02 11:40:07,784 - INFO - Iteration: 277, trades_today: 2, current_day: 2024-06-27
+2024-07-02 11:40:07,866 - INFO - Iteration: 278, trades_today: 2, current_day: 2024-06-27
+2024-07-02 11:40:07,953 - INFO - Iteration: 279, trades_today: 2, current_day: 2024-06-27
+2024-07-02 11:40:08,041 - INFO - Iteration: 280, trades_today: 2, current_day: 2024-06-27
+2024-07-02 11:40:08,130 - INFO - Iteration: 281, trades_today: 2, current_day: 2024-06-27
+2024-07-02 11:40:08,131 - INFO - New day detected: 2024-06-28, resetting trades_today and daily_loss.
+2024-07-02 11:40:08,212 - INFO - Iteration: 282, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:08,298 - INFO - Iteration: 283, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:08,380 - INFO - Iteration: 284, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:08,454 - INFO - Iteration: 285, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:08,528 - INFO - Iteration: 286, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:08,597 - INFO - Iteration: 287, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:08,667 - INFO - Iteration: 288, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:08,742 - INFO - Iteration: 289, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:08,813 - INFO - Iteration: 290, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:08,881 - INFO - Iteration: 291, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:08,948 - INFO - Iteration: 292, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:09,020 - INFO - Iteration: 293, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:09,087 - INFO - Iteration: 294, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:09,452 - INFO - Iteration: 295, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:09,626 - INFO - Iteration: 296, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:09,761 - INFO - Iteration: 297, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:09,867 - INFO - Iteration: 298, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:10,067 - INFO - Iteration: 299, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:10,242 - INFO - Iteration: 300, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:10,353 - INFO - Iteration: 301, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:10,440 - INFO - Iteration: 302, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:10,532 - INFO - Iteration: 303, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:10,628 - INFO - Iteration: 304, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:10,726 - INFO - Iteration: 305, trades_today: 0, current_day: 2024-06-28
+2024-07-02 11:40:10,728 - INFO - New day detected: 2024-07-01, resetting trades_today and daily_loss.
+2024-07-02 11:40:10,924 - INFO - Buy condition met at row 305.
+2024-07-02 11:40:10,928 - INFO - Balance after BUY trade: 10000
+2024-07-02 11:40:10,928 - INFO - Iteration: 306, trades_today: 1, current_day: 2024-07-01
+2024-07-02 11:40:11,015 - INFO - Buy condition met at row 306.
+2024-07-02 11:40:11,019 - INFO - Balance after BUY trade: 10000
+2024-07-02 11:40:11,019 - INFO - Iteration: 307, trades_today: 2, current_day: 2024-07-01
+2024-07-02 11:40:11,143 - INFO - Iteration: 308, trades_today: 2, current_day: 2024-07-01
+2024-07-02 11:40:11,249 - INFO - Buy condition met at row 308.
+2024-07-02 11:40:11,252 - INFO - Balance after BUY trade: 10000
+2024-07-02 11:40:11,253 - INFO - Iteration: 309, trades_today: 3, current_day: 2024-07-01
+2024-07-02 11:40:11,352 - INFO - Buy condition met at row 309.
+2024-07-02 11:40:11,357 - INFO - Balance after BUY trade: 10000
+2024-07-02 11:40:11,357 - INFO - Iteration: 310, trades_today: 4, current_day: 2024-07-01
+2024-07-02 11:40:11,497 - INFO - Buy condition met at row 310.
+2024-07-02 11:40:11,502 - INFO - Balance after BUY trade: 10000
+2024-07-02 11:40:11,503 - INFO - Iteration: 311, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,504 - INFO - Max trades per day reached at row 311.
+2024-07-02 11:40:11,507 - INFO - Iteration: 312, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,509 - INFO - Max trades per day reached at row 312.
+2024-07-02 11:40:11,510 - INFO - Iteration: 313, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,512 - INFO - Max trades per day reached at row 313.
+2024-07-02 11:40:11,513 - INFO - Iteration: 314, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,515 - INFO - Max trades per day reached at row 314.
+2024-07-02 11:40:11,516 - INFO - Iteration: 315, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,518 - INFO - Max trades per day reached at row 315.
+2024-07-02 11:40:11,518 - INFO - Iteration: 316, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,520 - INFO - Max trades per day reached at row 316.
+2024-07-02 11:40:11,527 - INFO - Iteration: 317, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,530 - INFO - Max trades per day reached at row 317.
+2024-07-02 11:40:11,530 - INFO - Iteration: 318, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,531 - INFO - Max trades per day reached at row 318.
+2024-07-02 11:40:11,532 - INFO - Iteration: 319, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,533 - INFO - Max trades per day reached at row 319.
+2024-07-02 11:40:11,534 - INFO - Iteration: 320, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,536 - INFO - Max trades per day reached at row 320.
+2024-07-02 11:40:11,546 - INFO - Iteration: 321, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,548 - INFO - Max trades per day reached at row 321.
+2024-07-02 11:40:11,550 - INFO - Iteration: 322, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,552 - INFO - Max trades per day reached at row 322.
+2024-07-02 11:40:11,552 - INFO - Iteration: 323, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,555 - INFO - Max trades per day reached at row 323.
+2024-07-02 11:40:11,560 - INFO - Iteration: 324, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,562 - INFO - Max trades per day reached at row 324.
+2024-07-02 11:40:11,562 - INFO - Iteration: 325, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,563 - INFO - Max trades per day reached at row 325.
+2024-07-02 11:40:11,564 - INFO - Iteration: 326, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,565 - INFO - Max trades per day reached at row 326.
+2024-07-02 11:40:11,566 - INFO - Iteration: 327, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,567 - INFO - Max trades per day reached at row 327.
+2024-07-02 11:40:11,568 - INFO - Iteration: 328, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,569 - INFO - Max trades per day reached at row 328.
+2024-07-02 11:40:11,570 - INFO - Iteration: 329, trades_today: 5, current_day: 2024-07-01
+2024-07-02 11:40:11,578 - INFO - New day detected: 2024-07-02, resetting trades_today and daily_loss.
+2024-07-02 11:40:11,744 - INFO - Iteration: 330, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:11,868 - INFO - Iteration: 331, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:11,966 - INFO - Iteration: 332, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:12,071 - INFO - Iteration: 333, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:12,199 - INFO - Iteration: 334, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:12,286 - INFO - Iteration: 335, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:12,371 - INFO - Iteration: 336, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:12,459 - INFO - Iteration: 337, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:12,540 - INFO - Iteration: 338, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:12,614 - INFO - Iteration: 339, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:12,687 - INFO - Iteration: 340, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:12,764 - INFO - Iteration: 341, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:12,840 - INFO - Iteration: 342, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:12,910 - INFO - Iteration: 343, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:12,977 - INFO - Iteration: 344, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:13,064 - INFO - Iteration: 345, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:13,176 - INFO - Iteration: 346, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:13,270 - INFO - Iteration: 347, trades_today: 0, current_day: 2024-07-02
+2024-07-02 11:40:13,367 - INFO - Final balance: 10000
+2024-07-02 11:40:13,368 - INFO - Total Profit: 0.00
+2024-07-02 11:40:13,368 - INFO - Number of Trades: 11
+2024-07-02 11:40:13,368 - INFO - Win Rate: 0.00%
+2024-07-02 11:40:13,369 - INFO - Maximum Drawdown: 0.00
+2024-07-02 11:40:13,552 - INFO - Backtest completed successfully.
+2024-07-02 11:40:13,599 - INFO - Shutting down MetaTrader5...
+2024-07-02 11:40:13,614 - INFO - MetaTrader5 connection gracefully shut down.
+2024-07-02 12:02:16,818 - INFO - STARTING APPLICATION
+2024-07-02 12:02:16,819 - INFO - LOGGING ALL THE CONFIG SETTINGS
+2024-07-02 12:02:16,819 - INFO - MT5_LOGIN: your_mt5_login
+2024-07-02 12:02:16,819 - INFO - MT5_PASSWORD: your_mt5_password
+2024-07-02 12:02:16,819 - INFO - MT5_SERVER: your_mt5_server
+2024-07-02 12:02:16,819 - INFO - MT5_PATH: C:\Program Files\MetaTrader 5\terminal64.exe
+2024-07-02 12:02:16,819 - INFO - MT5_TIMEFRAME: H1
+2024-07-02 12:02:16,820 - INFO - SYMBOLS: ['EURUSD']
+2024-07-02 12:02:16,820 - INFO - TELEGRAM_TOKEN: your_telegram_bot_token
+2024-07-02 12:02:16,820 - INFO - TELEGRAM_IDS: ['telegram_user_id_1', 'telegram_user_id_2']
+2024-07-02 12:02:16,820 - INFO - MIN_TP_PROFIT: 50.0
+2024-07-02 12:02:16,820 - INFO - MAX_LOSS_PER_DAY: 1000.0
+2024-07-02 12:02:16,820 - INFO - STARTING_EQUITY: 10000.0
+2024-07-02 12:02:16,820 - INFO - LIMIT_NO_OF_TRADES: 5
+2024-07-02 12:02:16,821 - INFO - RISK_PER_TRADE: 0.02
+2024-07-02 12:02:16,821 - INFO - PIP_VALUE: 0.0001
+2024-07-02 12:02:19,593 - INFO - Initializing MetaTrader5...
+2024-07-02 12:02:19,599 - INFO - MetaTrader5 initialized successfully.
+2024-07-02 12:02:19,599 - INFO - Running backtest...
+2024-07-02 12:02:19,644 - INFO - Backtest data shape: (349, 8)
+2024-07-02 12:02:19,656 - INFO - Backtest data head:
+                 time     open     high      low    close  tick_volume  spread  real_volume
+0 2024-06-12 07:00:00  1.07403  1.07406  1.07364  1.07367          572       0            0
+1 2024-06-12 08:00:00  1.07367  1.07463  1.07360  1.07459          841       0            0
+2 2024-06-12 09:00:00  1.07462  1.07471  1.07389  1.07415         1460       0            0
+3 2024-06-12 10:00:00  1.07415  1.07455  1.07356  1.07446         1800       0            0
+4 2024-06-12 11:00:00  1.07445  1.07538  1.07445  1.07466         1562       0            0
+2024-07-02 12:02:19,660 - INFO - Initial balance: 10000
+2024-07-02 12:02:19,698 - INFO - Iteration: 34, trades_today: 0, current_day: 2024-06-12
+2024-07-02 12:02:19,700 - INFO - New day detected: 2024-06-13, resetting trades_today and daily_loss.
+2024-07-02 12:02:19,804 - INFO - Iteration: 35, trades_today: 0, current_day: 2024-06-13
+2024-07-02 12:02:19,905 - INFO - Iteration: 36, trades_today: 0, current_day: 2024-06-13
+2024-07-02 12:02:20,010 - INFO - Sell condition met at row 36.
+2024-07-02 12:02:20,011 - INFO - Iteration: 37, trades_today: 0, current_day: 2024-06-13
+2024-07-02 12:02:20,118 - INFO - Iteration: 38, trades_today: 0, current_day: 2024-06-13
+2024-07-02 12:02:20,220 - INFO - Iteration: 39, trades_today: 0, current_day: 2024-06-13
+2024-07-02 12:02:20,338 - INFO - Iteration: 40, trades_today: 0, current_day: 2024-06-13
+2024-07-02 12:02:20,464 - INFO - Iteration: 41, trades_today: 0, current_day: 2024-06-13
+2024-07-02 12:02:20,465 - INFO - New day detected: 2024-06-14, resetting trades_today and daily_loss.
+2024-07-02 12:02:20,592 - INFO - Iteration: 42, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:20,726 - INFO - Iteration: 43, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:20,861 - INFO - Iteration: 44, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:20,973 - INFO - Iteration: 45, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:21,182 - INFO - Iteration: 46, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:21,309 - INFO - Iteration: 47, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:21,423 - INFO - Iteration: 48, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:21,545 - INFO - Iteration: 49, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:21,677 - INFO - Iteration: 50, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:21,809 - INFO - Iteration: 51, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:21,927 - INFO - Iteration: 52, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:22,063 - INFO - Sell condition met at row 52.
+2024-07-02 12:02:22,063 - INFO - Iteration: 53, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:22,188 - INFO - Sell condition met at row 53.
+2024-07-02 12:02:22,188 - INFO - Iteration: 54, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:22,313 - INFO - Iteration: 55, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:22,498 - INFO - Iteration: 56, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:22,638 - INFO - Iteration: 57, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:22,778 - INFO - Sell condition met at row 57.
+2024-07-02 12:02:22,778 - INFO - Iteration: 58, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:22,914 - INFO - Iteration: 59, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:23,070 - INFO - Iteration: 60, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:23,144 - INFO - Iteration: 61, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:23,211 - INFO - Iteration: 62, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:23,280 - INFO - Iteration: 63, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:23,350 - INFO - Iteration: 64, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:23,414 - INFO - Iteration: 65, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:02:23,416 - INFO - New day detected: 2024-06-17, resetting trades_today and daily_loss.
+2024-07-02 12:02:23,486 - INFO - Iteration: 66, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:23,565 - INFO - Iteration: 67, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:23,762 - INFO - Iteration: 68, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:23,893 - INFO - Iteration: 69, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:24,079 - INFO - Iteration: 70, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:24,196 - INFO - Iteration: 71, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:24,331 - INFO - Iteration: 72, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:24,474 - INFO - Iteration: 73, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:24,580 - INFO - Iteration: 74, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:24,656 - INFO - Iteration: 75, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:24,725 - INFO - Iteration: 76, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:24,797 - INFO - Iteration: 77, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:24,870 - INFO - Iteration: 78, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:24,955 - INFO - Iteration: 79, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:25,045 - INFO - Iteration: 80, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:25,127 - INFO - Iteration: 81, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:25,208 - INFO - Iteration: 82, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:25,289 - INFO - Iteration: 83, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:25,371 - INFO - Iteration: 84, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:25,445 - INFO - Iteration: 85, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:25,515 - INFO - Iteration: 86, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:25,595 - INFO - Iteration: 87, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:25,676 - INFO - Iteration: 88, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:25,754 - INFO - Iteration: 89, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:02:25,756 - INFO - New day detected: 2024-06-18, resetting trades_today and daily_loss.
+2024-07-02 12:02:25,826 - INFO - Iteration: 90, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:25,904 - INFO - Iteration: 91, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:25,971 - INFO - Iteration: 92, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:26,077 - INFO - Iteration: 93, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:26,147 - INFO - Iteration: 94, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:26,219 - INFO - Iteration: 95, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:26,283 - INFO - Iteration: 96, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:26,355 - INFO - Iteration: 97, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:26,585 - INFO - Iteration: 98, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:26,741 - INFO - Iteration: 99, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:26,809 - INFO - Iteration: 100, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:26,885 - INFO - Iteration: 101, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:26,973 - INFO - Iteration: 102, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:27,054 - INFO - Iteration: 103, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:27,137 - INFO - Iteration: 104, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:27,226 - INFO - Iteration: 105, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:27,317 - INFO - Iteration: 106, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:27,407 - INFO - Iteration: 107, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:27,510 - INFO - Iteration: 108, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:27,612 - INFO - Iteration: 109, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:27,705 - INFO - Iteration: 110, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:27,793 - INFO - Iteration: 111, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:27,890 - INFO - Iteration: 112, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:27,994 - INFO - Iteration: 113, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:02:27,995 - INFO - New day detected: 2024-06-19, resetting trades_today and daily_loss.
+2024-07-02 12:02:28,081 - INFO - Iteration: 114, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:28,178 - INFO - Iteration: 115, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:28,273 - INFO - Iteration: 116, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:28,364 - INFO - Iteration: 117, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:28,437 - INFO - Iteration: 118, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:28,510 - INFO - Iteration: 119, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:28,587 - INFO - Iteration: 120, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:28,658 - INFO - Iteration: 121, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:28,729 - INFO - Iteration: 122, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:28,804 - INFO - Iteration: 123, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:28,876 - INFO - Iteration: 124, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:28,954 - INFO - Iteration: 125, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:29,024 - INFO - Iteration: 126, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:29,093 - INFO - Iteration: 127, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:29,165 - INFO - Iteration: 128, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:29,266 - INFO - Iteration: 129, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:29,343 - INFO - Iteration: 130, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:29,527 - INFO - Iteration: 131, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:29,619 - INFO - Iteration: 132, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:29,693 - INFO - Iteration: 133, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:29,763 - INFO - Iteration: 134, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:29,836 - INFO - Iteration: 135, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:29,905 - INFO - Iteration: 136, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:30,014 - INFO - Iteration: 137, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:02:30,015 - INFO - New day detected: 2024-06-20, resetting trades_today and daily_loss.
+2024-07-02 12:02:30,143 - INFO - Iteration: 138, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:30,223 - INFO - Iteration: 139, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:30,316 - INFO - Iteration: 140, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:30,416 - INFO - Iteration: 141, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:30,508 - INFO - Iteration: 142, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:30,601 - INFO - Iteration: 143, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:30,684 - INFO - Iteration: 144, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:30,779 - INFO - Iteration: 145, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:30,872 - INFO - Iteration: 146, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:30,962 - INFO - Iteration: 147, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:31,062 - INFO - Iteration: 148, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:31,156 - INFO - Iteration: 149, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:31,247 - INFO - Iteration: 150, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:31,338 - INFO - Iteration: 151, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:31,430 - INFO - Iteration: 152, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:31,529 - INFO - Iteration: 153, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:31,620 - INFO - Iteration: 154, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:31,711 - INFO - Iteration: 155, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:31,796 - INFO - Iteration: 156, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:31,888 - INFO - Iteration: 157, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:31,996 - INFO - Iteration: 158, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:32,122 - INFO - Iteration: 159, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:32,223 - INFO - Iteration: 160, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:32,330 - INFO - Iteration: 161, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:02:32,332 - INFO - New day detected: 2024-06-21, resetting trades_today and daily_loss.
+2024-07-02 12:02:32,585 - INFO - Iteration: 162, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:32,681 - INFO - Iteration: 163, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:32,795 - INFO - Iteration: 164, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:32,913 - INFO - Iteration: 165, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:33,008 - INFO - Iteration: 166, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:33,100 - INFO - Iteration: 167, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:33,197 - INFO - Iteration: 168, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:33,315 - INFO - Iteration: 169, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:33,439 - INFO - Iteration: 170, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:33,537 - INFO - Iteration: 171, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:33,639 - INFO - Sell condition met at row 171.
+2024-07-02 12:02:33,639 - INFO - Iteration: 172, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:33,730 - INFO - Iteration: 173, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:33,838 - INFO - Iteration: 174, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:33,939 - INFO - Iteration: 175, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:34,027 - INFO - Iteration: 176, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:34,127 - INFO - Iteration: 177, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:34,236 - INFO - Iteration: 178, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:34,371 - INFO - Iteration: 179, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:34,472 - INFO - Iteration: 180, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:34,562 - INFO - Iteration: 181, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:34,656 - INFO - Iteration: 182, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:34,744 - INFO - Iteration: 183, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:34,855 - INFO - Iteration: 184, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:34,958 - INFO - Iteration: 185, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:02:34,959 - INFO - New day detected: 2024-06-24, resetting trades_today and daily_loss.
+2024-07-02 12:02:35,059 - INFO - Iteration: 186, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:02:35,159 - INFO - Iteration: 187, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:02:35,267 - INFO - Iteration: 188, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:02:35,539 - INFO - Iteration: 189, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:02:35,633 - INFO - Iteration: 190, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:02:35,738 - INFO - Iteration: 191, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:02:35,828 - INFO - Iteration: 192, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:02:35,922 - INFO - Iteration: 193, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:02:36,027 - INFO - Iteration: 194, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:02:36,122 - INFO - Iteration: 195, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:02:36,211 - INFO - Iteration: 196, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:02:36,324 - INFO - Iteration: 197, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:02:36,438 - INFO - Iteration: 198, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:02:36,537 - INFO - Buy condition met at row 198.
+2024-07-02 12:02:36,541 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:02:36,543 - INFO - Iteration: 199, trades_today: 1, current_day: 2024-06-24
+2024-07-02 12:02:36,635 - INFO - Buy condition met at row 199.
+2024-07-02 12:02:36,640 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:02:36,641 - INFO - Iteration: 200, trades_today: 2, current_day: 2024-06-24
+2024-07-02 12:02:36,744 - INFO - Buy condition met at row 200.
+2024-07-02 12:02:36,748 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:02:36,748 - INFO - Iteration: 201, trades_today: 3, current_day: 2024-06-24
+2024-07-02 12:02:36,857 - INFO - Buy condition met at row 201.
+2024-07-02 12:02:36,860 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:02:36,861 - INFO - Iteration: 202, trades_today: 4, current_day: 2024-06-24
+2024-07-02 12:02:36,961 - INFO - Iteration: 203, trades_today: 4, current_day: 2024-06-24
+2024-07-02 12:02:37,043 - INFO - Iteration: 204, trades_today: 4, current_day: 2024-06-24
+2024-07-02 12:02:37,147 - INFO - Iteration: 205, trades_today: 4, current_day: 2024-06-24
+2024-07-02 12:02:37,241 - INFO - Iteration: 206, trades_today: 4, current_day: 2024-06-24
+2024-07-02 12:02:37,339 - INFO - Iteration: 207, trades_today: 4, current_day: 2024-06-24
+2024-07-02 12:02:37,448 - INFO - Iteration: 208, trades_today: 4, current_day: 2024-06-24
+2024-07-02 12:02:37,681 - INFO - Iteration: 209, trades_today: 4, current_day: 2024-06-24
+2024-07-02 12:02:37,683 - INFO - New day detected: 2024-06-25, resetting trades_today and daily_loss.
+2024-07-02 12:02:37,772 - INFO - Iteration: 210, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:37,860 - INFO - Iteration: 211, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:37,956 - INFO - Iteration: 212, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:38,048 - INFO - Iteration: 213, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:38,141 - INFO - Iteration: 214, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:38,239 - INFO - Iteration: 215, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:38,328 - INFO - Iteration: 216, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:38,421 - INFO - Iteration: 217, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:38,516 - INFO - Iteration: 218, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:38,607 - INFO - Iteration: 219, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:38,696 - INFO - Iteration: 220, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:38,790 - INFO - Iteration: 221, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:38,879 - INFO - Iteration: 222, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:38,974 - INFO - Iteration: 223, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:39,044 - INFO - Iteration: 224, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:39,117 - INFO - Iteration: 225, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:39,189 - INFO - Iteration: 226, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:39,260 - INFO - Iteration: 227, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:39,340 - INFO - Iteration: 228, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:39,441 - INFO - Iteration: 229, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:39,528 - INFO - Iteration: 230, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:39,620 - INFO - Iteration: 231, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:39,730 - INFO - Iteration: 232, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:39,832 - INFO - Iteration: 233, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:02:39,833 - INFO - New day detected: 2024-06-26, resetting trades_today and daily_loss.
+2024-07-02 12:02:39,926 - INFO - Iteration: 234, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:40,005 - INFO - Iteration: 235, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:40,077 - INFO - Iteration: 236, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:40,153 - INFO - Iteration: 237, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:40,227 - INFO - Iteration: 238, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:40,300 - INFO - Iteration: 239, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:40,370 - INFO - Iteration: 240, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:40,442 - INFO - Iteration: 241, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:40,523 - INFO - Iteration: 242, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:40,740 - INFO - Iteration: 243, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:40,872 - INFO - Iteration: 244, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:41,132 - INFO - Iteration: 245, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:41,392 - INFO - Iteration: 246, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:41,527 - INFO - Iteration: 247, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:41,644 - INFO - Iteration: 248, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:41,744 - INFO - Iteration: 249, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:41,840 - INFO - Iteration: 250, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:41,939 - INFO - Iteration: 251, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:42,043 - INFO - Iteration: 252, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:42,146 - INFO - Iteration: 253, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:42,233 - INFO - Iteration: 254, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:42,308 - INFO - Iteration: 255, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:42,381 - INFO - Iteration: 256, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:42,457 - INFO - Iteration: 257, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:02:42,458 - INFO - New day detected: 2024-06-27, resetting trades_today and daily_loss.
+2024-07-02 12:02:42,531 - INFO - Iteration: 258, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:02:42,614 - INFO - Iteration: 259, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:02:42,707 - INFO - Iteration: 260, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:02:42,781 - INFO - Iteration: 261, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:02:42,900 - INFO - Iteration: 262, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:02:43,004 - INFO - Iteration: 263, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:02:43,148 - INFO - Iteration: 264, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:02:43,257 - INFO - Iteration: 265, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:02:43,352 - INFO - Iteration: 266, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:02:43,442 - INFO - Iteration: 267, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:02:43,546 - INFO - Iteration: 268, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:02:43,641 - INFO - Iteration: 269, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:02:43,742 - INFO - Iteration: 270, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:02:43,991 - INFO - Iteration: 271, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:02:44,095 - INFO - Iteration: 272, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:02:44,224 - INFO - Buy condition met at row 272.
+2024-07-02 12:02:44,230 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:02:44,231 - INFO - Iteration: 273, trades_today: 1, current_day: 2024-06-27
+2024-07-02 12:02:44,346 - INFO - Buy condition met at row 273.
+2024-07-02 12:02:44,352 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:02:44,354 - INFO - Iteration: 274, trades_today: 2, current_day: 2024-06-27
+2024-07-02 12:02:44,475 - INFO - Iteration: 275, trades_today: 2, current_day: 2024-06-27
+2024-07-02 12:02:44,562 - INFO - Iteration: 276, trades_today: 2, current_day: 2024-06-27
+2024-07-02 12:02:44,639 - INFO - Iteration: 277, trades_today: 2, current_day: 2024-06-27
+2024-07-02 12:02:44,725 - INFO - Iteration: 278, trades_today: 2, current_day: 2024-06-27
+2024-07-02 12:02:44,825 - INFO - Iteration: 279, trades_today: 2, current_day: 2024-06-27
+2024-07-02 12:02:44,911 - INFO - Iteration: 280, trades_today: 2, current_day: 2024-06-27
+2024-07-02 12:02:45,004 - INFO - Iteration: 281, trades_today: 2, current_day: 2024-06-27
+2024-07-02 12:02:45,006 - INFO - New day detected: 2024-06-28, resetting trades_today and daily_loss.
+2024-07-02 12:02:45,084 - INFO - Iteration: 282, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:45,162 - INFO - Iteration: 283, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:45,241 - INFO - Iteration: 284, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:45,324 - INFO - Iteration: 285, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:45,408 - INFO - Iteration: 286, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:45,488 - INFO - Iteration: 287, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:45,565 - INFO - Iteration: 288, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:45,649 - INFO - Iteration: 289, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:45,730 - INFO - Iteration: 290, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:45,809 - INFO - Iteration: 291, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:45,892 - INFO - Iteration: 292, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:45,971 - INFO - Iteration: 293, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:46,070 - INFO - Iteration: 294, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:46,161 - INFO - Iteration: 295, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:46,241 - INFO - Iteration: 296, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:46,314 - INFO - Iteration: 297, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:46,413 - INFO - Iteration: 298, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:46,498 - INFO - Iteration: 299, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:46,575 - INFO - Iteration: 300, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:46,655 - INFO - Iteration: 301, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:46,739 - INFO - Iteration: 302, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:46,815 - INFO - Iteration: 303, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:46,894 - INFO - Iteration: 304, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:47,053 - INFO - Iteration: 305, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:02:47,055 - INFO - New day detected: 2024-07-01, resetting trades_today and daily_loss.
+2024-07-02 12:02:47,147 - INFO - Buy condition met at row 305.
+2024-07-02 12:02:47,151 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:02:47,152 - INFO - Iteration: 306, trades_today: 1, current_day: 2024-07-01
+2024-07-02 12:02:47,248 - INFO - Buy condition met at row 306.
+2024-07-02 12:02:47,254 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:02:47,255 - INFO - Iteration: 307, trades_today: 2, current_day: 2024-07-01
+2024-07-02 12:02:47,329 - INFO - Iteration: 308, trades_today: 2, current_day: 2024-07-01
+2024-07-02 12:02:47,414 - INFO - Buy condition met at row 308.
+2024-07-02 12:02:47,421 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:02:47,422 - INFO - Iteration: 309, trades_today: 3, current_day: 2024-07-01
+2024-07-02 12:02:47,507 - INFO - Buy condition met at row 309.
+2024-07-02 12:02:47,510 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:02:47,510 - INFO - Iteration: 310, trades_today: 4, current_day: 2024-07-01
+2024-07-02 12:02:47,587 - INFO - Buy condition met at row 310.
+2024-07-02 12:02:47,590 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:02:47,590 - INFO - Iteration: 311, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,592 - INFO - Max trades per day reached at row 311.
+2024-07-02 12:02:47,593 - INFO - Iteration: 312, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,593 - INFO - Max trades per day reached at row 312.
+2024-07-02 12:02:47,594 - INFO - Iteration: 313, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,594 - INFO - Max trades per day reached at row 313.
+2024-07-02 12:02:47,595 - INFO - Iteration: 314, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,595 - INFO - Max trades per day reached at row 314.
+2024-07-02 12:02:47,596 - INFO - Iteration: 315, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,596 - INFO - Max trades per day reached at row 315.
+2024-07-02 12:02:47,597 - INFO - Iteration: 316, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,598 - INFO - Max trades per day reached at row 316.
+2024-07-02 12:02:47,598 - INFO - Iteration: 317, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,599 - INFO - Max trades per day reached at row 317.
+2024-07-02 12:02:47,599 - INFO - Iteration: 318, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,600 - INFO - Max trades per day reached at row 318.
+2024-07-02 12:02:47,600 - INFO - Iteration: 319, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,601 - INFO - Max trades per day reached at row 319.
+2024-07-02 12:02:47,602 - INFO - Iteration: 320, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,603 - INFO - Max trades per day reached at row 320.
+2024-07-02 12:02:47,604 - INFO - Iteration: 321, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,605 - INFO - Max trades per day reached at row 321.
+2024-07-02 12:02:47,606 - INFO - Iteration: 322, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,606 - INFO - Max trades per day reached at row 322.
+2024-07-02 12:02:47,607 - INFO - Iteration: 323, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,607 - INFO - Max trades per day reached at row 323.
+2024-07-02 12:02:47,608 - INFO - Iteration: 324, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,608 - INFO - Max trades per day reached at row 324.
+2024-07-02 12:02:47,609 - INFO - Iteration: 325, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,610 - INFO - Max trades per day reached at row 325.
+2024-07-02 12:02:47,610 - INFO - Iteration: 326, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,611 - INFO - Max trades per day reached at row 326.
+2024-07-02 12:02:47,611 - INFO - Iteration: 327, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,611 - INFO - Max trades per day reached at row 327.
+2024-07-02 12:02:47,612 - INFO - Iteration: 328, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,612 - INFO - Max trades per day reached at row 328.
+2024-07-02 12:02:47,613 - INFO - Iteration: 329, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:02:47,614 - INFO - New day detected: 2024-07-02, resetting trades_today and daily_loss.
+2024-07-02 12:02:47,698 - INFO - Iteration: 330, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:47,809 - INFO - Iteration: 331, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:47,888 - INFO - Iteration: 332, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:47,976 - INFO - Iteration: 333, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:48,066 - INFO - Iteration: 334, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:48,144 - INFO - Iteration: 335, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:48,223 - INFO - Iteration: 336, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:48,311 - INFO - Iteration: 337, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:48,395 - INFO - Iteration: 338, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:48,470 - INFO - Iteration: 339, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:48,558 - INFO - Iteration: 340, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:48,643 - INFO - Iteration: 341, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:48,715 - INFO - Iteration: 342, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:48,794 - INFO - Iteration: 343, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:48,869 - INFO - Iteration: 344, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:48,970 - INFO - Iteration: 345, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:49,053 - INFO - Iteration: 346, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:49,137 - INFO - Iteration: 347, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:49,225 - INFO - Iteration: 348, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:02:49,310 - INFO - Final balance: 10000
+2024-07-02 12:02:49,311 - INFO - Total Profit: 0.00
+2024-07-02 12:02:49,311 - INFO - Number of Trades: 11
+2024-07-02 12:02:49,311 - INFO - Win Rate: 0.00%
+2024-07-02 12:02:49,311 - INFO - Maximum Drawdown: 0.00
+2024-07-02 12:02:49,424 - INFO - Backtest completed successfully.
+2024-07-02 12:02:49,425 - INFO - Shutting down MetaTrader5...
+2024-07-02 12:02:49,425 - INFO - MetaTrader5 connection gracefully shut down.
+2024-07-02 12:41:52,940 - INFO - STARTING APPLICATION
+2024-07-02 12:41:52,940 - INFO - LOGGING ALL THE CONFIG SETTINGS
+2024-07-02 12:41:52,940 - INFO - MT5_LOGIN: your_mt5_login
+2024-07-02 12:41:52,941 - INFO - MT5_PASSWORD: your_mt5_password
+2024-07-02 12:41:52,941 - INFO - MT5_SERVER: your_mt5_server
+2024-07-02 12:41:52,941 - INFO - MT5_PATH: C:\Program Files\MetaTrader 5\terminal64.exe
+2024-07-02 12:41:52,941 - INFO - MT5_TIMEFRAME: H1
+2024-07-02 12:41:52,941 - INFO - SYMBOLS: ['EURUSD']
+2024-07-02 12:41:52,942 - INFO - TELEGRAM_TOKEN: your_telegram_bot_token
+2024-07-02 12:41:52,942 - INFO - TELEGRAM_IDS: ['telegram_user_id_1', 'telegram_user_id_2']
+2024-07-02 12:41:52,942 - INFO - MIN_TP_PROFIT: 50.0
+2024-07-02 12:41:52,942 - INFO - MAX_LOSS_PER_DAY: 1000.0
+2024-07-02 12:41:52,943 - INFO - STARTING_EQUITY: 10000.0
+2024-07-02 12:41:52,943 - INFO - LIMIT_NO_OF_TRADES: 5
+2024-07-02 12:41:52,943 - INFO - RISK_PER_TRADE: 0.02
+2024-07-02 12:41:52,943 - INFO - PIP_VALUE: 0.0001
+2024-07-02 12:41:57,911 - INFO - Initializing MetaTrader5...
+2024-07-02 12:41:57,923 - INFO - MetaTrader5 initialized successfully.
+2024-07-02 12:41:57,923 - INFO - Running backtest...
+2024-07-02 12:41:57,984 - INFO - Backtest data shape: (349, 8)
+2024-07-02 12:41:58,003 - INFO - Backtest data head:
+                 time     open     high      low    close  tick_volume  spread  real_volume
+0 2024-06-12 07:00:00  1.07403  1.07406  1.07364  1.07367          572       0            0
+1 2024-06-12 08:00:00  1.07367  1.07463  1.07360  1.07459          841       0            0
+2 2024-06-12 09:00:00  1.07462  1.07471  1.07389  1.07415         1460       0            0
+3 2024-06-12 10:00:00  1.07415  1.07455  1.07356  1.07446         1800       0            0
+4 2024-06-12 11:00:00  1.07445  1.07538  1.07445  1.07466         1562       0            0
+2024-07-02 12:41:58,006 - INFO - Initial balance: 10000
+2024-07-02 12:41:58,071 - INFO - Iteration: 34, trades_today: 0, current_day: 2024-06-12
+2024-07-02 12:41:58,072 - INFO - New day detected: 2024-06-13, resetting trades_today and daily_loss.
+2024-07-02 12:41:58,234 - INFO - Iteration: 35, trades_today: 0, current_day: 2024-06-13
+2024-07-02 12:41:58,391 - INFO - Iteration: 36, trades_today: 0, current_day: 2024-06-13
+2024-07-02 12:41:58,500 - INFO - Sell condition met at row 36.
+2024-07-02 12:41:58,500 - INFO - Iteration: 37, trades_today: 0, current_day: 2024-06-13
+2024-07-02 12:41:58,651 - INFO - Iteration: 38, trades_today: 0, current_day: 2024-06-13
+2024-07-02 12:41:58,783 - INFO - Iteration: 39, trades_today: 0, current_day: 2024-06-13
+2024-07-02 12:41:59,142 - INFO - Iteration: 40, trades_today: 0, current_day: 2024-06-13
+2024-07-02 12:41:59,392 - INFO - Iteration: 41, trades_today: 0, current_day: 2024-06-13
+2024-07-02 12:41:59,394 - INFO - New day detected: 2024-06-14, resetting trades_today and daily_loss.
+2024-07-02 12:41:59,603 - INFO - Iteration: 42, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:41:59,819 - INFO - Iteration: 43, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:00,036 - INFO - Iteration: 44, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:00,305 - INFO - Iteration: 45, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:00,526 - INFO - Iteration: 46, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:00,700 - INFO - Iteration: 47, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:00,889 - INFO - Iteration: 48, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:01,157 - INFO - Iteration: 49, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:01,369 - INFO - Iteration: 50, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:01,620 - INFO - Iteration: 51, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:01,825 - INFO - Iteration: 52, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:02,065 - INFO - Sell condition met at row 52.
+2024-07-02 12:42:02,068 - INFO - Iteration: 53, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:02,319 - INFO - Sell condition met at row 53.
+2024-07-02 12:42:02,320 - INFO - Iteration: 54, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:02,663 - INFO - Iteration: 55, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:02,834 - INFO - Iteration: 56, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:03,034 - INFO - Iteration: 57, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:03,227 - INFO - Sell condition met at row 57.
+2024-07-02 12:42:03,228 - INFO - Iteration: 58, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:03,423 - INFO - Iteration: 59, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:03,640 - INFO - Iteration: 60, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:03,759 - INFO - Iteration: 61, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:03,870 - INFO - Iteration: 62, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:03,974 - INFO - Iteration: 63, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:04,058 - INFO - Iteration: 64, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:04,139 - INFO - Iteration: 65, trades_today: 0, current_day: 2024-06-14
+2024-07-02 12:42:04,140 - INFO - New day detected: 2024-06-17, resetting trades_today and daily_loss.
+2024-07-02 12:42:04,226 - INFO - Iteration: 66, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:04,311 - INFO - Iteration: 67, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:04,418 - INFO - Iteration: 68, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:04,519 - INFO - Iteration: 69, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:04,603 - INFO - Iteration: 70, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:04,693 - INFO - Iteration: 71, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:04,784 - INFO - Iteration: 72, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:05,053 - INFO - Iteration: 73, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:05,153 - INFO - Iteration: 74, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:05,252 - INFO - Iteration: 75, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:05,359 - INFO - Iteration: 76, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:05,467 - INFO - Iteration: 77, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:05,568 - INFO - Iteration: 78, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:05,656 - INFO - Iteration: 79, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:05,747 - INFO - Iteration: 80, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:05,828 - INFO - Iteration: 81, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:05,914 - INFO - Iteration: 82, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:06,012 - INFO - Iteration: 83, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:06,111 - INFO - Iteration: 84, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:06,240 - INFO - Iteration: 85, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:06,355 - INFO - Iteration: 86, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:06,477 - INFO - Iteration: 87, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:06,561 - INFO - Iteration: 88, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:06,627 - INFO - Iteration: 89, trades_today: 0, current_day: 2024-06-17
+2024-07-02 12:42:06,628 - INFO - New day detected: 2024-06-18, resetting trades_today and daily_loss.
+2024-07-02 12:42:06,700 - INFO - Iteration: 90, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:06,771 - INFO - Iteration: 91, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:06,843 - INFO - Iteration: 92, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:06,925 - INFO - Iteration: 93, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:07,036 - INFO - Iteration: 94, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:07,138 - INFO - Iteration: 95, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:07,238 - INFO - Iteration: 96, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:07,355 - INFO - Iteration: 97, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:07,475 - INFO - Iteration: 98, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:07,746 - INFO - Iteration: 99, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:07,872 - INFO - Iteration: 100, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:07,974 - INFO - Iteration: 101, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:08,082 - INFO - Iteration: 102, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:08,194 - INFO - Iteration: 103, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:08,310 - INFO - Iteration: 104, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:08,419 - INFO - Iteration: 105, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:08,526 - INFO - Iteration: 106, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:08,639 - INFO - Iteration: 107, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:08,747 - INFO - Iteration: 108, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:08,859 - INFO - Iteration: 109, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:08,955 - INFO - Iteration: 110, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:09,060 - INFO - Iteration: 111, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:09,167 - INFO - Iteration: 112, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:09,267 - INFO - Iteration: 113, trades_today: 0, current_day: 2024-06-18
+2024-07-02 12:42:09,270 - INFO - New day detected: 2024-06-19, resetting trades_today and daily_loss.
+2024-07-02 12:42:09,361 - INFO - Iteration: 114, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:09,466 - INFO - Iteration: 115, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:09,575 - INFO - Iteration: 116, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:09,674 - INFO - Iteration: 117, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:09,772 - INFO - Iteration: 118, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:09,871 - INFO - Iteration: 119, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:09,966 - INFO - Iteration: 120, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:10,067 - INFO - Iteration: 121, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:10,152 - INFO - Iteration: 122, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:10,235 - INFO - Iteration: 123, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:10,319 - INFO - Iteration: 124, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:10,402 - INFO - Iteration: 125, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:10,628 - INFO - Iteration: 126, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:10,707 - INFO - Iteration: 127, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:10,791 - INFO - Iteration: 128, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:10,875 - INFO - Iteration: 129, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:10,960 - INFO - Iteration: 130, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:11,060 - INFO - Iteration: 131, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:11,164 - INFO - Iteration: 132, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:11,267 - INFO - Iteration: 133, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:11,388 - INFO - Iteration: 134, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:11,520 - INFO - Iteration: 135, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:11,616 - INFO - Iteration: 136, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:11,707 - INFO - Iteration: 137, trades_today: 0, current_day: 2024-06-19
+2024-07-02 12:42:11,709 - INFO - New day detected: 2024-06-20, resetting trades_today and daily_loss.
+2024-07-02 12:42:11,801 - INFO - Iteration: 138, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:11,889 - INFO - Iteration: 139, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:11,976 - INFO - Iteration: 140, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:12,064 - INFO - Iteration: 141, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:12,154 - INFO - Iteration: 142, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:12,247 - INFO - Iteration: 143, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:12,330 - INFO - Iteration: 144, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:12,420 - INFO - Iteration: 145, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:12,505 - INFO - Iteration: 146, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:12,576 - INFO - Iteration: 147, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:12,652 - INFO - Iteration: 148, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:12,727 - INFO - Iteration: 149, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:12,800 - INFO - Iteration: 150, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:12,890 - INFO - Iteration: 151, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:12,999 - INFO - Iteration: 152, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:13,092 - INFO - Iteration: 153, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:13,174 - INFO - Iteration: 154, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:13,260 - INFO - Iteration: 155, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:13,392 - INFO - Iteration: 156, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:13,487 - INFO - Iteration: 157, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:13,701 - INFO - Iteration: 158, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:13,807 - INFO - Iteration: 159, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:13,901 - INFO - Iteration: 160, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:14,016 - INFO - Iteration: 161, trades_today: 0, current_day: 2024-06-20
+2024-07-02 12:42:14,017 - INFO - New day detected: 2024-06-21, resetting trades_today and daily_loss.
+2024-07-02 12:42:14,109 - INFO - Iteration: 162, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:14,200 - INFO - Iteration: 163, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:14,293 - INFO - Iteration: 164, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:14,390 - INFO - Iteration: 165, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:14,500 - INFO - Iteration: 166, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:14,591 - INFO - Iteration: 167, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:14,664 - INFO - Iteration: 168, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:14,733 - INFO - Iteration: 169, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:14,801 - INFO - Iteration: 170, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:14,869 - INFO - Iteration: 171, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:14,940 - INFO - Sell condition met at row 171.
+2024-07-02 12:42:14,941 - INFO - Iteration: 172, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:15,017 - INFO - Iteration: 173, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:15,091 - INFO - Iteration: 174, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:15,166 - INFO - Iteration: 175, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:15,235 - INFO - Iteration: 176, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:15,303 - INFO - Iteration: 177, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:15,373 - INFO - Iteration: 178, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:15,485 - INFO - Iteration: 179, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:15,560 - INFO - Iteration: 180, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:15,632 - INFO - Iteration: 181, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:15,702 - INFO - Iteration: 182, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:15,773 - INFO - Iteration: 183, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:15,851 - INFO - Iteration: 184, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:15,935 - INFO - Iteration: 185, trades_today: 0, current_day: 2024-06-21
+2024-07-02 12:42:15,936 - INFO - New day detected: 2024-06-24, resetting trades_today and daily_loss.
+2024-07-02 12:42:16,013 - INFO - Iteration: 186, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:42:16,091 - INFO - Iteration: 187, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:42:16,168 - INFO - Iteration: 188, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:42:16,241 - INFO - Iteration: 189, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:42:16,455 - INFO - Iteration: 190, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:42:16,533 - INFO - Iteration: 191, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:42:16,605 - INFO - Iteration: 192, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:42:16,678 - INFO - Iteration: 193, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:42:16,756 - INFO - Iteration: 194, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:42:16,835 - INFO - Iteration: 195, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:42:16,908 - INFO - Iteration: 196, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:42:16,987 - INFO - Iteration: 197, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:42:17,070 - INFO - Iteration: 198, trades_today: 0, current_day: 2024-06-24
+2024-07-02 12:42:17,153 - INFO - Buy condition met at row 198.
+2024-07-02 12:42:17,157 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:42:17,157 - INFO - Iteration: 199, trades_today: 1, current_day: 2024-06-24
+2024-07-02 12:42:17,233 - INFO - Buy condition met at row 199.
+2024-07-02 12:42:17,236 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:42:17,236 - INFO - Iteration: 200, trades_today: 2, current_day: 2024-06-24
+2024-07-02 12:42:17,311 - INFO - Buy condition met at row 200.
+2024-07-02 12:42:17,316 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:42:17,316 - INFO - Iteration: 201, trades_today: 3, current_day: 2024-06-24
+2024-07-02 12:42:17,402 - INFO - Buy condition met at row 201.
+2024-07-02 12:42:17,406 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:42:17,407 - INFO - Iteration: 202, trades_today: 4, current_day: 2024-06-24
+2024-07-02 12:42:17,506 - INFO - Iteration: 203, trades_today: 4, current_day: 2024-06-24
+2024-07-02 12:42:17,605 - INFO - Iteration: 204, trades_today: 4, current_day: 2024-06-24
+2024-07-02 12:42:17,705 - INFO - Iteration: 205, trades_today: 4, current_day: 2024-06-24
+2024-07-02 12:42:17,789 - INFO - Iteration: 206, trades_today: 4, current_day: 2024-06-24
+2024-07-02 12:42:17,867 - INFO - Iteration: 207, trades_today: 4, current_day: 2024-06-24
+2024-07-02 12:42:17,959 - INFO - Iteration: 208, trades_today: 4, current_day: 2024-06-24
+2024-07-02 12:42:18,215 - INFO - Iteration: 209, trades_today: 4, current_day: 2024-06-24
+2024-07-02 12:42:18,220 - INFO - New day detected: 2024-06-25, resetting trades_today and daily_loss.
+2024-07-02 12:42:18,440 - INFO - Iteration: 210, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:18,799 - INFO - Iteration: 211, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:19,004 - INFO - Iteration: 212, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:19,138 - INFO - Iteration: 213, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:20,002 - INFO - Iteration: 214, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:20,205 - INFO - Iteration: 215, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:20,408 - INFO - Iteration: 216, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:21,156 - INFO - Iteration: 217, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:21,311 - INFO - Iteration: 218, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:21,568 - INFO - Iteration: 219, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:21,734 - INFO - Iteration: 220, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:21,836 - INFO - Iteration: 221, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:21,937 - INFO - Iteration: 222, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:22,058 - INFO - Iteration: 223, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:22,188 - INFO - Iteration: 224, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:22,285 - INFO - Iteration: 225, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:22,375 - INFO - Iteration: 226, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:22,481 - INFO - Iteration: 227, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:22,594 - INFO - Iteration: 228, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:22,683 - INFO - Iteration: 229, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:22,794 - INFO - Iteration: 230, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:22,907 - INFO - Iteration: 231, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:23,011 - INFO - Iteration: 232, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:23,131 - INFO - Iteration: 233, trades_today: 0, current_day: 2024-06-25
+2024-07-02 12:42:23,132 - INFO - New day detected: 2024-06-26, resetting trades_today and daily_loss.
+2024-07-02 12:42:23,245 - INFO - Iteration: 234, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:23,354 - INFO - Iteration: 235, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:23,444 - INFO - Iteration: 236, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:23,543 - INFO - Iteration: 237, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:23,656 - INFO - Iteration: 238, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:23,743 - INFO - Iteration: 239, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:23,844 - INFO - Iteration: 240, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:23,937 - INFO - Iteration: 241, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:24,028 - INFO - Iteration: 242, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:24,115 - INFO - Iteration: 243, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:24,199 - INFO - Iteration: 244, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:24,289 - INFO - Iteration: 245, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:24,385 - INFO - Iteration: 246, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:24,490 - INFO - Iteration: 247, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:24,589 - INFO - Iteration: 248, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:24,685 - INFO - Iteration: 249, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:24,988 - INFO - Iteration: 250, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:25,084 - INFO - Iteration: 251, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:25,179 - INFO - Iteration: 252, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:25,267 - INFO - Iteration: 253, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:25,356 - INFO - Iteration: 254, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:25,457 - INFO - Iteration: 255, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:25,545 - INFO - Iteration: 256, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:25,633 - INFO - Iteration: 257, trades_today: 0, current_day: 2024-06-26
+2024-07-02 12:42:25,635 - INFO - New day detected: 2024-06-27, resetting trades_today and daily_loss.
+2024-07-02 12:42:25,704 - INFO - Iteration: 258, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:42:25,772 - INFO - Iteration: 259, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:42:25,842 - INFO - Iteration: 260, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:42:25,917 - INFO - Iteration: 261, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:42:25,988 - INFO - Iteration: 262, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:42:26,061 - INFO - Iteration: 263, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:42:26,150 - INFO - Iteration: 264, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:42:26,220 - INFO - Iteration: 265, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:42:26,291 - INFO - Iteration: 266, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:42:26,365 - INFO - Iteration: 267, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:42:26,456 - INFO - Iteration: 268, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:42:26,572 - INFO - Iteration: 269, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:42:26,654 - INFO - Iteration: 270, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:42:26,729 - INFO - Iteration: 271, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:42:26,803 - INFO - Iteration: 272, trades_today: 0, current_day: 2024-06-27
+2024-07-02 12:42:26,878 - INFO - Buy condition met at row 272.
+2024-07-02 12:42:26,883 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:42:26,883 - INFO - Iteration: 273, trades_today: 1, current_day: 2024-06-27
+2024-07-02 12:42:26,956 - INFO - Buy condition met at row 273.
+2024-07-02 12:42:26,959 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:42:26,959 - INFO - Iteration: 274, trades_today: 2, current_day: 2024-06-27
+2024-07-02 12:42:27,036 - INFO - Iteration: 275, trades_today: 2, current_day: 2024-06-27
+2024-07-02 12:42:27,113 - INFO - Iteration: 276, trades_today: 2, current_day: 2024-06-27
+2024-07-02 12:42:27,287 - INFO - Iteration: 277, trades_today: 2, current_day: 2024-06-27
+2024-07-02 12:42:27,363 - INFO - Iteration: 278, trades_today: 2, current_day: 2024-06-27
+2024-07-02 12:42:27,444 - INFO - Iteration: 279, trades_today: 2, current_day: 2024-06-27
+2024-07-02 12:42:27,518 - INFO - Iteration: 280, trades_today: 2, current_day: 2024-06-27
+2024-07-02 12:42:27,593 - INFO - Iteration: 281, trades_today: 2, current_day: 2024-06-27
+2024-07-02 12:42:27,594 - INFO - New day detected: 2024-06-28, resetting trades_today and daily_loss.
+2024-07-02 12:42:27,669 - INFO - Iteration: 282, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:27,749 - INFO - Iteration: 283, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:27,825 - INFO - Iteration: 284, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:27,899 - INFO - Iteration: 285, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:27,994 - INFO - Iteration: 286, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:28,070 - INFO - Iteration: 287, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:28,142 - INFO - Iteration: 288, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:28,212 - INFO - Iteration: 289, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:28,282 - INFO - Iteration: 290, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:28,359 - INFO - Iteration: 291, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:28,434 - INFO - Iteration: 292, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:28,509 - INFO - Iteration: 293, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:28,596 - INFO - Iteration: 294, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:28,678 - INFO - Iteration: 295, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:28,755 - INFO - Iteration: 296, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:28,832 - INFO - Iteration: 297, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:28,923 - INFO - Iteration: 298, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:29,009 - INFO - Iteration: 299, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:29,107 - INFO - Iteration: 300, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:29,203 - INFO - Iteration: 301, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:29,304 - INFO - Iteration: 302, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:29,428 - INFO - Iteration: 303, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:29,522 - INFO - Iteration: 304, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:29,634 - INFO - Iteration: 305, trades_today: 0, current_day: 2024-06-28
+2024-07-02 12:42:29,636 - INFO - New day detected: 2024-07-01, resetting trades_today and daily_loss.
+2024-07-02 12:42:29,741 - INFO - Buy condition met at row 305.
+2024-07-02 12:42:29,744 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:42:29,744 - INFO - Iteration: 306, trades_today: 1, current_day: 2024-07-01
+2024-07-02 12:42:29,993 - INFO - Buy condition met at row 306.
+2024-07-02 12:42:30,032 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:42:30,033 - INFO - Iteration: 307, trades_today: 2, current_day: 2024-07-01
+2024-07-02 12:42:30,124 - INFO - Iteration: 308, trades_today: 2, current_day: 2024-07-01
+2024-07-02 12:42:30,220 - INFO - Buy condition met at row 308.
+2024-07-02 12:42:30,223 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:42:30,224 - INFO - Iteration: 309, trades_today: 3, current_day: 2024-07-01
+2024-07-02 12:42:30,325 - INFO - Buy condition met at row 309.
+2024-07-02 12:42:30,328 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:42:30,328 - INFO - Iteration: 310, trades_today: 4, current_day: 2024-07-01
+2024-07-02 12:42:30,436 - INFO - Buy condition met at row 310.
+2024-07-02 12:42:30,439 - INFO - Balance after BUY trade: 10000
+2024-07-02 12:42:30,440 - INFO - Iteration: 311, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,441 - INFO - Max trades per day reached at row 311.
+2024-07-02 12:42:30,441 - INFO - Iteration: 312, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,442 - INFO - Max trades per day reached at row 312.
+2024-07-02 12:42:30,443 - INFO - Iteration: 313, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,443 - INFO - Max trades per day reached at row 313.
+2024-07-02 12:42:30,444 - INFO - Iteration: 314, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,445 - INFO - Max trades per day reached at row 314.
+2024-07-02 12:42:30,445 - INFO - Iteration: 315, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,447 - INFO - Max trades per day reached at row 315.
+2024-07-02 12:42:30,447 - INFO - Iteration: 316, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,449 - INFO - Max trades per day reached at row 316.
+2024-07-02 12:42:30,450 - INFO - Iteration: 317, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,451 - INFO - Max trades per day reached at row 317.
+2024-07-02 12:42:30,452 - INFO - Iteration: 318, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,453 - INFO - Max trades per day reached at row 318.
+2024-07-02 12:42:30,455 - INFO - Iteration: 319, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,456 - INFO - Max trades per day reached at row 319.
+2024-07-02 12:42:30,457 - INFO - Iteration: 320, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,458 - INFO - Max trades per day reached at row 320.
+2024-07-02 12:42:30,459 - INFO - Iteration: 321, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,460 - INFO - Max trades per day reached at row 321.
+2024-07-02 12:42:30,460 - INFO - Iteration: 322, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,461 - INFO - Max trades per day reached at row 322.
+2024-07-02 12:42:30,462 - INFO - Iteration: 323, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,463 - INFO - Max trades per day reached at row 323.
+2024-07-02 12:42:30,464 - INFO - Iteration: 324, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,466 - INFO - Max trades per day reached at row 324.
+2024-07-02 12:42:30,468 - INFO - Iteration: 325, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,469 - INFO - Max trades per day reached at row 325.
+2024-07-02 12:42:30,470 - INFO - Iteration: 326, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,471 - INFO - Max trades per day reached at row 326.
+2024-07-02 12:42:30,472 - INFO - Iteration: 327, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,474 - INFO - Max trades per day reached at row 327.
+2024-07-02 12:42:30,474 - INFO - Iteration: 328, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,475 - INFO - Max trades per day reached at row 328.
+2024-07-02 12:42:30,475 - INFO - Iteration: 329, trades_today: 5, current_day: 2024-07-01
+2024-07-02 12:42:30,477 - INFO - New day detected: 2024-07-02, resetting trades_today and daily_loss.
+2024-07-02 12:42:30,572 - INFO - Iteration: 330, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:30,672 - INFO - Iteration: 331, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:30,765 - INFO - Iteration: 332, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:30,865 - INFO - Iteration: 333, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:30,950 - INFO - Iteration: 334, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:31,046 - INFO - Iteration: 335, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:31,137 - INFO - Iteration: 336, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:31,215 - INFO - Iteration: 337, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:31,304 - INFO - Iteration: 338, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:31,399 - INFO - Iteration: 339, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:31,482 - INFO - Iteration: 340, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:31,565 - INFO - Iteration: 341, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:31,650 - INFO - Iteration: 342, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:31,737 - INFO - Iteration: 343, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:31,833 - INFO - Iteration: 344, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:31,920 - INFO - Iteration: 345, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:31,995 - INFO - Iteration: 346, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:32,073 - INFO - Iteration: 347, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:32,141 - INFO - Iteration: 348, trades_today: 0, current_day: 2024-07-02
+2024-07-02 12:42:32,216 - INFO - Final balance: 10000
+2024-07-02 12:42:32,217 - INFO - Total Profit: 0.00
+2024-07-02 12:42:32,217 - INFO - Number of Trades: 11
+2024-07-02 12:42:32,218 - INFO - Win Rate: 0.00%
+2024-07-02 12:42:32,218 - INFO - Maximum Drawdown: 0.00
+2024-07-02 12:42:32,309 - INFO - Backtest completed successfully.
+2024-07-02 12:42:32,309 - INFO - Shutting down MetaTrader5...
+2024-07-02 12:42:32,310 - INFO - MetaTrader5 connection gracefully shut down.

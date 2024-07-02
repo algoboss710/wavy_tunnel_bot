@@ -367,7 +367,6 @@
 #         handle_error(e, "Failed to run the strategy")
 #         raise
 
-
 import numpy as np
 from metatrader.data_retrieval import get_historical_data
 from utils.error_handling import handle_error
@@ -381,11 +380,14 @@ def calculate_ema(prices, period):
     if not isinstance(prices, (list, np.ndarray, pd.Series)):
         raise ValueError("Invalid input type for prices. Expected list, numpy array, or pandas Series.")
     
+    logging.debug(f"Calculating EMA for period: {period}, prices: {prices}")
+    
     # Convert input to a pandas Series to ensure consistency
     prices = pd.Series(prices)
     
     # Ensure that the series is numeric
     prices = pd.to_numeric(prices, errors='coerce')
+    logging.debug(f"Prices converted to numeric: {prices}")
 
     ema_values = np.full(len(prices), np.nan, dtype=np.float64)
     if len(prices) < period:
@@ -393,9 +395,13 @@ def calculate_ema(prices, period):
     
     sma = np.mean(prices[:period])
     ema_values[period - 1] = sma
+    logging.debug(f"Initial SMA: {sma}")
+    
     multiplier = 2 / (period + 1)
     for i in range(period, len(prices)):
         ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
+        logging.debug(f"EMA value at index {i}: {ema_values[i]}")
+    
     ema_series = pd.Series(ema_values, index=prices.index)
     return ema_series
 
@@ -403,6 +409,8 @@ def detect_peaks_and_dips(df, peak_type):
     if not np.issubdtype(df['high'].dtype, np.number) or not np.issubdtype(df['low'].dtype, np.number):
         raise TypeError("High and Low columns must contain numeric data.")
 
+    logging.debug(f"Detecting peaks and dips with peak_type: {peak_type}")
+    
     highs = df['high'].values
     lows = df['low'].values
     center_index = peak_type // 2
@@ -419,20 +427,23 @@ def detect_peaks_and_dips(df, peak_type):
         if all(dip_window[center_index] < dip_window[j] for j in range(len(dip_window)) if j != center_index):
             dips.append(lows[i])
     
+    logging.debug(f"Detected peaks: {peaks}")
+    logging.debug(f"Detected dips: {dips}")
+    
     return peaks, dips
 
 def check_entry_conditions(row, peaks, dips, symbol):
-    print(f"Checking entry conditions for row: {row}")
-    print(f"Peaks: {peaks}")
-    print(f"Dips: {dips}")
+    logging.debug(f"Checking entry conditions for row: {row}")
+    logging.debug(f"Peaks: {peaks}")
+    logging.debug(f"Dips: {dips}")
 
     wavy_c, wavy_h, wavy_l = row['wavy_c'], row['wavy_h'], row['wavy_l']
     tunnel1, tunnel2 = row['tunnel1'], row['tunnel2']
     close_price = row['close']
 
-    print(f"wavy_c: {wavy_c}, wavy_h: {wavy_h}, wavy_l: {wavy_l}")
-    print(f"tunnel1: {tunnel1}, tunnel2: {tunnel2}")
-    print(f"close_price: {close_price}")
+    logging.debug(f"wavy_c: {wavy_c}, wavy_h: {wavy_h}, wavy_l: {wavy_l}")
+    logging.debug(f"tunnel1: {tunnel1}, tunnel2: {tunnel2}")
+    logging.debug(f"close_price: {close_price}")
 
     buy_condition = (
         close_price > max(wavy_c, wavy_h, wavy_l) and
@@ -445,8 +456,8 @@ def check_entry_conditions(row, peaks, dips, symbol):
         close_price in dips  # Check if the current close price is a dip
     )
     
-    print(f"Initial Buy condition: {buy_condition}")
-    print(f"Initial Sell condition: {sell_condition}")
+    logging.debug(f"Initial Buy condition: {buy_condition}")
+    logging.debug(f"Initial Sell condition: {sell_condition}")
 
     threshold_values = {
         'USD': 2,
@@ -465,7 +476,7 @@ def check_entry_conditions(row, peaks, dips, symbol):
             return False, False
         
         threshold = threshold_values.get(symbol[:3], threshold_values['default']) * symbol_info.trade_tick_size
-        print(f"Threshold: {threshold}")
+        logging.debug(f"Threshold: {threshold}")
 
         if threshold == 0:
             logging.error("Division by zero: threshold value is zero in check_entry_conditions")
@@ -474,12 +485,13 @@ def check_entry_conditions(row, peaks, dips, symbol):
         buy_condition &= close_price > max(wavy_c, wavy_h, wavy_l) + threshold
         sell_condition &= close_price < min(wavy_c, wavy_h, wavy_l) - threshold
 
-    print(f"Final Buy condition: {buy_condition}")
-    print(f"Final Sell condition: {sell_condition}")
+    logging.debug(f"Final Buy condition: {buy_condition}")
+    logging.debug(f"Final Sell condition: {sell_condition}")
 
     return buy_condition, sell_condition
 
 def execute_trade(trade_request):
+    logging.debug(f"Executing trade with request: {trade_request}")
     try:
         result = place_order(
             trade_request['symbol'],
@@ -492,30 +504,32 @@ def execute_trade(trade_request):
         if result == 'Order failed':
             raise Exception("Failed to execute trade")
         trade_request['profit'] = 0  # Initialize profit to 0
+        logging.debug(f"Trade executed successfully: {result}")
         return result
     except Exception as e:
         handle_error(e, "Failed to execute trade")
         return None
 
 def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
+    logging.debug(f"Managing position for symbol: {symbol}")
     try:
         positions = mt5.positions_get(symbol=symbol)
         if positions:
             for position in positions:
-                print(f"Checking position {position.ticket} with profit {position.profit}")
+                logging.debug(f"Checking position {position.ticket} with profit {position.profit}")
                 if position.profit >= min_take_profit:
-                    print(f"Closing position {position.ticket} for profit")
+                    logging.debug(f"Closing position {position.ticket} for profit")
                     close_position(position.ticket)
                 elif position.profit <= -max_loss_per_day:
-                    print(f"Closing position {position.ticket} for loss")
+                    logging.debug(f"Closing position {position.ticket} for loss")
                     close_position(position.ticket)
                 else:
                     current_equity = mt5.account_info().equity
                     if current_equity <= starting_equity * 0.9:  # Close position if equity drops by 10%
-                        print(f"Closing position {position.ticket} due to equity drop")
+                        logging.debug(f"Closing position {position.ticket} due to equity drop")
                         close_position(position.ticket)
                     elif mt5.positions_total() >= max_trades_per_day:
-                        print(f"Closing position {position.ticket} due to max trades exceeded")
+                        logging.debug(f"Closing position {position.ticket} due to max trades exceeded")
                         close_position(position.ticket)
     except Exception as e:
         handle_error(e, "Failed to manage position")
@@ -523,6 +537,7 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
 def calculate_tunnel_bounds(data, period, deviation_factor):
     # Ensure 'close' column is numeric
     data['close'] = pd.to_numeric(data['close'], errors='coerce')
+    logging.debug(f"Calculating tunnel bounds with period: {period} and deviation_factor: {deviation_factor}")
 
     if len(data) < period:
         return pd.Series([np.nan] * len(data)), pd.Series([np.nan] * len(data))
@@ -536,12 +551,12 @@ def calculate_tunnel_bounds(data, period, deviation_factor):
     upper_bound = ema + deviation
     lower_bound = ema - deviation
 
-    print(f"EMA Values for Tunnel Bounds: {ema}")
-    print(f"Rolling Std: {rolling_std}")
-    print(f"Volatility: {volatility}")
-    print(f"Deviation: {deviation}")
-    print(f"Upper Bound: {upper_bound}")
-    print(f"Lower Bound: {lower_bound}")
+    logging.debug(f"EMA Values for Tunnel Bounds: {ema}")
+    logging.debug(f"Rolling Std: {rolling_std}")
+    logging.debug(f"Volatility: {volatility}")
+    logging.debug(f"Deviation: {deviation}")
+    logging.debug(f"Upper Bound: {upper_bound}")
+    logging.debug(f"Lower Bound: {lower_bound}")
 
     return upper_bound, lower_bound
 
@@ -551,6 +566,7 @@ def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip
         logging.error("Division by zero: stop_loss_pips or pip_value is zero in calculate_position_size")
         raise ZeroDivisionError("stop_loss_pips or pip_value cannot be zero")
     position_size = risk_amount / (stop_loss_pips * pip_value)
+    logging.debug(f"Calculated position size: {position_size}")
     return position_size
 
 def generate_trade_signal(data, period, deviation_factor):
@@ -560,12 +576,12 @@ def generate_trade_signal(data, period, deviation_factor):
     upper_bound_last_value = upper_bound.iloc[-1]
     lower_bound_last_value = lower_bound.iloc[-1]
 
-    print(f"Data: {data}")
-    print(f"Upper Bound: {upper_bound}")
-    print(f"Lower Bound: {lower_bound}")
-    print(f"Last Close: {last_close}")
-    print(f"Upper Bound Last Value: {upper_bound_last_value}")
-    print(f"Lower Bound Last Value: {lower_bound_last_value}")
+    logging.debug(f"Data: {data}")
+    logging.debug(f"Upper Bound: {upper_bound}")
+    logging.debug(f"Lower Bound: {lower_bound}")
+    logging.debug(f"Last Close: {last_close}")
+    logging.debug(f"Upper Bound Last Value: {upper_bound_last_value}")
+    logging.debug(f"Lower Bound Last Value: {lower_bound_last_value}")
 
     if pd.isna(last_close) or pd.isna(upper_bound_last_value) or pd.isna(lower_bound_last_value):
         return None, None
@@ -573,8 +589,8 @@ def generate_trade_signal(data, period, deviation_factor):
     buy_condition = last_close >= upper_bound_last_value
     sell_condition = last_close <= lower_bound_last_value
 
-    print(f"Buy Condition: {buy_condition}")
-    print(f"Sell Condition: {sell_condition}")
+    logging.debug(f"Buy Condition: {buy_condition}")
+    logging.debug(f"Sell Condition: {sell_condition}")
 
     return buy_condition, sell_condition
 
