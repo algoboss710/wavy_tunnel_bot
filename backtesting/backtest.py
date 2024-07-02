@@ -171,13 +171,15 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
         current_day = data.iloc[0]['time'].date()
         max_drawdown = 0
         daily_loss = 0
+        buy_condition = False  # Initialize buy_condition
+        sell_condition = False  # Initialize sell_condition
 
         logging.info(f"Initial balance: {balance}")
         print(f"Initial balance: {balance}")
 
         # Validate critical parameters
-        if stop_loss_pips == 0 or pip_value == 0:
-            raise ZeroDivisionError("stop_loss_pips and pip_value must not be zero.")
+        if stop_loss_pips <= 0 or pip_value <= 0:
+            raise ZeroDivisionError("stop_loss_pips and pip_value must be greater than zero.")
 
         peak_type = 21
 

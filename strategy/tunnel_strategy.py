@@ -591,47 +591,53 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
             start_time = pd.Timestamp.now() - pd.Timedelta(days=30)  # Example: 30 days ago
             end_time = pd.Timestamp.now()  # Current time
             data = get_historical_data(symbol, timeframe, start_time, end_time)
-            if data is None:
-                raise Exception(f"Failed to retrieve historical data for {symbol}")
-
-            print(f"Historical data shape before calculations: {data.shape}")
-            print(f"Historical data head before calculations:\n{data.head()}")
-            print(f"Historical data for {symbol}:")
-            print(data.head())
-            print(f"Data types: {data.dtypes}")
+            if data is None or data.empty:
+                raise ValueError(f"Failed to retrieve historical data for {symbol}")
 
             period = 20
             market_conditions = 'volatile'  # Placeholder for determining market conditions
             deviation_factor = adjust_deviation_factor(market_conditions)
 
-            print("Calculating Wavy Tunnel indicators...")
+            logging.info("Calculating Wavy Tunnel indicators...")
             data['wavy_h'] = calculate_ema(data['high'], 34)
             data['wavy_c'] = calculate_ema(data['close'], 34)
             data['wavy_l'] = calculate_ema(data['low'], 34)
             data['tunnel1'] = calculate_ema(data['close'], 144)
             data['tunnel2'] = calculate_ema(data['close'], 169)
             data['long_term_ema'] = calculate_ema(data['close'], 200)
-            print("Indicators calculated.")
+            logging.info("Indicators calculated.")
 
-            print("Detecting peaks and dips...")
+            logging.info("Detecting peaks and dips...")
             peak_type = 21  # Define the peak_type variable
             peaks, dips = detect_peaks_and_dips(data, peak_type)
-            print(f"Peaks: {peaks[:5]}")
-            print(f"Dips: {dips[:5]}")
+            logging.info(f"Peaks: {peaks[:5]}")
+            logging.info(f"Dips: {dips[:5]}")
 
-            print(f"Historical data shape after calculations: {data.shape}")
-            print(f"Historical data head after calculations:\n{data.head()}")
+            logging.info(f"Historical data shape after calculations: {data.shape}")
+            logging.info(f"Historical data head after calculations:\n{data.head()}")
 
-            print("Generating entry signals...")
+            logging.info("Generating entry signals...")
             data['buy_signal'], data['sell_signal'] = zip(*data.apply(lambda x: check_entry_conditions(x, peaks, dips, symbol), axis=1))
-            print("Entry signals generated.")
+            logging.info("Entry signals generated.")
 
             if run_backtest:
-                # Run backtest
-                print("Running backtest...")
-                # Backtest logic here
+                logging.info("Running backtest...")
+                backtest_result = run_backtest(
+                    symbol=symbol,
+                    data=data,
+                    initial_balance=starting_equity,
+                    risk_percent=0.01,
+                    min_take_profit=min_take_profit,
+                    max_loss_per_day=max_loss_per_day,
+                    starting_equity=starting_equity,
+                    stop_loss_pips=20,
+                    pip_value=0.0001,
+                    max_trades_per_day=max_trades_per_day,
+                    slippage=0,
+                    transaction_cost=0
+                )
+                logging.info(f"Backtest result: {backtest_result}")
             else:
-                # Run live trading
                 buy_condition, sell_condition = generate_trade_signal(data, period, deviation_factor)
 
                 if buy_condition:
@@ -649,7 +655,7 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                         'type_filling': 'ORDER_FILLING_FOK',
                         'type_time': 'ORDER_TIME_GTC'
                     }
-                    print(f"Executing BUY trade for {symbol}...")
+                    logging.info(f"Executing BUY trade for {symbol}...")
                     execute_trade(trade_request)
                 elif sell_condition:
                     trade_request = {
@@ -666,7 +672,7 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                         'type_filling': 'ORDER_FILLING_FOK',
                         'type_time': 'ORDER_TIME_GTC'
                     }
-                    print(f"Executing SELL trade for {symbol}...")
+                    logging.info(f"Executing SELL trade for {symbol}...")
                     execute_trade(trade_request)
 
                 manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
