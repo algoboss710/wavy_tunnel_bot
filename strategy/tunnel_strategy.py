@@ -195,7 +195,6 @@ def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip
     logging.debug(f"Calculated position size: {position_size}")
     return position_size
 
-
 def generate_trade_signal(data, period, deviation_factor):
     if len(data) < period:
         return None, None
@@ -325,4 +324,3 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
     except Exception as e:
         handle_error(e, "Failed to run the strategy")
         raise
-

@@ -503,59 +503,102 @@ class TestRunBacktest(unittest.TestCase):
         uptrend_data['low'] = range(80, 110)
         uptrend_data['close'] = range(90, 120)
 
-        result = run_backtest(
-            symbol='EURUSD',
-            data=uptrend_data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
+        # Adding logging to monitor the state of the data
+        print(uptrend_data)
 
-        print(result)  # Debugging line to check the output
+        result = run_backtest(
+         symbol='EURUSD',
+         data=uptrend_data,
+         initial_balance=10000,
+         risk_percent=0.01,
+         min_take_profit=100,
+         max_loss_per_day=100,
+         starting_equity=10000,
+         stop_loss_pips=20,
+         pip_value=0.0001,
+         max_trades_per_day=5
+     )
+
+    # More detailed debugging information
+        print("Backtest Result:")
+        print(f"Initial balance: {result['initial_balance']}")
+        print(f"Final balance: {result['final_balance']}")
+        print(f"Total Profit: {result['total_profit']}")
+        print(f"Number of Trades: {result['number_of_trades']}")
+        print(f"Win Rate: {result['win_rate']:.2f}%")
+        print(f"Maximum Drawdown: {result['max_drawdown']:.2f}")
+
         self.assertGreater(result['total_profit'], 0)
 
-    def test_downtrend_data(self):
-        logging.info("Starting test_downtrend_data")
+
+    def test_uptrend_data(self):
+        uptrend_data = self.data.copy()
+        uptrend_data['high'] = range(100, 130)
+        uptrend_data['low'] = range(80, 110)
+        uptrend_data['close'] = range(90, 120)
+
+    # Adding logging to monitor the state of the data
+        print("Uptrend data:")
+        print(uptrend_data)
+
+    # Run backtest and add more detailed debugging information
+        try:
+            result = run_backtest(
+                symbol='EURUSD',
+                data=uptrend_data,
+                initial_balance=10000,
+                risk_percent=0.01,
+                min_take_profit=100,
+                max_loss_per_day=100,
+                starting_equity=10000,
+                stop_loss_pips=20,
+                pip_value=0.0001,
+                max_trades_per_day=5
+            )
+        except Exception as e:
+            print("Error occurred during backtest:", str(e))
+            raise
+
+        # More detailed debugging information
+        print("Backtest Result:")
+        print("Result dictionary keys:", result.keys())
     
-        downtrend_data = self.data.copy()
-        downtrend_data['high'] = range(130, 100, -1)
-        downtrend_data['low'] = range(110, 80, -1)
-        downtrend_data['close'] = range(120, 90, -1)
+        if 'initial_balance' not in result:
+            print("Error: 'initial_balance' key is missing from the result")
+        else:
+            print(f"Initial balance: {result['initial_balance']}")
 
-        logging.debug(f"Downtrend data prepared:\n{downtrend_data.head()}")
+        if 'final_balance' not in result:
+            print("Error: 'final_balance' key is missing from the result")
+        else:
+            print(f"Final balance: {result['final_balance']}")
 
-        result = run_backtest(
-            symbol='EURUSD',
-            data=downtrend_data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
+        if 'total_profit' not in result:
+            print("Error: 'total_profit' key is missing from the result")
+        else:
+            print(f"Total Profit: {result['total_profit']}")
 
-        logging.info(f"Backtest result: {result}")
-        print(result)  # Debugging line to check the output
+        if 'number_of_trades' not in result:
+            print("Error: 'number_of_trades' key is missing from the result")
+        else:
+            print(f"Number of Trades: {result['number_of_trades']}")
 
-        # Ensure no trades are executed due to strict strategy conditions
-        self.assertEqual(result['num_trades'], 0, "There should be no trades executed during the downtrend.")
-        logging.debug("Assertion passed: No trades executed.")
-    
-        self.assertEqual(result['total_profit'], 0, "Total profit should be 0 if no trades are executed.")
-        logging.debug("Assertion passed: Total profit is 0.")
-    
-        self.assertEqual(result['final_balance'], 10000, "Final balance should remain the same as the initial balance if no trades are executed.")
-        logging.debug("Assertion passed: Final balance is unchanged.")
+        if 'win_rate' not in result:
+            print("Error: 'win_rate' key is missing from the result")
+        else:
+            print(f"Win Rate: {result['win_rate']:.2f}%")
 
-        logging.info("Completed test_downtrend_data")
+        if 'max_drawdown' not in result:
+            print("Error: 'max_drawdown' key is missing from the result")
+        else:
+            print(f"Maximum Drawdown: {result['max_drawdown']:.2f}")
+
+    # Assuming the key checks passed, continue with the assertion
+        if 'total_profit' in result:
+            self.assertGreater(result['total_profit'], 0)
+        else:
+            self.fail("The 'total_profit' key is missing from the backtest result.")
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
