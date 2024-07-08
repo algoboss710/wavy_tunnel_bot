@@ -126,148 +126,6 @@ except Exception as e:
 <document index="2">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\main.py</source>
 <document_content>
-
-# import MetaTrader5 as mt5
-# import pandas as pd
-# from datetime import datetime
-# from config import Config
-# from metatrader.connection import initialize_mt5, shutdown_mt5
-# from metatrader.data_retrieval import get_historical_data
-# from strategy.tunnel_strategy import run_strategy, calculate_ema, detect_peaks_and_dips, check_entry_conditions
-# from backtesting.backtest import run_backtest
-# from utils.logger import setup_logging
-# from utils.error_handling import handle_error
-# import logging
-# import argparse
-# from ui import run_ui
-
-# def run_backtest_func():
-#     try:
-#         # Initialize MetaTrader5
-#         logging.info("Initializing MetaTrader5...")
-#         if not initialize_mt5(Config.MT5_PATH):
-#             raise Exception("Failed to initialize MetaTrader5")
-#         logging.info("MetaTrader5 initialized successfully.")
-
-#         for symbol in Config.SYMBOLS:
-#             logging.info("Running backtest...")
-#             start_date = datetime(2024, 6, 12)
-#             end_date = datetime.now()
-#             initial_balance = 10000
-#             risk_percent = Config.RISK_PER_TRADE
-#             stop_loss_pips = 20  # Example value for stop loss in pips
-#             pip_value = Config.PIP_VALUE
-
-#             backtest_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, start_date, end_date)
-#             if backtest_data is not None and not backtest_data.empty:
-#                 logging.info(f"Backtest data shape: {backtest_data.shape}")
-#                 logging.info(f"Backtest data head:\n{backtest_data.head()}")
-#             else:
-#                 logging.error(f"No historical data retrieved for {symbol} for backtesting")
-#                 continue
-
-#             # Ensure there are enough data points for the indicators
-#             if len(backtest_data) < 20:
-#                 logging.error(f"Not enough data for symbol {symbol} to perform backtest")
-#                 continue
-
-#             try:
-#                 run_backtest(
-#                     symbol=symbol,
-#                     data=backtest_data,
-#                     initial_balance=initial_balance,
-#                     risk_percent=risk_percent,
-#                     min_take_profit=Config.MIN_TP_PROFIT,
-#                     max_loss_per_day=Config.MAX_LOSS_PER_DAY,
-#                     starting_equity=Config.STARTING_EQUITY,
-#                     max_trades_per_day=Config.LIMIT_NO_OF_TRADES,
-#                     stop_loss_pips=stop_loss_pips,  # Pass stop_loss_pips
-#                     pip_value=pip_value              # Pass pip_value
-#                 )
-#                 logging.info("Backtest completed successfully.")
-#             except Exception as e:
-#                 handle_error(e, f"An error occurred during backtesting for {symbol}")
-
-#     except Exception as e:
-#         error_code = mt5.last_error()
-#         error_message = "An error occurred"
-#         handle_error(e, f"An error occurred in the run_backtest_func: {error_code} - {error_message}")
-
-#     finally:
-#         logging.info("Shutting down MetaTrader5...")
-#         shutdown_mt5()
-#         logging.info("MetaTrader5 connection gracefully shut down.")
-
-# def run_live_trading_func():
-#     try:
-#         # Initialize MetaTrader5
-#         logging.info("Initializing MetaTrader5...")
-#         if not initialize_mt5(Config.MT5_PATH):
-#             raise Exception("Failed to initialize MetaTrader5")
-#         logging.info("MetaTrader5 initialized successfully.")
-
-#         for symbol in Config.SYMBOLS:
-#             logging.info("Running live trading...")
-#             run_strategy(
-#                 symbols=[symbol],
-#                 mt5_init=mt5,
-#                 timeframe=mt5.TIMEFRAME_M1,
-#                 lot_size=0.01,
-#                 min_take_profit=Config.MIN_TP_PROFIT,
-#                 max_loss_per_day=Config.MAX_LOSS_PER_DAY,
-#                 starting_equity=Config.STARTING_EQUITY,
-#                 max_trades_per_day=Config.LIMIT_NO_OF_TRADES,
-#                 run_backtest=False
-#             )
-#             logging.info("Live trading completed.")
-
-#     except Exception as e:
-#         error_code = mt5.last_error()
-#         error_message = "An error occurred"
-#         handle_error(e, f"An error occurred in the run_live_trading_func: {error_code} - {error_message}")
-
-#     finally:
-#         logging.info("Shutting down MetaTrader5...")
-#         shutdown_mt5()
-#         logging.info("MetaTrader5 connection gracefully shut down.")
-
-# def main():
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument("--ui", action="store_true", help="Run the UI")
-#     args = parser.parse_args()
-
-#     try:
-#         setup_logging()
-#         logging.info("STARTING APPLICATION")
-
-#         # Log configuration settings
-#         logging.info("LOGGING ALL THE CONFIG SETTINGS")
-#         Config.log_config()
-
-#         if args.ui:
-#             run_ui(run_backtest_func, run_live_trading_func)
-#         else:
-#             # Prompt the user to choose between backtesting and live trading
-#             print("Choose an option:")
-#             print("1. Run Backtesting")
-#             print("2. Run Live Trading")
-#             choice = input("Enter your choice (1 or 2): ")
-
-#             if choice == "1":
-#                 run_backtest_func()
-#             elif choice == "2":
-#                 run_live_trading_func()
-#             else:
-#                 print("Invalid choice. Exiting...")
-
-#     except Exception as e:
-#         error_code = mt5.last_error()
-#         error_message = "An error occurred"
-#         handle_error(e, f"An error occurred in the main function: {error_code} - {error_message}")
-
-# if __name__ == '__main__':
-#     main()
-
 import MetaTrader5 as mt5
 import pandas as pd
 from datetime import datetime
@@ -316,6 +174,9 @@ def run_backtest_func():
             if len(backtest_data) < 20:
                 logging.error(f"Not enough data for symbol {symbol} to perform backtest")
                 continue
+
+            # Process data to avoid SettingWithCopyWarning
+            backtest_data.loc[:, 'close'] = pd.to_numeric(backtest_data['close'], errors='coerce')
 
             try:
                 run_backtest(
@@ -700,8 +561,161 @@ def run_ui(run_backtest_func, run_live_trading_func, clear_log_file, open_log_fi
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\backtesting\backtest.py</source>
 <document_content>
 # import logging
-# import pandas as pd
-# import numpy as np
+# import cProfile
+# import pstats
+# from io import StringIO
+# from strategy.tunnel_strategy import generate_trade_signal, manage_position, calculate_position_size, detect_peaks_and_dips
+# from metatrader.indicators import calculate_ema
+# from metatrader.trade_management import execute_trade
+
+# def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, stop_loss_pips, pip_value, max_trades_per_day=None, slippage=0, transaction_cost=0, enable_profiling=False):
+
+#     if enable_profiling:
+#         pr = cProfile.Profile()
+#         pr.enable()
+#     else:
+#         pr = None
+
+#     try:
+#         if initial_balance <= 0:
+#             raise ValueError("Initial balance must be positive.")
+#         if risk_percent <= 0:
+#             raise ValueError("Risk percent must be positive.")
+
+#         balance = initial_balance
+#         trades = []
+#         trades_today = 0
+#         current_day = data.iloc[0]['time'].date()
+#         max_drawdown = 0
+#         daily_loss = 0
+#         buy_condition = False
+#         sell_condition = False
+
+#         logging.info(f"Initial balance: {balance}")
+#         print(f"Initial balance: {balance}")
+
+#         if stop_loss_pips <= 0 or pip_value <= 0:
+#             raise ZeroDivisionError("stop_loss_pips and pip_value must be greater than zero.")
+
+#         peak_type = 21
+
+#         data['wavy_h'] = calculate_ema(data['high'], 34)
+#         data['wavy_c'] = calculate_ema(data['close'], 34)
+#         data['wavy_l'] = calculate_ema(data['low'], 34)
+#         data['tunnel1'] = calculate_ema(data['close'], 144)
+#         data['tunnel2'] = calculate_ema(data['close'], 169)
+#         data['long_term_ema'] = calculate_ema(data['close'], 200)
+
+#         logging.debug(f"Indicators calculated:\n{data[['wavy_h', 'wavy_c', 'wavy_l', 'tunnel1', 'tunnel2', 'long_term_ema']].head()}")
+
+#         peaks, dips = detect_peaks_and_dips(data, peak_type)
+
+#         logging.debug(f"Detected peaks: {peaks[:5]}")
+#         logging.debug(f"Detected dips: {dips[:5]}")
+
+#         for i in range(34, len(data)):  # Start after enough data points are available
+#             logging.info(f"Iteration: {i}, trades_today: {trades_today}, current_day: {current_day}")
+
+#             if data.iloc[i]['time'].date() != current_day:
+#                 logging.info(f"New day detected: {data.iloc[i]['time'].date()}, resetting trades_today and daily_loss.")
+#                 current_day = data.iloc[i]['time'].date()
+#                 trades_today = 0
+#                 daily_loss = 0
+
+#             if max_trades_per_day is not None and trades_today >= max_trades_per_day:
+#                 logging.info(f"Max trades per day reached at row {i}.")
+#                 continue
+
+#             buy_condition, sell_condition = generate_trade_signal(data.iloc[:i+1], period=20, deviation_factor=2.0)
+#             if buy_condition is None or sell_condition is None:
+#                 continue
+
+#             logging.debug(f"Buy Condition at {i}: {buy_condition}, Sell Condition at {i}: {sell_condition}")
+
+#             try:
+#                 position_size = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
+#             except ZeroDivisionError as e:
+#                 logging.error(f"Division by zero occurred in calculate_position_size: {e}. Variables - balance: {balance}, risk_percent: {risk_percent}, stop_loss_pips: {stop_loss_pips}, pip_value: {pip_value}")
+#                 continue
+
+#             row = data.iloc[i]
+
+#             if buy_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
+#                 logging.info(f"Buy condition met at row {i}.")
+#                 trade = {
+#                     'entry_time': data.iloc[i]['time'],
+#                     'entry_price': data.iloc[i]['close'],
+#                     'volume': position_size,
+#                     'symbol': symbol,
+#                     'action': 'BUY',
+#                     'sl': data.iloc[i]['close'] - (1.5 * data['close'].rolling(window=20).std().iloc[i]),
+#                     'tp': data.iloc[i]['close'] + (2 * data['close'].rolling(window=20).std().iloc[i])
+#                 }
+#                 trades.append(trade)
+#                 execute_trade(trade)
+#                 trades_today += 1
+#                 logging.debug(f"Trade executed: {trade}")
+
+#             elif sell_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
+#                 logging.info(f"Sell condition met at row {i}.")
+#                 trade = {
+#                     'entry_time': data.iloc[i]['time'],
+#                     'entry_price': data.iloc[i]['close'],
+#                     'volume': position_size,
+#                     'symbol': symbol,
+#                     'action': 'SELL',
+#                     'sl': data.iloc[i]['close'] + (1.5 * data['close'].rolling(window=20).std().iloc[i]),
+#                     'tp': data.iloc[i]['close'] - (2 * data['close'].rolling(window=20).std().iloc[i])
+#                 }
+#                 trades.append(trade)
+#                 execute_trade(trade)
+#                 trades_today += 1
+#                 logging.debug(f"Trade executed: {trade}")
+
+#             manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+
+#         logging.info(f"Final balance: {balance}")
+#         print(f"Final balance: {balance}")
+
+#         total_profit = sum(trade.get('profit', 0) for trade in trades)
+#         num_trades = len(trades)
+#         win_rate = sum(1 for trade in trades if trade.get('profit', 0) > 0) / num_trades if num_trades > 0 else 0
+#         max_drawdown = calculate_max_drawdown(trades, initial_balance)
+
+#         logging.info(f"Total Profit: {total_profit:.2f}")
+#         logging.info(f"Number of Trades: {num_trades}")
+#         logging.info(f"Win Rate: {win_rate:.2%}")
+#         logging.info(f"Maximum Drawdown: {max_drawdown:.2f}")
+
+#         print(f"Total Profit: {total_profit:.2f}")
+#         print(f"Number of Trades: {num_trades}")
+#         print(f"Win Rate: {win_rate:.2%}")
+#         print(f"Maximum Drawdown: {max_drawdown:.2f}")
+
+#         final_balance = balance  # Ensure final_balance is calculated
+#         logging.info(f"Final balance: {final_balance}")
+#         print(f"Final balance: {final_balance}")
+
+#         return {
+#             'total_profit': total_profit,
+#             'final_balance': final_balance,
+#             'num_trades': num_trades,
+#             'win_rate': win_rate,
+#             'max_drawdown': max_drawdown,
+#             'buy_condition': buy_condition,
+#             'sell_condition': sell_condition,
+#             'trades': trades,
+#             'total_slippage_costs': len(trades) * slippage,
+#             'total_transaction_costs': len(trades) * transaction_cost
+#         }
+
+#     finally:
+#         if enable_profiling and pr:
+#             pr.disable()
+#             s = StringIO()
+#             ps = pstats.Stats(pr, stream=s).sort_stats(pstats.SortKey.CUMULATIVE)
+#             ps.print_stats()
+#             print(s.getvalue())
 
 # def calculate_max_drawdown(trades, initial_balance):
 #     balance = initial_balance
@@ -717,130 +731,175 @@ def run_ui(run_backtest_func, run_live_trading_func, clear_log_file, open_log_fi
 
 #     return max_drawdown
 
-# def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, stop_loss_pips, pip_value, max_trades_per_day=None):
-#     from strategy.tunnel_strategy import generate_trade_signal, manage_position, calculate_position_size, detect_peaks_and_dips
-#     from metatrader.indicators import calculate_ema
-#     from metatrader.trade_management import execute_trade
-
-#     balance = initial_balance
-#     trades = []
-#     trades_today = 0
-#     current_day = data.iloc[0]['time'].date()
-#     max_drawdown = 0
-#     daily_loss = 0
-
-#     logging.info(f"Initial balance: {balance}")
-#     print(f"Initial balance: {balance}")
-
-#     # Validate critical parameters
-#     if stop_loss_pips == 0 or pip_value == 0:
-#         raise ZeroDivisionError("stop_loss_pips and pip_value must not be zero.")
-
-#     peak_type = 21
-
-#     # Calculate indicators and peaks/dips for the entire dataset
-#     data['wavy_h'] = calculate_ema(data['high'], 34)
-#     data['wavy_c'] = calculate_ema(data['close'], 34)
-#     data['wavy_l'] = calculate_ema(data['low'], 34)
-#     data['tunnel1'] = calculate_ema(data['close'], 144)
-#     data['tunnel2'] = calculate_ema(data['close'], 169)
-#     data['long_term_ema'] = calculate_ema(data['close'], 200)
-
-#     peaks, dips = detect_peaks_and_dips(data, peak_type)
-
-#     for i in range(20, len(data)):  # Start after enough data points are available
-#         logging.info(f"Iteration: {i}, trades_today: {trades_today}, current_day: {current_day}")
-
-#         # Check if it's a new day
-#         if data.iloc[i]['time'].date() != current_day:
-#             logging.info(f"New day detected: {data.iloc[i]['time'].date()}, resetting trades_today and daily_loss.")
-#             current_day = data.iloc[i]['time'].date()
-#             trades_today = 0
-#             daily_loss = 0
-
-#         if max_trades_per_day is not None and trades_today >= max_trades_per_day:
-#             logging.info(f"Max trades per day reached at row {i}.")
-#             continue
-
-#         # Generate trading signals
-#         buy_condition, sell_condition = generate_trade_signal(data.iloc[:i+1], period=20, deviation_factor=2.0)
-#         if buy_condition is None or sell_condition is None:
-#             continue
-
-#         try:
-#             position_size = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
-#         except ZeroDivisionError as e:
-#             logging.error(f"Division by zero occurred in calculate_position_size: {e}. Variables - balance: {balance}, risk_percent: {risk_percent}, stop_loss_pips: {stop_loss_pips}, pip_value: {pip_value}")
-#             continue
-
-#         row = data.iloc[i]
-
-#         if buy_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
-#             logging.info(f"Buy condition met at row {i}.")
-#             trade = {
-#                 'entry_time': data.iloc[i]['time'],
-#                 'entry_price': data.iloc[i]['close'],
-#                 'volume': position_size,
-#                 'symbol': symbol,
-#                 'action': 'BUY',
-#                 'sl': data.iloc[i]['close'] - (1.5 * data['close'].rolling(window=20).std().iloc[i]),
-#                 'tp': data.iloc[i]['close'] + (2 * data['close'].rolling(window=20).std().iloc[i])
-#             }
-#             trades.append(trade)
-#             trades_today += 1
-#             execute_trade(trade)
-#             logging.info(f"Balance after BUY trade: {balance}")
-
-#         elif sell_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
-#             logging.info(f"Sell condition met at row {i}.")
-#             if trades:
-#                 trade = trades[-1]
-#                 trade['exit_time'] = data.iloc[i]['time']
-#                 trade['exit_price'] = data.iloc[i]['close']
-#                 trade['profit'] = (trade['exit_price'] - trade['entry_price']) * trade['volume'] * pip_value
-#                 balance += trade['profit']
-#                 execute_trade(trade)
-#                 trades_today += 1
-#                 logging.info(f"Balance after SELL trade: {balance}")
-
-#         manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
-
-#     logging.info(f"Final balance: {balance}")
-#     print(f"Final balance: {balance}")
-
-#     total_profit = sum(trade['profit'] for trade in trades if 'profit' in trade)
-#     num_trades = len(trades)
-#     win_rate = sum(1 for trade in trades if 'profit' in trade and trade['profit'] > 0) / num_trades if num_trades > 0 else 0
-#     max_drawdown = calculate_max_drawdown(trades, initial_balance)
-
-#     logging.info(f"Total Profit: {total_profit:.2f}")
-#     logging.info(f"Number of Trades: {num_trades}")
-#     logging.info(f"Win Rate: {win_rate:.2%}")
-#     logging.info(f"Maximum Drawdown: {max_drawdown:.2f}")
-
-#     print(f"Total Profit: {total_profit:.2f}")
-#     print(f"Number of Trades: {num_trades}")
-#     print(f"Win Rate: {win_rate:.2%}")
-#     print(f"Maximum Drawdown: {max_drawdown:.2f}")
-
-#     return {
-#         'total_profit': total_profit,
-#         'num_trades': num_trades,
-#         'win_rate': win_rate,
-#         'max_drawdown': max_drawdown,
-#         'buy_condition': buy_condition,
-#         'sell_condition': sell_condition,
-#         'trades': trades
-#     }
 
 # if __name__ == '__main__':
 #     logging.basicConfig(level=logging.INFO)
 import logging
-import pandas as pd
-import numpy as np
 import cProfile
 import pstats
 from io import StringIO
+import pandas as pd
+import numpy as np
+from strategy.tunnel_strategy import generate_trade_signal, manage_position, calculate_position_size, detect_peaks_and_dips
+from metatrader.indicators import calculate_ema
+from metatrader.trade_management import execute_trade
+
+def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, stop_loss_pips, pip_value, max_trades_per_day=None, slippage=0, transaction_cost=0, enable_profiling=False):
+
+    if enable_profiling:
+        pr = cProfile.Profile()
+        pr.enable()
+    else:
+        pr = None
+
+    try:
+        if initial_balance <= 0:
+            raise ValueError("Initial balance must be positive.")
+        if risk_percent <= 0:
+            raise ValueError("Risk percent must be positive.")
+
+        balance = initial_balance
+        trades = []
+        trades_today = 0
+        current_day = data.iloc[0]['time'].date()
+        max_drawdown = 0
+        daily_loss = 0
+        buy_condition = False
+        sell_condition = False
+
+        logging.info(f"Initial balance: {balance}")
+        print(f"Initial balance: {balance}")
+
+        if stop_loss_pips <= 0 or pip_value <= 0:
+            raise ZeroDivisionError("stop_loss_pips and pip_value must be greater than zero.")
+
+        peak_type = 21
+
+        data = data.copy()  # Make a copy to avoid modifying the original DataFrame
+
+        # Handle missing values by interpolation
+        data['high'] = data['high'].interpolate(method='linear')
+        data['close'] = data['close'].interpolate(method='linear')
+        data['low'] = data['low'].interpolate(method='linear')
+
+        data.loc[:, 'wavy_h'] = calculate_ema(data['high'], 34)
+        data.loc[:, 'wavy_c'] = calculate_ema(data['close'], 34)
+        data.loc[:, 'wavy_l'] = calculate_ema(data['low'], 34)
+        data.loc[:, 'tunnel1'] = calculate_ema(data['close'], 144)
+        data.loc[:, 'tunnel2'] = calculate_ema(data['close'], 169)
+        data.loc[:, 'long_term_ema'] = calculate_ema(data['close'], 200)
+
+        logging.debug(f"Indicators calculated:\n{data[['wavy_h', 'wavy_c', 'wavy_l', 'tunnel1', 'tunnel2', 'long_term_ema']].head()}")
+
+        peaks, dips = detect_peaks_and_dips(data, peak_type)
+
+        logging.debug(f"Detected peaks: {peaks[:5]}")
+        logging.debug(f"Detected dips: {dips[:5]}")
+
+        for i in range(34, len(data)):  # Start after enough data points are available
+            logging.info(f"Iteration: {i}, trades_today: {trades_today}, current_day: {current_day}")
+
+            if data.iloc[i]['time'].date() != current_day:
+                logging.info(f"New day detected: {data.iloc[i]['time'].date()}, resetting trades_today and daily_loss.")
+                current_day = data.iloc[i]['time'].date()
+                trades_today = 0
+                daily_loss = 0
+
+            if max_trades_per_day is not None and trades_today >= max_trades_per_day:
+                logging.info(f"Max trades per day reached at row {i}.")
+                continue
+
+            buy_condition, sell_condition = generate_trade_signal(data.iloc[:i+1], period=20, deviation_factor=2.0)
+            if buy_condition is None or sell_condition is None:
+                continue
+
+            logging.debug(f"Buy Condition at {i}: {buy_condition}, Sell Condition at {i}: {sell_condition}")
+
+            try:
+                position_size = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
+            except ZeroDivisionError as e:
+                logging.error(f"Division by zero occurred in calculate_position_size: {e}. Variables - balance: {balance}, risk_percent: {risk_percent}, stop_loss_pips: {stop_loss_pips}, pip_value: {pip_value}")
+                continue
+
+            row = data.iloc[i]
+            std_dev = data['close'].rolling(window=20).std().iloc[i]
+
+            if buy_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
+                logging.info(f"Buy condition met at row {i}.")
+                trade = {
+                    'entry_time': data.iloc[i]['time'],
+                    'entry_price': data.iloc[i]['close'],
+                    'volume': position_size,
+                    'symbol': symbol,
+                    'action': 'BUY',
+                    'sl': data.iloc[i]['close'] - (1.5 * std_dev),
+                    'tp': data.iloc[i]['close'] + (2 * std_dev)
+                }
+                trades.append(trade)
+                execute_trade(trade)
+                trades_today += 1
+                logging.debug(f"Trade executed: {trade}")
+
+            elif sell_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
+                logging.info(f"Sell condition met at row {i}.")
+                trade = {
+                    'entry_time': data.iloc[i]['time'],
+                    'entry_price': data.iloc[i]['close'],
+                    'volume': position_size,
+                    'symbol': symbol,
+                    'action': 'SELL',
+                    'sl': data.iloc[i]['close'] + (1.5 * std_dev),
+                    'tp': data.iloc[i]['close'] - (2 * std_dev)
+                }
+                trades.append(trade)
+                execute_trade(trade)
+                trades_today += 1
+                logging.debug(f"Trade executed: {trade}")
+
+            manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+
+        logging.info(f"Final balance: {balance}")
+        print(f"Final balance: {balance}")
+
+        total_profit = sum(trade.get('profit', 0) for trade in trades)
+        num_trades = len(trades)
+        win_rate = sum(1 for trade in trades if trade.get('profit', 0) > 0) / num_trades if num_trades > 0 else 0
+        max_drawdown = calculate_max_drawdown(trades, initial_balance)
+
+        logging.info(f"Total Profit: {total_profit:.2f}")
+        logging.info(f"Number of Trades: {num_trades}")
+        logging.info(f"Win Rate: {win_rate:.2%}")
+        logging.info(f"Maximum Drawdown: {max_drawdown:.2f}")
+
+        print(f"Total Profit: {total_profit:.2f}")
+        print(f"Number of Trades: {num_trades}")
+        print(f"Win Rate: {win_rate:.2%}")
+        print(f"Maximum Drawdown: {max_drawdown:.2f}")
+
+        final_balance = balance  # Ensure final_balance is calculated
+        logging.info(f"Final balance: {final_balance}")
+        print(f"Final balance: {final_balance}")
+
+        return {
+            'total_profit': total_profit,
+            'final_balance': final_balance,
+            'num_trades': num_trades,
+            'win_rate': win_rate,
+            'max_drawdown': max_drawdown,
+            'buy_condition': buy_condition,
+            'sell_condition': sell_condition,
+            'trades': trades,
+            'total_slippage_costs': len(trades) * slippage,
+            'total_transaction_costs': len(trades) * transaction_cost
+        }
+
+    finally:
+        if enable_profiling and pr:
+            pr.disable()
+            s = StringIO()
+            ps = pstats.Stats(pr, stream=s).sort_stats(pstats.SortKey.CUMULATIVE)
+            ps.print_stats()
+            print(s.getvalue())
 
 def calculate_max_drawdown(trades, initial_balance):
     balance = initial_balance
@@ -855,138 +914,6 @@ def calculate_max_drawdown(trades, initial_balance):
             max_drawdown = max(max_drawdown, drawdown)
 
     return max_drawdown
-
-def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, stop_loss_pips, pip_value, max_trades_per_day=None, slippage=0, transaction_cost=0):
-    from strategy.tunnel_strategy import generate_trade_signal, manage_position, calculate_position_size, detect_peaks_and_dips
-    from metatrader.indicators import calculate_ema
-    from metatrader.trade_management import execute_trade
-
-    # Profiling setup
-    pr = cProfile.Profile()
-    pr.enable()
-
-    try:
-        balance = initial_balance
-        trades = []
-        trades_today = 0
-        current_day = data.iloc[0]['time'].date()
-        max_drawdown = 0
-        daily_loss = 0
-
-        logging.info(f"Initial balance: {balance}")
-        print(f"Initial balance: {balance}")
-
-        # Validate critical parameters
-        if stop_loss_pips == 0 or pip_value == 0:
-            raise ZeroDivisionError("stop_loss_pips and pip_value must not be zero.")
-
-        peak_type = 21
-
-        # Calculate indicators and peaks/dips for the entire dataset
-        data.loc[:, 'wavy_h'] = calculate_ema(data['high'], 34)
-        data.loc[:, 'wavy_c'] = calculate_ema(data['close'], 34)
-        data.loc[:, 'wavy_l'] = calculate_ema(data['low'], 34)
-        data.loc[:, 'tunnel1'] = calculate_ema(data['close'], 144)
-        data.loc[:, 'tunnel2'] = calculate_ema(data['close'], 169)
-        data.loc[:, 'long_term_ema'] = calculate_ema(data['close'], 200)
-
-        peaks, dips = detect_peaks_and_dips(data, peak_type)
-
-        for i in range(34, len(data)):  # Start after enough data points are available
-            logging.info(f"Iteration: {i}, trades_today: {trades_today}, current_day: {current_day}")
-
-            # Check if it's a new day
-            if data.iloc[i]['time'].date() != current_day:
-                logging.info(f"New day detected: {data.iloc[i]['time'].date()}, resetting trades_today and daily_loss.")
-                current_day = data.iloc[i]['time'].date()
-                trades_today = 0
-                daily_loss = 0
-
-            if max_trades_per_day is not None and trades_today >= max_trades_per_day:
-                logging.info(f"Max trades per day reached at row {i}.")
-                continue
-
-            # Generate trading signals
-            buy_condition, sell_condition = generate_trade_signal(data.iloc[:i+1], period=20, deviation_factor=2.0)
-            if buy_condition is None or sell_condition is None:
-                continue
-
-            try:
-                position_size = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
-            except ZeroDivisionError as e:
-                logging.error(f"Division by zero occurred in calculate_position_size: {e}. Variables - balance: {balance}, risk_percent: {risk_percent}, stop_loss_pips: {stop_loss_pips}, pip_value: {pip_value}")
-                continue
-
-            row = data.iloc[i]
-
-            if buy_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
-                logging.info(f"Buy condition met at row {i}.")
-                trade = {
-                    'entry_time': data.iloc[i]['time'],
-                    'entry_price': data.iloc[i]['close'],
-                    'volume': position_size,
-                    'symbol': symbol,
-                    'action': 'BUY',
-                    'sl': data.iloc[i]['close'] - (1.5 * data['close'].rolling(window=20).std().iloc[i]),
-                    'tp': data.iloc[i]['close'] + (2 * data['close'].rolling(window=20).std().iloc[i])
-                }
-                trades.append(trade)
-                trades_today += 1
-                execute_trade(trade)
-                logging.info(f"Balance after BUY trade: {balance}")
-
-            elif sell_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
-                logging.info(f"Sell condition met at row {i}.")
-                if trades:
-                    trade = trades[-1]
-                    trade['exit_time'] = data.iloc[i]['time']
-                    trade['exit_price'] = data.iloc[i]['close']
-                    trade['profit'] = (trade['exit_price'] - trade['entry_price']) * trade['volume'] * pip_value
-                    balance += trade['profit']
-                    execute_trade(trade)
-                    trades_today += 1
-                    logging.info(f"Balance after SELL trade: {balance}")
-
-            manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
-
-        logging.info(f"Final balance: {balance}")
-        print(f"Final balance: {balance}")
-
-        total_profit = sum(trade['profit'] for trade in trades if 'profit' in trade)
-        num_trades = len(trades)
-        win_rate = sum(1 for trade in trades if 'profit' in trade and trade['profit'] > 0) / num_trades if num_trades > 0 else 0
-        max_drawdown = calculate_max_drawdown(trades, initial_balance)
-
-        logging.info(f"Total Profit: {total_profit:.2f}")
-        logging.info(f"Number of Trades: {num_trades}")
-        logging.info(f"Win Rate: {win_rate:.2%}")
-        logging.info(f"Maximum Drawdown: {max_drawdown:.2f}")
-
-        print(f"Total Profit: {total_profit:.2f}")
-        print(f"Number of Trades: {num_trades}")
-        print(f"Win Rate: {win_rate:.2%}")
-        print(f"Maximum Drawdown: {max_drawdown:.2f}")
-
-        return {
-            'total_profit': total_profit,
-            'num_trades': num_trades,
-            'win_rate': win_rate,
-            'max_drawdown': max_drawdown,
-            'buy_condition': buy_condition,
-            'sell_condition': sell_condition,
-            'trades': trades,
-            'total_slippage_costs': len(trades) * slippage,
-            'total_transaction_costs': len(trades) * transaction_cost
-        }
-
-    finally:
-        pr.disable()
-
-        # Output profiling results
-        s = StringIO()
-        ps = pstats.Stats(pr, stream=s).sort_stats(pstats.SortKey.CUMULATIVE)
-        ps.print_stats()
-        print(s.getvalue())
 
 
 if __name__ == '__main__':
@@ -1226,16 +1153,20 @@ if __name__ == '__main__':
 <document_content>
 import pandas as pd
 import numpy as np
+import logging
 
 def calculate_ema(prices, period):
     if not isinstance(prices, (list, np.ndarray, pd.Series)):
         raise ValueError("Invalid input type for prices. Expected list, numpy array, or pandas Series.")
+    
+    logging.debug(f"Calculating EMA for period: {period}, prices: {prices}")
     
     # Convert input to a pandas Series to ensure consistency
     prices = pd.Series(prices)
     
     # Ensure that the series is numeric
     prices = pd.to_numeric(prices, errors='coerce')
+    logging.debug(f"Prices converted to numeric: {prices}")
 
     ema_values = np.full(len(prices), np.nan, dtype=np.float64)
     if len(prices) < period:
@@ -1243,9 +1174,13 @@ def calculate_ema(prices, period):
     
     sma = np.mean(prices[:period])
     ema_values[period - 1] = sma
+    logging.debug(f"Initial SMA: {sma}")
+    
     multiplier = 2 / (period + 1)
     for i in range(period, len(prices)):
         ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
+        logging.debug(f"EMA value at index {i}: {ema_values[i]}")
+    
     ema_series = pd.Series(ema_values, index=prices.index)
     return ema_series
 
@@ -1429,11 +1364,11 @@ def exit_trade(position_ticket):
 #     if not isinstance(prices, (list, np.ndarray, pd.Series)):
 #         raise ValueError("Invalid input type for prices. Expected list, numpy array, or pandas Series.")
     
-#     # Convert input to a pandas Series to ensure consistency
-#     prices = pd.Series(prices)
+#     logging.debug(f"Calculating EMA for period: {period}, prices: {prices}")
     
-#     # Ensure that the series is numeric
+#     prices = pd.Series(prices)
 #     prices = pd.to_numeric(prices, errors='coerce')
+#     logging.debug(f"Prices converted to numeric: {prices}")
 
 #     ema_values = np.full(len(prices), np.nan, dtype=np.float64)
 #     if len(prices) < period:
@@ -1441,16 +1376,21 @@ def exit_trade(position_ticket):
     
 #     sma = np.mean(prices[:period])
 #     ema_values[period - 1] = sma
+#     logging.debug(f"Initial SMA: {sma}")
+    
 #     multiplier = 2 / (period + 1)
 #     for i in range(period, len(prices)):
 #         ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
-#     ema_series = pd.Series(ema_values, index=prices.index)
-#     return ema_series
+#         logging.debug(f"EMA value at index {i}: {ema_values[i]}")
+    
+#     return pd.Series(ema_values, index=prices.index)
 
 # def detect_peaks_and_dips(df, peak_type):
 #     if not np.issubdtype(df['high'].dtype, np.number) or not np.issubdtype(df['low'].dtype, np.number):
 #         raise TypeError("High and Low columns must contain numeric data.")
 
+#     logging.debug(f"Detecting peaks and dips with peak_type: {peak_type}")
+    
 #     highs = df['high'].values
 #     lows = df['low'].values
 #     center_index = peak_type // 2
@@ -1467,81 +1407,23 @@ def exit_trade(position_ticket):
 #         if all(dip_window[center_index] < dip_window[j] for j in range(len(dip_window)) if j != center_index):
 #             dips.append(lows[i])
     
+#     logging.debug(f"Detected peaks: {peaks}")
+#     logging.debug(f"Detected dips: {dips}")
+    
 #     return peaks, dips
 
-
-# # def check_entry_conditions(row, peaks, dips, symbol):
-# #     print(f"Checking entry conditions for row: {row}")
-# #     print(f"Peaks: {peaks}")
-# #     print(f"Dips: {dips}")
-
-# #     wavy_c, wavy_h, wavy_l = row['wavy_c'], row['wavy_h'], row['wavy_l']
-# #     tunnel1, tunnel2 = row['tunnel1'], row['tunnel2']
-# #     close_price = row['close']
-
-# #     print(f"wavy_c: {wavy_c}, wavy_h: {wavy_h}, wavy_l: {wavy_l}")
-# #     print(f"tunnel1: {tunnel1}, tunnel2: {tunnel2}")
-# #     print(f"close_price: {close_price}")
-
-# #     buy_condition = (
-# #         close_price > max(wavy_c, wavy_h, wavy_l) and
-# #         min(wavy_c, wavy_h, wavy_l) > max(tunnel1, tunnel2) and
-# #         close_price in peaks  # Check if the current close price is a peak
-# #     )
-# #     sell_condition = (
-# #         close_price < min(wavy_c, wavy_h, wavy_l) and
-# #         max(wavy_c, wavy_h, wavy_l) < min(tunnel1, tunnel2) and
-# #         close_price in dips  # Check if the current close price is a dip
-# #     )
-    
-# #     print(f"Initial Buy condition: {buy_condition}")
-# #     print(f"Initial Sell condition: {sell_condition}")
-
-# #     threshold_values = {
-# #         'USD': 2,
-# #         'EUR': 2,
-# #         'JPY': 300,
-# #         'GBP': 6,
-# #         'CHF': 2,
-# #         'AUD': 2,
-# #         'default': 100
-# #     }
-# #     apply_threshold = True
-# #     if apply_threshold:
-# #         symbol_info = mt5.symbol_info(symbol)
-# #         if symbol_info is None:
-# #             logging.error(f"Symbol info for {symbol} not found.")
-# #             return False, False
-
-# #         threshold = threshold_values.get(symbol[:3], threshold_values['default']) * symbol_info.trade_tick_size
-# #         print(f"Threshold: {threshold}")
-
-# #         if threshold == 0:
-# #             logging.error("Division by zero: threshold value is zero in check_entry_conditions")
-# #             return False, False
-
-# #         buy_condition &= close_price > max(wavy_c, wavy_h, wavy_l) + threshold
-# #         sell_condition &= close_price < min(wavy_c, wavy_h, wavy_l) - threshold
-
-# #     print(f"Final Buy condition: {buy_condition}")
-# #     print(f"Final Sell condition: {sell_condition}")
-
-# #     return buy_condition, sell_condition
-
-
-
 # def check_entry_conditions(row, peaks, dips, symbol):
-#     print(f"Checking entry conditions for row: {row}")
-#     print(f"Peaks: {peaks}")
-#     print(f"Dips: {dips}")
+#     logging.debug(f"Checking entry conditions for row: {row}")
+#     logging.debug(f"Peaks: {peaks}")
+#     logging.debug(f"Dips: {dips}")
 
 #     wavy_c, wavy_h, wavy_l = row['wavy_c'], row['wavy_h'], row['wavy_l']
 #     tunnel1, tunnel2 = row['tunnel1'], row['tunnel2']
 #     close_price = row['close']
 
-#     print(f"wavy_c: {wavy_c}, wavy_h: {wavy_h}, wavy_l: {wavy_l}")
-#     print(f"tunnel1: {tunnel1}, tunnel2: {tunnel2}")
-#     print(f"close_price: {close_price}")
+#     logging.debug(f"wavy_c: {wavy_c}, wavy_h: {wavy_h}, wavy_l: {wavy_l}")
+#     logging.debug(f"tunnel1: {tunnel1}, tunnel2: {tunnel2}")
+#     logging.debug(f"close_price: {close_price}")
 
 #     buy_condition = (
 #         close_price > max(wavy_c, wavy_h, wavy_l) and
@@ -1554,8 +1436,8 @@ def exit_trade(position_ticket):
 #         close_price in dips  # Check if the current close price is a dip
 #     )
     
-#     print(f"Initial Buy condition: {buy_condition}")
-#     print(f"Initial Sell condition: {sell_condition}")
+#     logging.debug(f"Initial Buy condition: {buy_condition}")
+#     logging.debug(f"Initial Sell condition: {sell_condition}")
 
 #     threshold_values = {
 #         'USD': 2,
@@ -1574,7 +1456,7 @@ def exit_trade(position_ticket):
 #             return False, False
         
 #         threshold = threshold_values.get(symbol[:3], threshold_values['default']) * symbol_info.trade_tick_size
-#         print(f"Threshold: {threshold}")
+#         logging.debug(f"Threshold: {threshold}")
 
 #         if threshold == 0:
 #             logging.error("Division by zero: threshold value is zero in check_entry_conditions")
@@ -1583,13 +1465,13 @@ def exit_trade(position_ticket):
 #         buy_condition &= close_price > max(wavy_c, wavy_h, wavy_l) + threshold
 #         sell_condition &= close_price < min(wavy_c, wavy_h, wavy_l) - threshold
 
-#     print(f"Final Buy condition: {buy_condition}")
-#     print(f"Final Sell condition: {sell_condition}")
+#     logging.debug(f"Final Buy condition: {buy_condition}")
+#     logging.debug(f"Final Sell condition: {sell_condition}")
 
 #     return buy_condition, sell_condition
 
-
 # def execute_trade(trade_request):
+#     logging.debug(f"Executing trade with request: {trade_request}")
 #     try:
 #         result = place_order(
 #             trade_request['symbol'],
@@ -1602,38 +1484,39 @@ def exit_trade(position_ticket):
 #         if result == 'Order failed':
 #             raise Exception("Failed to execute trade")
 #         trade_request['profit'] = 0  # Initialize profit to 0
+#         logging.debug(f"Trade executed successfully: {result}")
 #         return result
 #     except Exception as e:
 #         handle_error(e, "Failed to execute trade")
 #         return None
-    
+
 # def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
+#     logging.debug(f"Managing position for symbol: {symbol}")
 #     try:
 #         positions = mt5.positions_get(symbol=symbol)
 #         if positions:
 #             for position in positions:
-#                 print(f"Checking position {position.ticket} with profit {position.profit}")
+#                 logging.debug(f"Checking position {position.ticket} with profit {position.profit}")
 #                 if position.profit >= min_take_profit:
-#                     print(f"Closing position {position.ticket} for profit")
+#                     logging.debug(f"Closing position {position.ticket} for profit")
 #                     close_position(position.ticket)
 #                 elif position.profit <= -max_loss_per_day:
-#                     print(f"Closing position {position.ticket} for loss")
+#                     logging.debug(f"Closing position {position.ticket} for loss")
 #                     close_position(position.ticket)
 #                 else:
 #                     current_equity = mt5.account_info().equity
 #                     if current_equity <= starting_equity * 0.9:  # Close position if equity drops by 10%
-#                         print(f"Closing position {position.ticket} due to equity drop")
+#                         logging.debug(f"Closing position {position.ticket} due to equity drop")
 #                         close_position(position.ticket)
 #                     elif mt5.positions_total() >= max_trades_per_day:
-#                         print(f"Closing position {position.ticket} due to max trades exceeded")
+#                         logging.debug(f"Closing position {position.ticket} due to max trades exceeded")
 #                         close_position(position.ticket)
 #     except Exception as e:
 #         handle_error(e, "Failed to manage position")
 
-
 # def calculate_tunnel_bounds(data, period, deviation_factor):
-#     # Ensure 'close' column is numeric
 #     data['close'] = pd.to_numeric(data['close'], errors='coerce')
+#     logging.debug(f"Calculating tunnel bounds with period: {period} and deviation_factor: {deviation_factor}")
 
 #     if len(data) < period:
 #         return pd.Series([np.nan] * len(data)), pd.Series([np.nan] * len(data))
@@ -1647,15 +1530,14 @@ def exit_trade(position_ticket):
 #     upper_bound = ema + deviation
 #     lower_bound = ema - deviation
 
-#     print(f"EMA Values for Tunnel Bounds: {ema}")
-#     print(f"Rolling Std: {rolling_std}")
-#     print(f"Volatility: {volatility}")
-#     print(f"Deviation: {deviation}")
-#     print(f"Upper Bound: {upper_bound}")
-#     print(f"Lower Bound: {lower_bound}")
+#     logging.debug(f"EMA Values for Tunnel Bounds: {ema}")
+#     logging.debug(f"Rolling Std: {rolling_std}")
+#     logging.debug(f"Volatility: {volatility}")
+#     logging.debug(f"Deviation: {deviation}")
+#     logging.debug(f"Upper Bound: {upper_bound}")
+#     logging.debug(f"Lower Bound: {lower_bound}")
 
 #     return upper_bound, lower_bound
-
 
 # def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value):
 #     risk_amount = account_balance * risk_per_trade
@@ -1663,31 +1545,36 @@ def exit_trade(position_ticket):
 #         logging.error("Division by zero: stop_loss_pips or pip_value is zero in calculate_position_size")
 #         raise ZeroDivisionError("stop_loss_pips or pip_value cannot be zero")
 #     position_size = risk_amount / (stop_loss_pips * pip_value)
+#     logging.debug(f"Calculated position size: {position_size}")
 #     return position_size
 
 # def generate_trade_signal(data, period, deviation_factor):
+#     if len(data) < period:
+#         return None, None
+
 #     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
     
-#     # Ensure last_close is numeric
 #     last_close = pd.to_numeric(data['close'].iloc[-1], errors='coerce')
 #     upper_bound_last_value = upper_bound.iloc[-1]
 #     lower_bound_last_value = lower_bound.iloc[-1]
 
-#     print(f"Last Close: {last_close}")
-#     print(f"Upper Bound Last Value: {upper_bound_last_value}")
-#     print(f"Lower Bound Last Value: {lower_bound_last_value}")
+#     logging.debug(f"Data: {data}")
+#     logging.debug(f"Upper Bound: {upper_bound}")
+#     logging.debug(f"Lower Bound: {lower_bound}")
+#     logging.debug(f"Last Close: {last_close}")
+#     logging.debug(f"Upper Bound Last Value: {upper_bound_last_value}")
+#     logging.debug(f"Lower Bound Last Value: {lower_bound_last_value}")
 
 #     if pd.isna(last_close) or pd.isna(upper_bound_last_value) or pd.isna(lower_bound_last_value):
-#         return None
+#         return None, None
 
-#     if last_close >= upper_bound_last_value:
-#         return 'BUY'
-#     elif last_close <= lower_bound_last_value:
-#         return 'SELL'
-#     else:
-#         return None
+#     buy_condition = last_close >= upper_bound_last_value
+#     sell_condition = last_close <= lower_bound_last_value
 
+#     logging.debug(f"Buy Condition: {buy_condition}")
+#     logging.debug(f"Sell Condition: {sell_condition}")
 
+#     return buy_condition, sell_condition
 
 # def adjust_deviation_factor(market_conditions):
 #     if market_conditions == 'volatile':
@@ -1701,50 +1588,56 @@ def exit_trade(position_ticket):
 #             start_time = pd.Timestamp.now() - pd.Timedelta(days=30)  # Example: 30 days ago
 #             end_time = pd.Timestamp.now()  # Current time
 #             data = get_historical_data(symbol, timeframe, start_time, end_time)
-#             if data is None:
-#                 raise Exception(f"Failed to retrieve historical data for {symbol}")
-
-#             print(f"Historical data shape before calculations: {data.shape}")
-#             print(f"Historical data head before calculations:\n{data.head()}")
-#             print(f"Historical data for {symbol}:")
-#             print(data.head())
-#             print(f"Data types: {data.dtypes}")
+#             if data is None or data.empty:
+#                 raise ValueError(f"Failed to retrieve historical data for {symbol}")
 
 #             period = 20
 #             market_conditions = 'volatile'  # Placeholder for determining market conditions
 #             deviation_factor = adjust_deviation_factor(market_conditions)
 
-#             print("Calculating Wavy Tunnel indicators...")
+#             logging.info("Calculating Wavy Tunnel indicators...")
 #             data['wavy_h'] = calculate_ema(data['high'], 34)
 #             data['wavy_c'] = calculate_ema(data['close'], 34)
 #             data['wavy_l'] = calculate_ema(data['low'], 34)
 #             data['tunnel1'] = calculate_ema(data['close'], 144)
 #             data['tunnel2'] = calculate_ema(data['close'], 169)
 #             data['long_term_ema'] = calculate_ema(data['close'], 200)
-#             print("Indicators calculated.")
+#             logging.info("Indicators calculated.")
 
-#             print("Detecting peaks and dips...")
+#             logging.info("Detecting peaks and dips...")
 #             peak_type = 21  # Define the peak_type variable
 #             peaks, dips = detect_peaks_and_dips(data, peak_type)
-#             print(f"Peaks: {peaks[:5]}")
-#             print(f"Dips: {dips[:5]}")
+#             logging.info(f"Peaks: {peaks[:5]}")
+#             logging.info(f"Dips: {dips[:5]}")
 
-#             print(f"Historical data shape after calculations: {data.shape}")
-#             print(f"Historical data head after calculations:\n{data.head()}")
+#             logging.info(f"Historical data shape after calculations: {data.shape}")
+#             logging.info(f"Historical data head after calculations:\n{data.head()}")
 
-#             print("Generating entry signals...")
+#             logging.info("Generating entry signals...")
 #             data['buy_signal'], data['sell_signal'] = zip(*data.apply(lambda x: check_entry_conditions(x, peaks, dips, symbol), axis=1))
-#             print("Entry signals generated.")
+#             logging.info("Entry signals generated.")
 
 #             if run_backtest:
-#                 # Run backtest
-#                 print("Running backtest...")
-#                 # Backtest logic here
+#                 logging.info("Running backtest...")
+#                 backtest_result = run_backtest(
+#                     symbol=symbol,
+#                     data=data,
+#                     initial_balance=starting_equity,
+#                     risk_percent=0.01,
+#                     min_take_profit=min_take_profit,
+#                     max_loss_per_day=max_loss_per_day,
+#                     starting_equity=starting_equity,
+#                     stop_loss_pips=20,
+#                     pip_value=0.0001,
+#                     max_trades_per_day=max_trades_per_day,
+#                     slippage=0,
+#                     transaction_cost=0
+#                 )
+#                 logging.info(f"Backtest result: {backtest_result}")
 #             else:
-#                 # Run live trading
-#                 signal = generate_trade_signal(data, period, deviation_factor)
+#                 buy_condition, sell_condition = generate_trade_signal(data, period, deviation_factor)
 
-#                 if signal == 'BUY':
+#                 if buy_condition:
 #                     trade_request = {
 #                         'action': 'BUY',
 #                         'symbol': symbol,
@@ -1759,9 +1652,9 @@ def exit_trade(position_ticket):
 #                         'type_filling': 'ORDER_FILLING_FOK',
 #                         'type_time': 'ORDER_TIME_GTC'
 #                     }
-#                     print(f"Executing BUY trade for {symbol}...")
+#                     logging.info(f"Executing BUY trade for {symbol}...")
 #                     execute_trade(trade_request)
-#                 elif signal == 'SELL':
+#                 elif sell_condition:
 #                     trade_request = {
 #                         'action': 'SELL',
 #                         'symbol': symbol,
@@ -1776,7 +1669,7 @@ def exit_trade(position_ticket):
 #                         'type_filling': 'ORDER_FILLING_FOK',
 #                         'type_time': 'ORDER_TIME_GTC'
 #                     }
-#                     print(f"Executing SELL trade for {symbol}...")
+#                     logging.info(f"Executing SELL trade for {symbol}...")
 #                     execute_trade(trade_request)
 
 #                 manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
@@ -1784,26 +1677,24 @@ def exit_trade(position_ticket):
 #     except Exception as e:
 #         handle_error(e, "Failed to run the strategy")
 #         raise
-
-
 import numpy as np
+import pandas as pd
+import MetaTrader5 as mt5
+import logging
 from metatrader.data_retrieval import get_historical_data
 from utils.error_handling import handle_error
 from metatrader.indicators import calculate_ema
 from metatrader.trade_management import place_order, close_position, modify_order
-import pandas as pd
-import MetaTrader5 as mt5
-import logging
 
 def calculate_ema(prices, period):
     if not isinstance(prices, (list, np.ndarray, pd.Series)):
         raise ValueError("Invalid input type for prices. Expected list, numpy array, or pandas Series.")
     
-    # Convert input to a pandas Series to ensure consistency
-    prices = pd.Series(prices)
+    logging.debug(f"Calculating EMA for period: {period}, prices: {prices}")
     
-    # Ensure that the series is numeric
+    prices = pd.Series(prices)
     prices = pd.to_numeric(prices, errors='coerce')
+    logging.debug(f"Prices converted to numeric: {prices}")
 
     ema_values = np.full(len(prices), np.nan, dtype=np.float64)
     if len(prices) < period:
@@ -1811,16 +1702,21 @@ def calculate_ema(prices, period):
     
     sma = np.mean(prices[:period])
     ema_values[period - 1] = sma
+    logging.debug(f"Initial SMA: {sma}")
+    
     multiplier = 2 / (period + 1)
     for i in range(period, len(prices)):
         ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
-    ema_series = pd.Series(ema_values, index=prices.index)
-    return ema_series
+        logging.debug(f"EMA value at index {i}: {ema_values[i]}")
+    
+    return pd.Series(ema_values, index=prices.index)
 
 def detect_peaks_and_dips(df, peak_type):
     if not np.issubdtype(df['high'].dtype, np.number) or not np.issubdtype(df['low'].dtype, np.number):
         raise TypeError("High and Low columns must contain numeric data.")
 
+    logging.debug(f"Detecting peaks and dips with peak_type: {peak_type}")
+    
     highs = df['high'].values
     lows = df['low'].values
     center_index = peak_type // 2
@@ -1837,20 +1733,23 @@ def detect_peaks_and_dips(df, peak_type):
         if all(dip_window[center_index] < dip_window[j] for j in range(len(dip_window)) if j != center_index):
             dips.append(lows[i])
     
+    logging.debug(f"Detected peaks: {peaks}")
+    logging.debug(f"Detected dips: {dips}")
+    
     return peaks, dips
 
 def check_entry_conditions(row, peaks, dips, symbol):
-    print(f"Checking entry conditions for row: {row}")
-    print(f"Peaks: {peaks}")
-    print(f"Dips: {dips}")
+    logging.debug(f"Checking entry conditions for row: {row}")
+    logging.debug(f"Peaks: {peaks}")
+    logging.debug(f"Dips: {dips}")
 
     wavy_c, wavy_h, wavy_l = row['wavy_c'], row['wavy_h'], row['wavy_l']
     tunnel1, tunnel2 = row['tunnel1'], row['tunnel2']
     close_price = row['close']
 
-    print(f"wavy_c: {wavy_c}, wavy_h: {wavy_h}, wavy_l: {wavy_l}")
-    print(f"tunnel1: {tunnel1}, tunnel2: {tunnel2}")
-    print(f"close_price: {close_price}")
+    logging.debug(f"wavy_c: {wavy_c}, wavy_h: {wavy_h}, wavy_l: {wavy_l}")
+    logging.debug(f"tunnel1: {tunnel1}, tunnel2: {tunnel2}")
+    logging.debug(f"close_price: {close_price}")
 
     buy_condition = (
         close_price > max(wavy_c, wavy_h, wavy_l) and
@@ -1863,8 +1762,8 @@ def check_entry_conditions(row, peaks, dips, symbol):
         close_price in dips  # Check if the current close price is a dip
     )
     
-    print(f"Initial Buy condition: {buy_condition}")
-    print(f"Initial Sell condition: {sell_condition}")
+    logging.debug(f"Initial Buy condition: {buy_condition}")
+    logging.debug(f"Initial Sell condition: {sell_condition}")
 
     threshold_values = {
         'USD': 2,
@@ -1883,7 +1782,7 @@ def check_entry_conditions(row, peaks, dips, symbol):
             return False, False
         
         threshold = threshold_values.get(symbol[:3], threshold_values['default']) * symbol_info.trade_tick_size
-        print(f"Threshold: {threshold}")
+        logging.debug(f"Threshold: {threshold}")
 
         if threshold == 0:
             logging.error("Division by zero: threshold value is zero in check_entry_conditions")
@@ -1892,12 +1791,13 @@ def check_entry_conditions(row, peaks, dips, symbol):
         buy_condition &= close_price > max(wavy_c, wavy_h, wavy_l) + threshold
         sell_condition &= close_price < min(wavy_c, wavy_h, wavy_l) - threshold
 
-    print(f"Final Buy condition: {buy_condition}")
-    print(f"Final Sell condition: {sell_condition}")
+    logging.debug(f"Final Buy condition: {buy_condition}")
+    logging.debug(f"Final Sell condition: {sell_condition}")
 
     return buy_condition, sell_condition
 
 def execute_trade(trade_request):
+    logging.debug(f"Executing trade with request: {trade_request}")
     try:
         result = place_order(
             trade_request['symbol'],
@@ -1910,37 +1810,39 @@ def execute_trade(trade_request):
         if result == 'Order failed':
             raise Exception("Failed to execute trade")
         trade_request['profit'] = 0  # Initialize profit to 0
+        logging.debug(f"Trade executed successfully: {result}")
         return result
     except Exception as e:
         handle_error(e, "Failed to execute trade")
         return None
 
 def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
+    logging.debug(f"Managing position for symbol: {symbol}")
     try:
         positions = mt5.positions_get(symbol=symbol)
         if positions:
             for position in positions:
-                print(f"Checking position {position.ticket} with profit {position.profit}")
+                logging.debug(f"Checking position {position.ticket} with profit {position.profit}")
                 if position.profit >= min_take_profit:
-                    print(f"Closing position {position.ticket} for profit")
+                    logging.debug(f"Closing position {position.ticket} for profit")
                     close_position(position.ticket)
                 elif position.profit <= -max_loss_per_day:
-                    print(f"Closing position {position.ticket} for loss")
+                    logging.debug(f"Closing position {position.ticket} for loss")
                     close_position(position.ticket)
                 else:
                     current_equity = mt5.account_info().equity
                     if current_equity <= starting_equity * 0.9:  # Close position if equity drops by 10%
-                        print(f"Closing position {position.ticket} due to equity drop")
+                        logging.debug(f"Closing position {position.ticket} due to equity drop")
                         close_position(position.ticket)
                     elif mt5.positions_total() >= max_trades_per_day:
-                        print(f"Closing position {position.ticket} due to max trades exceeded")
+                        logging.debug(f"Closing position {position.ticket} due to max trades exceeded")
                         close_position(position.ticket)
     except Exception as e:
         handle_error(e, "Failed to manage position")
 
 def calculate_tunnel_bounds(data, period, deviation_factor):
-    # Ensure 'close' column is numeric
-    data['close'] = pd.to_numeric(data['close'], errors='coerce')
+    data.loc[:, 'close'] = pd.to_numeric(data['close'], errors='coerce')  # Modified line
+    logging.debug(f"Calculating tunnel bounds with period: {period} and deviation_factor: {deviation_factor}")
 
     if len(data) < period:
         return pd.Series([np.nan] * len(data)), pd.Series([np.nan] * len(data))
@@ -1954,12 +1856,12 @@ def calculate_tunnel_bounds(data, period, deviation_factor):
     upper_bound = ema + deviation
     lower_bound = ema - deviation
 
-    print(f"EMA Values for Tunnel Bounds: {ema}")
-    print(f"Rolling Std: {rolling_std}")
-    print(f"Volatility: {volatility}")
-    print(f"Deviation: {deviation}")
-    print(f"Upper Bound: {upper_bound}")
-    print(f"Lower Bound: {lower_bound}")
+    logging.debug(f"EMA Values for Tunnel Bounds: {ema}")
+    logging.debug(f"Rolling Std: {rolling_std}")
+    logging.debug(f"Volatility: {volatility}")
+    logging.debug(f"Deviation: {deviation}")
+    logging.debug(f"Upper Bound: {upper_bound}")
+    logging.debug(f"Lower Bound: {lower_bound}")
 
     return upper_bound, lower_bound
 
@@ -1969,21 +1871,25 @@ def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip
         logging.error("Division by zero: stop_loss_pips or pip_value is zero in calculate_position_size")
         raise ZeroDivisionError("stop_loss_pips or pip_value cannot be zero")
     position_size = risk_amount / (stop_loss_pips * pip_value)
+    logging.debug(f"Calculated position size: {position_size}")
     return position_size
 
 def generate_trade_signal(data, period, deviation_factor):
+    if len(data) < period:
+        return None, None
+
     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
     
     last_close = pd.to_numeric(data['close'].iloc[-1], errors='coerce')
     upper_bound_last_value = upper_bound.iloc[-1]
     lower_bound_last_value = lower_bound.iloc[-1]
 
-    print(f"Data: {data}")
-    print(f"Upper Bound: {upper_bound}")
-    print(f"Lower Bound: {lower_bound}")
-    print(f"Last Close: {last_close}")
-    print(f"Upper Bound Last Value: {upper_bound_last_value}")
-    print(f"Lower Bound Last Value: {lower_bound_last_value}")
+    logging.debug(f"Data: {data}")
+    logging.debug(f"Upper Bound: {upper_bound}")
+    logging.debug(f"Lower Bound: {lower_bound}")
+    logging.debug(f"Last Close: {last_close}")
+    logging.debug(f"Upper Bound Last Value: {upper_bound_last_value}")
+    logging.debug(f"Lower Bound Last Value: {lower_bound_last_value}")
 
     if pd.isna(last_close) or pd.isna(upper_bound_last_value) or pd.isna(lower_bound_last_value):
         return None, None
@@ -1991,11 +1897,10 @@ def generate_trade_signal(data, period, deviation_factor):
     buy_condition = last_close >= upper_bound_last_value
     sell_condition = last_close <= lower_bound_last_value
 
-    print(f"Buy Condition: {buy_condition}")
-    print(f"Sell Condition: {sell_condition}")
+    logging.debug(f"Buy Condition: {buy_condition}")
+    logging.debug(f"Sell Condition: {sell_condition}")
 
     return buy_condition, sell_condition
-
 
 def adjust_deviation_factor(market_conditions):
     if market_conditions == 'volatile':
@@ -2009,47 +1914,53 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
             start_time = pd.Timestamp.now() - pd.Timedelta(days=30)  # Example: 30 days ago
             end_time = pd.Timestamp.now()  # Current time
             data = get_historical_data(symbol, timeframe, start_time, end_time)
-            if data is None:
-                raise Exception(f"Failed to retrieve historical data for {symbol}")
-
-            print(f"Historical data shape before calculations: {data.shape}")
-            print(f"Historical data head before calculations:\n{data.head()}")
-            print(f"Historical data for {symbol}:")
-            print(data.head())
-            print(f"Data types: {data.dtypes}")
+            if data is None or data.empty:
+                raise ValueError(f"Failed to retrieve historical data for {symbol}")
 
             period = 20
             market_conditions = 'volatile'  # Placeholder for determining market conditions
             deviation_factor = adjust_deviation_factor(market_conditions)
 
-            print("Calculating Wavy Tunnel indicators...")
+            logging.info("Calculating Wavy Tunnel indicators...")
             data['wavy_h'] = calculate_ema(data['high'], 34)
             data['wavy_c'] = calculate_ema(data['close'], 34)
             data['wavy_l'] = calculate_ema(data['low'], 34)
             data['tunnel1'] = calculate_ema(data['close'], 144)
             data['tunnel2'] = calculate_ema(data['close'], 169)
             data['long_term_ema'] = calculate_ema(data['close'], 200)
-            print("Indicators calculated.")
+            logging.info("Indicators calculated.")
 
-            print("Detecting peaks and dips...")
+            logging.info("Detecting peaks and dips...")
             peak_type = 21  # Define the peak_type variable
             peaks, dips = detect_peaks_and_dips(data, peak_type)
-            print(f"Peaks: {peaks[:5]}")
-            print(f"Dips: {dips[:5]}")
+            logging.info(f"Peaks: {peaks[:5]}")
+            logging.info(f"Dips: {dips[:5]}")
 
-            print(f"Historical data shape after calculations: {data.shape}")
-            print(f"Historical data head after calculations:\n{data.head()}")
+            logging.info(f"Historical data shape after calculations: {data.shape}")
+            logging.info(f"Historical data head after calculations:\n{data.head()}")
 
-            print("Generating entry signals...")
+            logging.info("Generating entry signals...")
             data['buy_signal'], data['sell_signal'] = zip(*data.apply(lambda x: check_entry_conditions(x, peaks, dips, symbol), axis=1))
-            print("Entry signals generated.")
+            logging.info("Entry signals generated.")
 
             if run_backtest:
-                # Run backtest
-                print("Running backtest...")
-                # Backtest logic here
+                logging.info("Running backtest...")
+                backtest_result = run_backtest(
+                    symbol=symbol,
+                    data=data,
+                    initial_balance=starting_equity,
+                    risk_percent=0.01,
+                    min_take_profit=min_take_profit,
+                    max_loss_per_day=max_loss_per_day,
+                    starting_equity=starting_equity,
+                    stop_loss_pips=20,
+                    pip_value=0.0001,
+                    max_trades_per_day=max_trades_per_day,
+                    slippage=0,
+                    transaction_cost=0
+                )
+                logging.info(f"Backtest result: {backtest_result}")
             else:
-                # Run live trading
                 buy_condition, sell_condition = generate_trade_signal(data, period, deviation_factor)
 
                 if buy_condition:
@@ -2067,7 +1978,7 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                         'type_filling': 'ORDER_FILLING_FOK',
                         'type_time': 'ORDER_TIME_GTC'
                     }
-                    print(f"Executing BUY trade for {symbol}...")
+                    logging.info(f"Executing BUY trade for {symbol}...")
                     execute_trade(trade_request)
                 elif sell_condition:
                     trade_request = {
@@ -2084,7 +1995,7 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                         'type_filling': 'ORDER_FILLING_FOK',
                         'type_time': 'ORDER_TIME_GTC'
                     }
-                    print(f"Executing SELL trade for {symbol}...")
+                    logging.info(f"Executing SELL trade for {symbol}...")
                     execute_trade(trade_request)
 
                 manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
@@ -2111,206 +2022,35 @@ from .tunnel_strategy import run_strategy
 </document>
 
 <document index="15">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\integration\backtest_new.py</source>
+<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\integration\backtest_integration.py</source>
 <document_content>
+import logging
 import unittest
 import pandas as pd
 from backtesting.backtest import run_backtest
-import logging
-import cProfile
-import pstats
-from io import StringIO
+# Assuming run_backtest is a function you have defined elsewhere
 
-class TestRunBacktest(unittest.TestCase):
+class BacktestTestCase(unittest.TestCase):
 
     def setUp(self):
-        # Create sample data
-        data = {
-            'time': pd.date_range(start='2023-01-01', periods=30, freq='D'),
-            'high': [70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124, 126, 128],
-            'low': [50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108],
-            'close': [60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 112, 114, 116, 118]
-        }
-        self.data = pd.DataFrame(data)
+        # Dummy data for testing
+        self.data = pd.DataFrame({
+            'time': pd.date_range(start='2024-01-01', periods=100, freq='D'),
+            'open': 1.0,
+            'high': 1.2,
+            'low': 0.8,
+            'close': 1.0
+        })
 
-    def test_initial_balance(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        self.assertEqual(result['total_profit'], 0)
-        self.assertEqual(result['num_trades'], 0)
-        self.assertEqual(result['win_rate'], 0)
-        self.assertEqual(result['max_drawdown'], 0)
-
-    def test_max_loss_per_day(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        # Ensure result contains trades key
-        self.assertIn('trades', result, "Result dictionary does not contain 'trades' key.")
-        
-        actual_loss = sum(trade['profit'] for trade in result['trades'] if 'profit' in trade and trade['profit'] < 0)
-        expected_loss = -100  # Expecting that max loss per day is respected
-        if result['trades']:
-            self.assertLessEqual(actual_loss, expected_loss)
-        else:
-            self.assertEqual(actual_loss, 0)
-
-    def test_pip_value_validation(self):
-        with self.assertRaises(ZeroDivisionError):
-            run_backtest(
-                symbol='EURUSD',
-                data=self.data,
-                initial_balance=10000,
-                risk_percent=0.01,
-                min_take_profit=100,
-                max_loss_per_day=100,
-                starting_equity=10000,
-                stop_loss_pips=20,
-                pip_value=0,
-                max_trades_per_day=5
-            )
-
-    def test_stop_loss_pips_validation(self):
-        with self.assertRaises(ZeroDivisionError):
-            run_backtest(
-                symbol='EURUSD',
-                data=self.data,
-                initial_balance=10000,
-                risk_percent=0.01,
-                min_take_profit=100,
-                max_loss_per_day=100,
-                starting_equity=10000,
-                stop_loss_pips=0,
-                pip_value=0.0001,
-                max_trades_per_day=5
-            )
-
-    def test_max_trades_per_day(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=1  # Limiting to 1 trade per day for this test
-        )
-
-        # Ensure result contains trades key
-        self.assertIn('trades', result, "Result dictionary does not contain 'trades' key.")
-        
-        # Check that the number of trades does not exceed the max trades per day
-        trades_per_day = {}
-        for trade in result['trades']:
-            day = trade['entry_time'].date()
-            if day not in trades_per_day:
-                trades_per_day[day] = 0
-            trades_per_day[day] += 1
-        
-        for day, count in trades_per_day.items():
-            self.assertLessEqual(count, 1, f"More than 1 trade executed on {day}")
-
-    def test_total_profit_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        total_profit = sum(trade['profit'] for trade in result['trades'])
-        self.assertEqual(result['total_profit'], total_profit, "Total profit calculation is incorrect.")
-
-    def test_number_of_trades(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        self.assertEqual(result['num_trades'], len(result['trades']), "Number of trades calculation is incorrect.")
-
-    def test_win_rate_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        wins = sum(1 for trade in result['trades'] if trade['profit'] > 0)
-        total_trades = len(result['trades'])
-        win_rate = (wins / total_trades) * 100 if total_trades > 0 else 0
-
-        self.assertAlmostEqual(result['win_rate'], win_rate, places=2, msg="Win rate calculation is incorrect.")
-
-    def test_max_drawdown_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        equity_curve = [trade['equity'] for trade in result['trades']]
-        if equity_curve:
-            max_drawdown = max((max(equity_curve[:i+1]) - equity) / max(equity_curve[:i+1]) for i, equity in enumerate(equity_curve))
-        else:
-            max_drawdown = 0
-
-        self.assertAlmostEqual(result['max_drawdown'], max_drawdown, places=2, msg="Max drawdown calculation is incorrect.")
+    def run_backtest_and_print(self, test_name, **kwargs):
+        print(f"\nRunning {test_name}")
+        result = run_backtest(**kwargs)
+        print(f"Result for {test_name}: {result}")
+        return result
 
     def test_profit_factor_calculation(self):
-        result = run_backtest(
+        result = self.run_backtest_and_print(
+            'test_profit_factor_calculation',
             symbol='EURUSD',
             data=self.data,
             initial_balance=10000,
@@ -2322,15 +2062,14 @@ class TestRunBacktest(unittest.TestCase):
             pip_value=0.0001,
             max_trades_per_day=5
         )
-
         gross_profit = sum(trade['profit'] for trade in result['trades'] if trade['profit'] > 0)
         gross_loss = abs(sum(trade['profit'] for trade in result['trades'] if trade['profit'] < 0))
         profit_factor = gross_profit / gross_loss if gross_loss > 0 else float('inf')
-
         self.assertAlmostEqual(result.get('profit_factor', profit_factor), profit_factor, places=2, msg="Profit factor calculation is incorrect.")
 
     def test_return_on_investment_calculation(self):
-        result = run_backtest(
+        result = self.run_backtest_and_print(
+            'test_return_on_investment_calculation',
             symbol='EURUSD',
             data=self.data,
             initial_balance=10000,
@@ -2342,15 +2081,14 @@ class TestRunBacktest(unittest.TestCase):
             pip_value=0.0001,
             max_trades_per_day=5
         )
-
         total_profit = result['total_profit']
         initial_balance = 10000
         roi = (total_profit / initial_balance) * 100
-
         self.assertAlmostEqual(result.get('roi', roi), roi, places=2, msg="ROI calculation is incorrect.")
 
     def test_sharpe_ratio_calculation(self):
-        result = run_backtest(
+        result = self.run_backtest_and_print(
+            'test_sharpe_ratio_calculation',
             symbol='EURUSD',
             data=self.data,
             initial_balance=10000,
@@ -2362,17 +2100,16 @@ class TestRunBacktest(unittest.TestCase):
             pip_value=0.0001,
             max_trades_per_day=5
         )
-
         returns = [trade['profit'] / 10000 for trade in result['trades']]
         avg_return = sum(returns) / len(returns) if returns else 0
         std_return = (sum((x - avg_return) ** 2 for x in returns) / len(returns)) ** 0.5 if returns else 0
         risk_free_rate = 0.01
         sharpe_ratio = (avg_return - risk_free_rate) / std_return if std_return != 0 else 0
-
         self.assertAlmostEqual(result.get('sharpe_ratio', sharpe_ratio), sharpe_ratio, places=2, msg="Sharpe ratio calculation is incorrect.")
 
     def test_win_loss_ratio_calculation(self):
-        result = run_backtest(
+        result = self.run_backtest_and_print(
+            'test_win_loss_ratio_calculation',
             symbol='EURUSD',
             data=self.data,
             initial_balance=10000,
@@ -2384,15 +2121,14 @@ class TestRunBacktest(unittest.TestCase):
             pip_value=0.0001,
             max_trades_per_day=5
         )
-
         wins = sum(1 for trade in result['trades'] if trade['profit'] > 0)
         losses = sum(1 for trade in result['trades'] if trade['profit'] < 0)
         win_loss_ratio = wins / losses if losses > 0 else float('inf')
-
         self.assertAlmostEqual(result.get('win_loss_ratio', win_loss_ratio), win_loss_ratio, places=2, msg="Win/Loss ratio calculation is incorrect.")
 
     def test_annualized_return_calculation(self):
-        result = run_backtest(
+        result = self.run_backtest_and_print(
+            'test_annualized_return_calculation',
             symbol='EURUSD',
             data=self.data,
             initial_balance=10000,
@@ -2404,15 +2140,14 @@ class TestRunBacktest(unittest.TestCase):
             pip_value=0.0001,
             max_trades_per_day=5
         )
-
         total_profit = result['total_profit']
         days = (self.data['time'].iloc[-1] - self.data['time'].iloc[0]).days
         annualized_return = ((total_profit / 10000) + 1) ** (365 / days) - 1 if days > 0 else 0
-
         self.assertAlmostEqual(result.get('annualized_return', annualized_return), annualized_return, places=2, msg="Annualized return calculation is incorrect.")
 
     def test_expectancy_calculation(self):
-        result = run_backtest(
+        result = self.run_backtest_and_print(
+            'test_expectancy_calculation',
             symbol='EURUSD',
             data=self.data,
             initial_balance=10000,
@@ -2424,7 +2159,6 @@ class TestRunBacktest(unittest.TestCase):
             pip_value=0.0001,
             max_trades_per_day=5
         )
-
         total_trades = len(result['trades'])
         wins = [trade['profit'] for trade in result['trades'] if trade['profit'] > 0]
         losses = [trade['profit'] for trade in result['trades'] if trade['profit'] < 0]
@@ -2433,13 +2167,13 @@ class TestRunBacktest(unittest.TestCase):
         win_rate = len(wins) / total_trades if total_trades > 0 else 0
         loss_rate = len(losses) / total_trades if total_trades > 0 else 0
         expectancy = (avg_win * win_rate) - (avg_loss * loss_rate)
-
         self.assertAlmostEqual(result.get('expectancy', expectancy), expectancy, places=2, msg="Expectancy calculation is incorrect.")
 
-    # Additional test cases
+    # Additional test cases follow the same structure...
 
     def test_consecutive_wins_and_losses(self):
-        result = run_backtest(
+        result = self.run_backtest_and_print(
+            'test_consecutive_wins_and_losses',
             symbol='EURUSD',
             data=self.data,
             initial_balance=10000,
@@ -2451,7 +2185,6 @@ class TestRunBacktest(unittest.TestCase):
             pip_value=0.0001,
             max_trades_per_day=5
         )
-
         max_consecutive_wins = 0
         max_consecutive_losses = 0
         current_wins = 0
@@ -2475,10 +2208,10 @@ class TestRunBacktest(unittest.TestCase):
         large_data = pd.concat([self.data] * 1000, ignore_index=True)
         chunk_size = len(self.data)  # Adjust chunk size as needed
         chunks = [large_data[i:i + chunk_size] for i in range(0, len(large_data), chunk_size)]
-
         result = None
         for chunk in chunks:
-            result = run_backtest(
+            result = self.run_backtest_and_print(
+                'test_handling_large_datasets',
                 symbol='EURUSD',
                 data=chunk,
                 initial_balance=10000,
@@ -2490,15 +2223,15 @@ class TestRunBacktest(unittest.TestCase):
                 pip_value=0.0001,
                 max_trades_per_day=5
             )
-        
         self.assertIsNotNone(result, "Handling large datasets failed.")
 
     def test_handling_missing_values(self):
-        data_with_missing_values = self.data.copy()
-        data_with_missing_values.loc[0, 'close'] = None
-        result = run_backtest(
+        data_with_nans = self.data.copy()
+        data_with_nans.loc[::10, 'close'] = float('nan')
+        result = self.run_backtest_and_print(
+            'test_handling_missing_values',
             symbol='EURUSD',
-            data=data_with_missing_values,
+            data=data_with_nans,
             initial_balance=10000,
             risk_percent=0.01,
             min_take_profit=100,
@@ -2508,11 +2241,11 @@ class TestRunBacktest(unittest.TestCase):
             pip_value=0.0001,
             max_trades_per_day=5
         )
-
         self.assertIsNotNone(result, "Handling missing values failed.")
 
     def test_transaction_costs(self):
-        result = run_backtest(
+        result = self.run_backtest_and_print(
+            'test_transaction_costs',
             symbol='EURUSD',
             data=self.data,
             initial_balance=10000,
@@ -2525,12 +2258,12 @@ class TestRunBacktest(unittest.TestCase):
             max_trades_per_day=5,
             transaction_cost=1  # Adding transaction costs
         )
-
         total_transaction_costs = len(result['trades']) * 1
         self.assertAlmostEqual(result['total_transaction_costs'], total_transaction_costs, places=2, msg="Transaction costs calculation is incorrect.")
 
     def test_slippage(self):
-        result = run_backtest(
+        result = self.run_backtest_and_print(
+            'test_slippage',
             symbol='EURUSD',
             data=self.data,
             initial_balance=10000,
@@ -2543,9 +2276,61 @@ class TestRunBacktest(unittest.TestCase):
             max_trades_per_day=5,
             slippage=1  # Adding slippage
         )
-
         total_slippage_costs = len(result['trades']) * 1
         self.assertAlmostEqual(result['total_slippage_costs'], total_slippage_costs, places=2, msg="Slippage calculation is incorrect.")
+
+    def test_negative_initial_balance(self):
+        with self.assertRaises(ValueError):
+            self.run_backtest_and_print(
+                'test_negative_initial_balance',
+                symbol='EURUSD',
+                data=self.data,
+                initial_balance=-10000,
+                risk_percent=0.01,
+                min_take_profit=100,
+                max_loss_per_day=100,
+                starting_equity=10000,
+                stop_loss_pips=20,
+                pip_value=0.0001,
+                max_trades_per_day=5
+            )
+
+    def test_zero_risk_percent(self):
+        with self.assertRaises(ValueError):
+            self.run_backtest_and_print(
+                'test_zero_risk_percent',
+                symbol='EURUSD',
+                data=self.data,
+                initial_balance=10000,
+                risk_percent=0,
+                min_take_profit=100,
+                max_loss_per_day=100,
+                starting_equity=10000,
+                stop_loss_pips=20,
+                pip_value=0.0001,
+                max_trades_per_day=5
+            )
+
+    def test_constant_prices(self):
+        constant_data = self.data.copy()
+        constant_data['high'] = 100
+        constant_data['low'] = 100
+        constant_data['close'] = 100
+        result = self.run_backtest_and_print(
+            'test_constant_prices',
+            symbol='EURUSD',
+            data=constant_data,
+            initial_balance=10000,
+            risk_percent=0.01,
+            min_take_profit=100,
+            max_loss_per_day=100,
+            starting_equity=10000,
+            stop_loss_pips=20,
+            pip_value=0.0001,
+            max_trades_per_day=5
+        )
+        self.assertEqual(result['total_profit'], 0)
+        self.assertEqual(result['num_trades'], 0)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
@@ -2555,192 +2340,13 @@ if __name__ == '__main__':
 </document>
 
 <document index="16">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\integration\test_backtest_integration.py</source>
-<document_content>
-# import unittest
-# import pandas as pd
-# import numpy as np
-# import MetaTrader5 as mt5
-# from backtesting.backtest import run_backtest
-# from strategy.tunnel_strategy import check_entry_conditions
-# import logging
-
-# # Set logging level to DEBUG
-# logging.basicConfig(level=logging.DEBUG)
-
-# class TestBacktestIntegration(unittest.TestCase):
-
-#     @classmethod
-#     def setUpClass(cls):
-#         # Initialize MetaTrader 5 connection
-#         if not mt5.initialize():
-#             raise RuntimeError("MetaTrader 5 initialization failed")
-#         # Ensure symbol is available
-#         symbol = 'EURUSD'
-#         if not mt5.symbol_select(symbol, True):
-#             raise RuntimeError(f"Failed to select symbol: {symbol}")
-#         print(f"MetaTrader 5 initialized with symbol: {symbol}")
-
-#     @classmethod
-#     def tearDownClass(cls):
-#         # Shutdown MetaTrader 5 connection
-#         mt5.shutdown()
-#         print("MetaTrader 5 shutdown completed")
-
-#     def test_run_backtest_with_dummy_data(self):
-#         print("Setting up test with sufficient data")
-
-#         # Prepare dummy data with at least 50 data points
-#         dummy_data = pd.DataFrame({
-#             'time': pd.date_range(start='2024-06-17', periods=50, freq='h'),
-#             'open': np.linspace(1.1, 2.0, 50),
-#             'high': np.linspace(1.2, 2.1, 50),
-#             'low': np.linspace(1.0, 1.9, 50),
-#             'close': np.linspace(1.1, 2.0, 50),
-#             'tick_volume': np.random.randint(100, 500, 50),
-#             'spread': np.random.randint(1, 5, 50),
-#             'real_volume': np.random.randint(10, 50, 50),
-#             'wavy_c': np.linspace(1.1, 2.0, 50),
-#             'wavy_h': np.linspace(1.2, 2.1, 50),
-#             'wavy_l': np.linspace(1.0, 1.9, 50),
-#             'tunnel1': np.linspace(1.0, 1.5, 50),
-#             'tunnel2': np.linspace(0.5, 1.0, 50)
-#         })
-
-#         print("Running backtest with sufficient data")
-        
-#         # Call run_backtest with the updated dummy data
-#         result = run_backtest('EURUSD', dummy_data, 10000, 0.02, 50.0, 1000.0, 10000.0, 5, 20, 0.0001)
-#         print(f"Result: {result}")
-
-#         # Assert the results
-#         self.assertIsNotNone(result, "run_backtest returned None")
-#         self.assertTrue(result['buy_condition'], f"Expected buy_condition to be True, but got {result['buy_condition']}")
-#         self.assertFalse(result['sell_condition'], f"Expected sell_condition to be False, but got {result['sell_condition']}")
-
-#     def test_run_backtest_edge_cases(self):
-#         # Prepare edge case data
-#         extreme_data = pd.DataFrame({
-#             'time': pd.date_range(start='2024-06-17', periods=10000, freq='h'),
-#             'open': [1.1] * 10000,
-#             'high': [1.15] * 10000,
-#             'low': [1.05] * 10000,
-#             'close': [1.1] * 10000,
-#             'tick_volume': [100] * 10000,
-#             'spread': [1] * 10000,
-#             'real_volume': [10] * 10000
-#         })
-
-#         # Call run_backtest with edge case data
-#         result = run_backtest('EURUSD', extreme_data, 10000, 0.02, 50.0, 1000.0, 10000.0, 5, 20, 0.0001)
-#         print(f"Result: {result}")
-
-#         # Assert the results
-#         self.assertIsNotNone(result, "run_backtest returned None")
-
-#     def test_check_entry_conditions_direct(self):
-#         # Prepare data for check_entry_conditions
-#         data = pd.DataFrame({
-#             'time': pd.date_range(start='2024-06-17', periods=5, freq='h'),
-#             'open': [1.1, 1.2, 1.3, 1.4, 1.5],
-#             'high': [1.15, 1.25, 1.35, 1.45, 1.55],
-#             'low': [1.05, 1.15, 1.25, 1.35, 1.45],
-#             'close': [1.1, 1.2, 1.3, 1.4, 1.5],
-#             'tick_volume': [100, 200, 300, 400, 500],
-#             'spread': [1, 1, 1, 1, 1],
-#             'real_volume': [10, 20, 30, 40, 50],
-#             'wavy_c': [1.1, 1.2, 1.3, 1.4, 1.5],
-#             'wavy_h': [1.15, 1.25, 1.35, 1.45, 1.55],
-#             'wavy_l': [1.05, 1.15, 1.25, 1.35, 1.45],
-#             'tunnel1': [1.0, 1.1, 1.2, 1.3, 1.4],
-#             'tunnel2': [0.5, 0.6, 0.7, 0.8, 0.9]
-#         })
-
-#         peaks, dips = [], []
-
-#         for i in range(5):
-#             row = data.iloc[i]
-#             print(f"Calling check_entry_conditions for row {i}")
-#             result = check_entry_conditions(row, peaks, dips, 'EURUSD')
-#             print(f"Result for row {i}: {result}, type: {type(result)}")
-#             print(f"Result[0]: {result[0]}, Result[1]: {result[1]}")
-#             self.assertFalse(result[0])
-#             self.assertFalse(result[1])
-
-#     def test_performance_and_stability(self):
-#         # Prepare large dataset
-#         large_data = pd.DataFrame({
-#             'time': pd.date_range(start='2024-06-17', periods=100000, freq='h'),
-#             'open': [1.1] * 100000,
-#             'high': [1.15] * 100000,
-#             'low': [1.05] * 100000,
-#             'close': [1.1] * 100000,
-#             'tick_volume': [100] * 100000,
-#             'spread': [1] * 100000,
-#             'real_volume': [10] * 100000
-#         })
-
-#         # Call run_backtest with large dataset
-#         result = run_backtest('EURUSD', large_data, 10000, 0.02, 50.0, 1000.0, 10000.0, 5, 20, 0.0001)
-#         print(f"Result: {result}")
-
-#         # Assert the results
-#         self.assertIsNotNone(result, "run_backtest returned None")
-
-# if __name__ == '__main__':
-#     unittest.main()
-import unittest
-import pandas as pd
-import numpy as np
-from strategy.tunnel_strategy import run_backtest
-
-class TestBacktestIntegration(unittest.TestCase):
-    def test_run_backtest_with_dummy_data(self):
-        print("Setting up test with sufficient data")
-
-        # Prepare dummy data with at least 50 data points
-        dummy_data = pd.DataFrame({
-            'time': pd.date_range(start='2024-06-17', periods=50, freq='h'),
-            'open': np.linspace(1.1, 2.0, 50),
-            'high': np.linspace(1.2, 2.1, 50),
-            'low': np.linspace(1.0, 1.9, 50),
-            'close': np.linspace(1.5, 2.4, 50),  # Adjusted to be higher for peaks
-            'tick_volume': np.random.randint(100, 500, 50),
-            'spread': np.random.randint(1, 5, 50),
-            'real_volume': np.random.randint(10, 50, 50),
-            'wavy_c': np.linspace(1.1, 2.0, 50),
-            'wavy_h': np.linspace(1.2, 2.1, 50),
-            'wavy_l': np.linspace(1.0, 1.9, 50),
-            'tunnel1': np.linspace(1.0, 1.5, 50),
-            'tunnel2': np.linspace(0.5, 1.0, 50)
-        })
-
-        print("Running backtest with sufficient data")
-        
-        # Call run_backtest with the updated dummy data
-        result = run_backtest('EURUSD', dummy_data, 10000, 0.02, 50.0, 1000.0, 10000.0, 5, 20, 0.0001)
-        print(f"Result: {result}")
-
-        # Assert the results
-        self.assertIsNotNone(result, "run_backtest returned None")
-        self.assertTrue(result['buy_condition'], f"Expected buy_condition to be True, but got {result['buy_condition']}")
-        self.assertFalse(result['sell_condition'], f"Expected sell_condition to be False, but got {result['sell_condition']}")
-
-if __name__ == '__main__':
-    unittest.main()
-
-
-</document_content>
-</document>
-
-<document index="17">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\integration\__init__.py</source>
 <document_content>
 
 </document_content>
 </document>
 
-<document index="18">
+<document index="17">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\backtesting\test_backtest.py</source>
 <document_content>
 # tests/backtesting/test_backtest.py
@@ -2813,7 +2419,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="19">
+<document index="18">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\config\test_config.py</source>
 <document_content>
 import unittest
@@ -2858,7 +2464,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="20">
+<document index="19">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\metatrader\test_connection.py</source>
 <document_content>
 import unittest
@@ -2902,7 +2508,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="21">
+<document index="20">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\metatrader\test_data_retrieval.py</source>
 <document_content>
 import unittest
@@ -2960,7 +2566,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="22">
+<document index="21">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\metatrader\test_indicators.py</source>
 <document_content>
 import unittest
@@ -3016,7 +2622,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="23">
+<document index="22">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\metatrader\test_trade_management.py</source>
 <document_content>
 import unittest
@@ -3104,7 +2710,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="24">
+<document index="23">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\strategy\test_strategy.py</source>
 <document_content>
 import unittest
@@ -3540,7 +3146,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="25">
+<document index="24">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\strategy\test_trade_logic.py</source>
 <document_content>
 import unittest
@@ -3618,7 +3224,7 @@ class TestStrategyFunctions(unittest.TestCase):
 </document_content>
 </document>
 
-<document index="26">
+<document index="25">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_data_validation.py</source>
 <document_content>
 import unittest
@@ -3671,7 +3277,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="27">
+<document index="26">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_error_handling.py</source>
 <document_content>
 import unittest
@@ -3706,7 +3312,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="28">
+<document index="27">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_logger.py</source>
 <document_content>
 import unittest
@@ -3726,7 +3332,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="29">
+<document index="28">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_plotting.py</source>
 <document_content>
 import unittest
@@ -3758,7 +3364,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="30">
+<document index="29">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_types.py</source>
 <document_content>
 import unittest
@@ -3827,7 +3433,7 @@ if __name__ == '__main__':
 </document_content>
 </document>
 
-<document index="31">
+<document index="30">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\data_validation.py</source>
 <document_content>
 from typing import Any
@@ -3920,7 +3526,7 @@ def validate_close_request(close_request):
 </document_content>
 </document>
 
-<document index="32">
+<document index="31">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\error_handling.py</source>
 <document_content>
 import logging
@@ -3938,7 +3544,7 @@ def warn_error(error, message):
 </document_content>
 </document>
 
-<document index="33">
+<document index="32">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\logger.py</source>
 <document_content>
 import logging
@@ -3965,7 +3571,7 @@ def setup_logging(log_level=logging.INFO, log_file="app.log"):
 </document_content>
 </document>
 
-<document index="34">
+<document index="33">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\plotting.py</source>
 <document_content>
 import matplotlib.pyplot as plt
@@ -4013,7 +3619,7 @@ def plot_backtest_results(data, trades):
 </document_content>
 </document>
 
-<document index="35">
+<document index="34">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\types.py</source>
 <document_content>
 class TradeAction(str):
@@ -4061,7 +3667,7 @@ class LotSize(float):
 </document_content>
 </document>
 
-<document index="36">
+<document index="35">
 <source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\__init__.py</source>
 <document_content>
 from .data_validation import validate_data, sanitize_data, validate_trade_request, validate_close_request

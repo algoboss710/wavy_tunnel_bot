@@ -324,15 +324,14 @@
 #     except Exception as e:
 #         handle_error(e, "Failed to run the strategy")
 #         raise
-
 import numpy as np
+import pandas as pd
+import MetaTrader5 as mt5
+import logging
 from metatrader.data_retrieval import get_historical_data
 from utils.error_handling import handle_error
 from metatrader.indicators import calculate_ema
 from metatrader.trade_management import place_order, close_position, modify_order
-import pandas as pd
-import MetaTrader5 as mt5
-import logging
 
 def calculate_ema(prices, period):
     if not isinstance(prices, (list, np.ndarray, pd.Series)):
@@ -447,17 +446,24 @@ def check_entry_conditions(row, peaks, dips, symbol):
 def execute_trade(trade_request):
     logging.debug(f"Executing trade with request: {trade_request}")
     try:
+        # Set initial trade details
+        trade_request['entry_time'] = pd.Timestamp.now()
+        trade_request['entry_price'] = trade_request['price']
+        trade_request['profit'] = 0  # Initialize profit to 0
+
+        # Place the order (simulated for this example)
         result = place_order(
             trade_request['symbol'],
             trade_request['action'].lower(),
             trade_request['volume'],
-            trade_request['price'],
+            trade_request['entry_price'],
             trade_request['sl'],
             trade_request['tp']
         )
+
         if result == 'Order failed':
             raise Exception("Failed to execute trade")
-        trade_request['profit'] = 0  # Initialize profit to 0
+
         logging.debug(f"Trade executed successfully: {result}")
         return result
     except Exception as e:
@@ -471,25 +477,42 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
         if positions:
             for position in positions:
                 logging.debug(f"Checking position {position.ticket} with profit {position.profit}")
+
+                current_equity = mt5.account_info().equity
+
+                # Check for take profit, stop loss, or maximum loss per day conditions
                 if position.profit >= min_take_profit:
                     logging.debug(f"Closing position {position.ticket} for profit")
                     close_position(position.ticket)
+                    position['exit_time'] = pd.Timestamp.now()
+                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
+                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+
                 elif position.profit <= -max_loss_per_day:
                     logging.debug(f"Closing position {position.ticket} for loss")
                     close_position(position.ticket)
-                else:
-                    current_equity = mt5.account_info().equity
-                    if current_equity <= starting_equity * 0.9:  # Close position if equity drops by 10%
-                        logging.debug(f"Closing position {position.ticket} due to equity drop")
-                        close_position(position.ticket)
-                    elif mt5.positions_total() >= max_trades_per_day:
-                        logging.debug(f"Closing position {position.ticket} due to max trades exceeded")
-                        close_position(position.ticket)
+                    position['exit_time'] = pd.Timestamp.now()
+                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
+                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+
+                elif current_equity <= starting_equity * 0.9:  # Close position if equity drops by 10%
+                    logging.debug(f"Closing position {position.ticket} due to equity drop")
+                    close_position(position.ticket)
+                    position['exit_time'] = pd.Timestamp.now()
+                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
+                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+
+                elif mt5.positions_total() >= max_trades_per_day:
+                    logging.debug(f"Closing position {position.ticket} due to max trades exceeded")
+                    close_position(position.ticket)
+                    position['exit_time'] = pd.Timestamp.now()
+                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
+                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
     except Exception as e:
         handle_error(e, "Failed to manage position")
 
 def calculate_tunnel_bounds(data, period, deviation_factor):
-    data['close'] = pd.to_numeric(data['close'], errors='coerce')
+    data.loc[:, 'close'] = pd.to_numeric(data['close'], errors='coerce')  # Modified line
     logging.debug(f"Calculating tunnel bounds with period: {period} and deviation_factor: {deviation_factor}")
 
     if len(data) < period:

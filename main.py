@@ -1,5 +1,3 @@
-
-
 import MetaTrader5 as mt5
 import pandas as pd
 from datetime import datetime
@@ -48,6 +46,9 @@ def run_backtest_func():
             if len(backtest_data) < 20:
                 logging.error(f"Not enough data for symbol {symbol} to perform backtest")
                 continue
+
+            # Process data to avoid SettingWithCopyWarning
+            backtest_data.loc[:, 'close'] = pd.to_numeric(backtest_data['close'], errors='coerce')
 
             try:
                 run_backtest(
