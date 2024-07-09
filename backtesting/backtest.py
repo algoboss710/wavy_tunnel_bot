@@ -36,6 +36,9 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
         if len(data) < 200:
             raise ValueError("Not enough data to calculate required EMAs. Ensure data has at least 200 rows.")
 
+        # Log the data length before EMA calculation
+        logging.debug(f"Data length for 'high': {len(data['high'])}, 'low': {len(data['low'])}, 'close': {len(data['close'])}")
+
         # Calculate EMAs
         data.loc[:, 'wavy_h'] = calculate_ema(data['high'], 34)
         data.loc[:, 'wavy_c'] = calculate_ema(data['close'], 34)

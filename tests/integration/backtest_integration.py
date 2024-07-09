@@ -1,20 +1,51 @@
 import logging
 import unittest
 import pandas as pd
+import numpy as np
 from backtesting.backtest import run_backtest
-# Assuming run_backtest is a function you have defined elsewhere
 
 class BacktestTestCase(unittest.TestCase):
 
     def setUp(self):
         # Dummy data for testing
         self.data = pd.DataFrame({
-            'time': pd.date_range(start='2024-01-01', periods=100, freq='D'),
+            'time': pd.date_range(start='2024-01-01', periods=200, freq='D'),
             'open': 1.0,
             'high': 1.2,
             'low': 0.8,
             'close': 1.0
         })
+
+    def generate_large_dataset(self, start='2024-01-01', end='2024-12-31', freq='1T'):
+        """
+        Generates a large dataset with minute-by-minute data for the given date range.
+        :param start: Start date of the dataset.
+        :param end: End date of the dataset.
+        :param freq: Frequency of data points, default is 1 minute.
+        :return: DataFrame with generated data.
+        """
+        date_range = pd.date_range(start=start, end=end, freq=freq)
+        num_points = len(date_range)
+
+        np.random.seed(0)  # For reproducibility
+
+        data = {
+            'time': date_range,
+            'open': np.random.rand(num_points) * 100,
+            'high': np.random.rand(num_points) * 100,
+            'low': np.random.rand(num_points) * 100,
+            'close': np.random.rand(num_points) * 100,
+            'volume': np.random.randint(1, 100, num_points)
+        }
+
+        df = pd.DataFrame(data)
+
+        # Ensure 'high' is always greater than or equal to 'low' and 'close' is within 'high' and 'low'
+        df['high'] = df[['high', 'low']].max(axis=1)
+        df['low'] = df[['high', 'low']].min(axis=1)
+        df['close'] = df[['close', 'low']].clip(lower=df['low']).clip(upper=df['high'])
+
+        return df
 
     def run_backtest_and_print(self, test_name, **kwargs):
         print(f"\nRunning {test_name}")
@@ -22,6 +53,26 @@ class BacktestTestCase(unittest.TestCase):
         print(f"Result for {test_name}: {result}")
         return result
 
+    def test_handling_large_datasets(self):
+        large_data = self.generate_large_dataset()
+        logging.debug(f"Generated dataset length: {len(large_data)}")
+        
+        result = self.run_backtest_and_print(
+            'test_handling_large_datasets',
+            symbol='EURUSD',
+            data=large_data,
+            initial_balance=10000,
+            risk_percent=0.01,
+            min_take_profit=100,
+            max_loss_per_day=100,
+            starting_equity=10000,
+            stop_loss_pips=20,
+            pip_value=0.0001,
+            max_trades_per_day=5
+        )
+        self.assertGreater(result['num_trades'], 0)
+
+    # Add the rest of your test methods here
     def test_profit_factor_calculation(self):
         result = self.run_backtest_and_print(
             'test_profit_factor_calculation',
@@ -143,8 +194,6 @@ class BacktestTestCase(unittest.TestCase):
         expectancy = (avg_win * win_rate) - (avg_loss * loss_rate)
         self.assertAlmostEqual(result.get('expectancy', expectancy), expectancy, places=2, msg="Expectancy calculation is incorrect.")
 
-    # Additional test cases follow the same structure...
-
     def test_consecutive_wins_and_losses(self):
         result = self.run_backtest_and_print(
             'test_consecutive_wins_and_losses',
@@ -177,27 +226,6 @@ class BacktestTestCase(unittest.TestCase):
 
         self.assertEqual(result.get('max_consecutive_wins', max_consecutive_wins), max_consecutive_wins, "Max consecutive wins calculation is incorrect.")
         self.assertEqual(result.get('max_consecutive_losses', max_consecutive_losses), max_consecutive_losses, "Max consecutive losses calculation is incorrect.")
-
-    def test_handling_large_datasets(self):
-        large_data = pd.concat([self.data] * 1000, ignore_index=True)
-        chunk_size = len(self.data)  # Adjust chunk size as needed
-        chunks = [large_data[i:i + chunk_size] for i in range(0, len(large_data), chunk_size)]
-        result = None
-        for chunk in chunks:
-            result = self.run_backtest_and_print(
-                'test_handling_large_datasets',
-                symbol='EURUSD',
-                data=chunk,
-                initial_balance=10000,
-                risk_percent=0.01,
-                min_take_profit=100,
-                max_loss_per_day=100,
-                starting_equity=10000,
-                stop_loss_pips=20,
-                pip_value=0.0001,
-                max_trades_per_day=5
-            )
-        self.assertIsNotNone(result, "Handling large datasets failed.")
 
     def test_handling_missing_values(self):
         data_with_nans = self.data.copy()
