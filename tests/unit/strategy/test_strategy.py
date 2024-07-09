@@ -2,6 +2,7 @@ import unittest
 import pandas as pd
 import numpy as np
 from unittest import mock
+from unittest.mock import MagicMock
 from strategy.tunnel_strategy import (
     calculate_ema, calculate_tunnel_bounds, detect_peaks_and_dips, 
     check_entry_conditions, generate_trade_signal, run_strategy, execute_trade, manage_position, adjust_deviation_factor, calculate_position_size
@@ -369,17 +370,17 @@ class TestStrategy(unittest.TestCase):
         self.assertIsNone(result)
         mock_handle_error.assert_called_once()
 
+    
     @patch('strategy.tunnel_strategy.mt5')
     @patch('strategy.tunnel_strategy.close_position')
     def test_manage_position(self, mock_close_position, mock_mt5):
         print("Running test_manage_position")
         # Mock the positions_get and account_info responses
-        mock_mt5.positions_get.return_value = [
-            Mock(ticket=1, profit=500),  # Should be closed for profit
-            Mock(ticket=2, profit=-1500),  # Should be closed for loss
-            Mock(ticket=3, profit=0)  # Should be closed due to equity drop
-        ]
-        mock_mt5.account_info.return_value = Mock(equity=8000)
+        mock_position1 = MagicMock(ticket=1, profit=500)
+        mock_position2 = MagicMock(ticket=2, profit=-1500)
+        mock_position3 = MagicMock(ticket=3, profit=0)
+        mock_mt5.positions_get.return_value = [mock_position1, mock_position2, mock_position3]
+        mock_mt5.account_info.return_value = MagicMock(equity=8000)
         mock_mt5.positions_total.return_value = 6  # Should close positions due to max trades exceeded
 
         # Mock the historical data retrieval
@@ -401,6 +402,10 @@ class TestStrategy(unittest.TestCase):
         mock_close_position.assert_any_call(2)  # Close position with loss < -max_loss_per_day
         mock_close_position.assert_any_call(3)  # Close position due to equity drop
         self.assertEqual(mock_close_position.call_count, 3)  # Adjust expected call count
+
+if __name__ == '__main__':
+    unittest.main()
+
 
     def test_adjust_deviation_factor_volatile(self):
         print("Running test_adjust_deviation_factor_volatile")
