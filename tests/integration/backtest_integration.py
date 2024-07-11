@@ -16,12 +16,12 @@ class BacktestTestCase(unittest.TestCase):
             'close': 1.0
         })
 
-    def generate_large_dataset(self, start='2024-01-01', end='2024-12-31', freq='1T'):
+    def generate_large_dataset(self, start='2024-01-01', end='2024-01-31', freq='5min'):
         """
-        Generates a large dataset with minute-by-minute data for the given date range.
+        Generates a large dataset with 5-minute interval data for the given date range.
         :param start: Start date of the dataset.
         :param end: End date of the dataset.
-        :param freq: Frequency of data points, default is 1 minute.
+        :param freq: Frequency of data points, default is 5 minutes.
         :return: DataFrame with generated data.
         """
         date_range = pd.date_range(start=start, end=end, freq=freq)
@@ -43,7 +43,7 @@ class BacktestTestCase(unittest.TestCase):
         # Ensure 'high' is always greater than or equal to 'low' and 'close' is within 'high' and 'low'
         df['high'] = df[['high', 'low']].max(axis=1)
         df['low'] = df[['high', 'low']].min(axis=1)
-        df['close'] = df[['close', 'low']].clip(lower=df['low']).clip(upper=df['high'])
+        df['close'] = df[['close', 'low', 'high']].apply(lambda x: np.clip(x[0], x[1], x[2]), axis=1)
 
         return df
 
