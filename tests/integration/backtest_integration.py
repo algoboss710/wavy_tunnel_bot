@@ -282,11 +282,25 @@ class BacktestTestCase(unittest.TestCase):
         self.assertAlmostEqual(result['total_slippage_costs'], total_slippage_costs, places=2, msg="Slippage calculation is incorrect.")
 
     def test_negative_initial_balance(self):
+    # Create a dataset with more price variation
+        varied_data = pd.DataFrame({
+            'time': pd.date_range(start='2024-01-01', periods=200, freq='D'),
+            'open': np.random.uniform(50, 150, 200),
+            'high': np.random.uniform(60, 160, 200),
+            'low': np.random.uniform(40, 140, 200),
+            'close': np.random.uniform(50, 150, 200)
+        })
+
+    # Ensure 'high' is always greater than or equal to 'low' and 'close' is within 'high' and 'low'
+        varied_data['high'] = varied_data[['high', 'low']].max(axis=1)
+        varied_data['low'] = varied_data[['high', 'low']].min(axis=1)
+        varied_data['close'] = varied_data[['close', 'low', 'high']].apply(lambda x: np.clip(x[0], x[1], x[2]), axis=1)
+
         with self.assertRaises(ValueError):
             self.run_backtest_and_print(
                 'test_negative_initial_balance',
                 symbol='EURUSD',
-                data=self.data,
+                data=varied_data,
                 initial_balance=-10000,
                 risk_percent=0.01,
                 min_take_profit=100,
@@ -295,7 +309,7 @@ class BacktestTestCase(unittest.TestCase):
                 stop_loss_pips=20,
                 pip_value=0.0001,
                 max_trades_per_day=5
-            )
+         )
 
     def test_zero_risk_percent(self):
         with self.assertRaises(ValueError):

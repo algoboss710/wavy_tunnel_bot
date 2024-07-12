@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import pstats
 from io import StringIO
-from strategy.tunnel_strategy import generate_trade_signal, calculate_position_size, detect_peaks_and_dips, manage_position
+from strategy.tunnel_strategy import generate_trade_signal, calculate_position_size, detect_peaks_and_dips, manage_position, check_entry_conditions
 from metatrader.indicators import calculate_ema
 from metatrader.trade_management import execute_trade
 import cProfile
@@ -17,7 +17,11 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
     pr = cProfile.Profile() if enable_profiling else None
     if enable_profiling:
         pr.enable()
-    
+
+    # Check for zero risk percentage
+    if risk_percent == 0:
+        raise ValueError("Risk percentage cannot be zero.")
+
     try:
         balance = initial_balance
         trades = []
@@ -47,12 +51,14 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
         data.loc[:, 'tunnel2'] = calculate_ema(data['close'], 169)
         data.loc[:, 'long_term_ema'] = calculate_ema(data['close'], 200)
 
-        # Detect peaks and dips
+        # Peak and Dip detection
         peaks, dips = detect_peaks_and_dips(data, peak_type)
 
+        # Loop through the data
         for i in range(34, len(data)):
-            if data.iloc[i]['time'].date() != current_day:
-                current_day = data.iloc[i]['time'].date()
+            row = data.iloc[i]
+            if row['time'].date() != current_day:
+                current_day = row['time'].date()
                 trades_today = 0
                 daily_loss = 0
                 logger.info(f"New trading day: {current_day}, resetting daily counters.")
@@ -61,9 +67,10 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                 logger.info(f"Reached max trades per day: {max_trades_per_day}, skipping further trades for {current_day}.")
                 continue
 
-            buy_condition, sell_condition = generate_trade_signal(data.iloc[:i+1], period=20, deviation_factor=2.0)
+            buy_condition, sell_condition = check_entry_conditions(row, peaks, dips, symbol)
+
             if buy_condition is None or sell_condition is None:
-                logger.debug(f"No trade signal generated for {data.iloc[i]['time']}.")
+                logger.debug(f"No trade signal generated for {row['time']}.")
                 continue
 
             try:
@@ -72,18 +79,17 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                 logger.warning(f"Zero division error while calculating position size: {e}")
                 continue
 
-            row = data.iloc[i]
             std_dev = data['close'].rolling(window=20).std().iloc[i]
 
             if buy_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
                 trade = {
-                    'entry_time': data.iloc[i]['time'],
-                    'entry_price': data.iloc[i]['close'],
+                    'entry_time': row['time'],
+                    'entry_price': row['close'],
                     'volume': position_size,
                     'symbol': symbol,
                     'action': 'BUY',
-                    'sl': data.iloc[i]['close'] - (1.5 * std_dev),
-                    'tp': data.iloc[i]['close'] + (2 * std_dev),
+                    'sl': row['close'] - (1.5 * std_dev),
+                    'tp': row['close'] + (2 * std_dev),
                     'profit': 0  # Initialize profit to 0
                 }
                 execute_trade(trade)
@@ -93,13 +99,13 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
 
             elif sell_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
                 trade = {
-                    'entry_time': data.iloc[i]['time'],
-                    'entry_price': data.iloc[i]['close'],
+                    'entry_time': row['time'],
+                    'entry_price': row['close'],
                     'volume': position_size,
                     'symbol': symbol,
                     'action': 'SELL',
-                    'sl': data.iloc[i]['close'] + (1.5 * std_dev),
-                    'tp': data.iloc[i]['close'] - (2 * std_dev),
+                    'sl': row['close'] + (1.5 * std_dev),
+                    'tp': row['close'] - (2 * std_dev),
                     'profit': 0  # Initialize profit to 0
                 }
                 execute_trade(trade)
