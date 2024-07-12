@@ -1,344 +1,566 @@
-2024-07-09 12:13:27,234 - INFO - Initializing MetaTrader5...
-2024-07-09 12:13:27,261 - INFO - MetaTrader5 initialized successfully.
-2024-07-09 12:13:27,274 - INFO - Running backtest...
-2024-07-09 12:13:27,332 - INFO - Backtest data shape: (458, 8)
-2024-07-09 12:13:27,349 - INFO - Backtest data head:
+2024-07-11 12:42:48,880 - INFO - STARTING APPLICATION
+2024-07-11 12:42:48,880 - INFO - LOGGING ALL THE CONFIG SETTINGS
+2024-07-11 12:42:48,881 - INFO - MT5_LOGIN: your_mt5_login
+2024-07-11 12:42:48,881 - INFO - MT5_PASSWORD: your_mt5_password
+2024-07-11 12:42:48,881 - INFO - MT5_SERVER: your_mt5_server
+2024-07-11 12:42:48,881 - INFO - MT5_PATH: C:\Program Files\MetaTrader 5\terminal64.exe
+2024-07-11 12:42:48,881 - INFO - MT5_TIMEFRAME: H1
+2024-07-11 12:42:48,881 - INFO - SYMBOLS: ['EURUSD']
+2024-07-11 12:42:48,881 - INFO - TELEGRAM_TOKEN: your_telegram_bot_token
+2024-07-11 12:42:48,881 - INFO - TELEGRAM_IDS: ['telegram_user_id_1', 'telegram_user_id_2']
+2024-07-11 12:42:48,881 - INFO - MIN_TP_PROFIT: 50.0
+2024-07-11 12:42:48,881 - INFO - MAX_LOSS_PER_DAY: 1000.0
+2024-07-11 12:42:48,881 - INFO - STARTING_EQUITY: 10000.0
+2024-07-11 12:42:48,882 - INFO - LIMIT_NO_OF_TRADES: 5
+2024-07-11 12:42:48,882 - INFO - RISK_PER_TRADE: 0.02
+2024-07-11 12:42:48,882 - INFO - PIP_VALUE: 0.0001
+2024-07-11 12:42:50,649 - INFO - Initializing MetaTrader5...
+2024-07-11 12:42:50,650 - INFO - MetaTrader5 initialized successfully.
+2024-07-11 12:42:50,650 - INFO - Running backtest...
+2024-07-11 12:42:50,659 - INFO - Backtest data shape: (506, 8)
+2024-07-11 12:42:50,665 - INFO - Backtest data head:
                  time     open     high      low    close  tick_volume  spread  real_volume
 0 2024-06-12 07:00:00  1.07403  1.07406  1.07364  1.07367          572       0            0
 1 2024-06-12 08:00:00  1.07367  1.07463  1.07360  1.07459          841       0            0
 2 2024-06-12 09:00:00  1.07462  1.07471  1.07389  1.07415         1460       0            0
 3 2024-06-12 10:00:00  1.07415  1.07455  1.07356  1.07446         1800       0            0
 4 2024-06-12 11:00:00  1.07445  1.07538  1.07445  1.07466         1562       0            0
-2024-07-09 12:13:27,419 - INFO - New trading day: 2024-06-13, resetting daily counters.
-2024-07-09 12:13:27,552 - INFO - Executed SELL trade at 2024-06-13 19:00:00, price: 1.07352, volume: 100000.0.
-2024-07-09 12:13:27,736 - INFO - New trading day: 2024-06-14, resetting daily counters.
-2024-07-09 12:13:28,214 - INFO - Executed SELL trade at 2024-06-14 11:00:00, price: 1.06918, volume: 100000.0.
-2024-07-09 12:13:28,299 - INFO - Executed SELL trade at 2024-06-14 12:00:00, price: 1.06873, volume: 100000.0.
-2024-07-09 12:13:28,545 - INFO - Executed SELL trade at 2024-06-14 16:00:00, price: 1.06692, volume: 100000.0.
-2024-07-09 12:13:28,812 - INFO - New trading day: 2024-06-17, resetting daily counters.
-2024-07-09 12:13:29,494 - INFO - New trading day: 2024-06-18, resetting daily counters.
-2024-07-09 12:13:30,156 - INFO - New trading day: 2024-06-19, resetting daily counters.
-2024-07-09 12:13:30,871 - INFO - New trading day: 2024-06-20, resetting daily counters.
-2024-07-09 12:13:31,674 - INFO - New trading day: 2024-06-21, resetting daily counters.
-2024-07-09 12:13:32,188 - INFO - Executed SELL trade at 2024-06-21 10:00:00, price: 1.06779, volume: 100000.0.
-2024-07-09 12:13:32,688 - INFO - New trading day: 2024-06-24, resetting daily counters.
-2024-07-09 12:13:33,158 - INFO - Executed BUY trade at 2024-06-24 13:00:00, price: 1.07301, volume: 100000.0.
-2024-07-09 12:13:33,227 - INFO - Executed BUY trade at 2024-06-24 14:00:00, price: 1.07357, volume: 100000.0.
-2024-07-09 12:13:33,284 - INFO - Executed BUY trade at 2024-06-24 15:00:00, price: 1.07346, volume: 100000.0.
-2024-07-09 12:13:33,354 - INFO - Executed BUY trade at 2024-06-24 16:00:00, price: 1.07426, volume: 100000.0.
-2024-07-09 12:13:33,616 - INFO - New trading day: 2024-06-25, resetting daily counters.
-2024-07-09 12:13:34,534 - INFO - New trading day: 2024-06-26, resetting daily counters.
-2024-07-09 12:13:35,376 - INFO - New trading day: 2024-06-27, resetting daily counters.
-2024-07-09 12:13:35,942 - INFO - Executed BUY trade at 2024-06-27 15:00:00, price: 1.07195, volume: 100000.0.
-2024-07-09 12:13:35,982 - INFO - Executed BUY trade at 2024-06-27 16:00:00, price: 1.07205, volume: 100000.0.
-2024-07-09 12:13:36,227 - INFO - New trading day: 2024-06-28, resetting daily counters.
-2024-07-09 12:13:36,958 - INFO - New trading day: 2024-07-01, resetting daily counters.
-2024-07-09 12:13:36,995 - INFO - Executed BUY trade at 2024-07-01 00:00:00, price: 1.07383, volume: 100000.0.
-2024-07-09 12:13:37,051 - INFO - Executed BUY trade at 2024-07-01 01:00:00, price: 1.0737, volume: 100000.0.
-2024-07-09 12:13:37,138 - INFO - Executed BUY trade at 2024-07-01 03:00:00, price: 1.07457, volume: 100000.0.
-2024-07-09 12:13:37,181 - INFO - Executed BUY trade at 2024-07-01 04:00:00, price: 1.07483, volume: 100000.0.
-2024-07-09 12:13:37,233 - INFO - Executed BUY trade at 2024-07-01 05:00:00, price: 1.0755, volume: 100000.0.
-2024-07-09 12:13:37,247 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,263 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,279 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,295 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,312 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,327 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,343 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,368 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,393 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,407 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,423 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,439 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,463 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,477 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,494 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,523 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,536 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,561 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-09 12:13:37,583 - INFO - New trading day: 2024-07-02, resetting daily counters.
-2024-07-09 12:13:38,037 - INFO - New trading day: 2024-07-03, resetting daily counters.
-2024-07-09 12:13:38,559 - INFO - Executed BUY trade at 2024-07-03 15:00:00, price: 1.07744, volume: 100000.0.
-2024-07-09 12:13:38,599 - INFO - Executed BUY trade at 2024-07-03 16:00:00, price: 1.07883, volume: 100000.0.
-2024-07-09 12:13:38,645 - INFO - Executed BUY trade at 2024-07-03 17:00:00, price: 1.08058, volume: 100000.0.
-2024-07-09 12:13:38,695 - INFO - Executed BUY trade at 2024-07-03 18:00:00, price: 1.07988, volume: 100000.0.
-2024-07-09 12:13:38,748 - INFO - Executed BUY trade at 2024-07-03 19:00:00, price: 1.07957, volume: 100000.0.
-2024-07-09 12:13:38,773 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
-2024-07-09 12:13:38,789 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
-2024-07-09 12:13:38,812 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
-2024-07-09 12:13:38,830 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
-2024-07-09 12:13:38,847 - INFO - New trading day: 2024-07-04, resetting daily counters.
-2024-07-09 12:13:39,649 - INFO - New trading day: 2024-07-05, resetting daily counters.
-2024-07-09 12:13:40,532 - INFO - New trading day: 2024-07-08, resetting daily counters.
-2024-07-09 12:13:41,442 - INFO - New trading day: 2024-07-09, resetting daily counters.
-2024-07-09 12:13:42,265 - INFO - Trade closed at 2024-06-13 19:00:00, action: SELL, profit: -311.48238946587804.
-2024-07-09 12:13:42,290 - INFO - Trade closed at 2024-06-14 11:00:00, action: SELL, profit: -292.52549484055646.
-2024-07-09 12:13:42,312 - INFO - Trade closed at 2024-06-14 12:00:00, action: SELL, profit: -287.7816915195064.
-2024-07-09 12:13:42,336 - INFO - Trade closed at 2024-06-14 16:00:00, action: SELL, profit: -357.8258277800561.
-2024-07-09 12:13:42,362 - INFO - Trade closed at 2024-06-21 10:00:00, action: SELL, profit: -150.4667212727906.
-2024-07-09 12:13:42,395 - INFO - Trade closed at 2024-06-24 13:00:00, action: BUY, profit: 237.61525735177537.
-2024-07-09 12:13:42,419 - INFO - Trade closed at 2024-06-24 14:00:00, action: BUY, profit: 288.8601737865981.
-2024-07-09 12:13:42,451 - INFO - Trade closed at 2024-06-24 15:00:00, action: BUY, profit: 323.37097809436165.
-2024-07-09 12:13:42,476 - INFO - Trade closed at 2024-06-24 16:00:00, action: BUY, profit: 365.81669266395613.
-2024-07-09 12:13:42,503 - INFO - Trade closed at 2024-06-27 15:00:00, action: BUY, profit: 200.86182734455616.
-2024-07-09 12:13:42,526 - INFO - Trade closed at 2024-06-27 16:00:00, action: BUY, profit: 243.34761794166937.
-2024-07-09 12:13:42,548 - INFO - Trade closed at 2024-07-01 00:00:00, action: BUY, profit: 244.0018119000742.
-2024-07-09 12:13:42,572 - INFO - Trade closed at 2024-07-01 01:00:00, action: BUY, profit: 275.78166421244885.
-2024-07-09 12:13:42,589 - INFO - Trade closed at 2024-07-01 03:00:00, action: BUY, profit: 313.1818876257908.
-2024-07-09 12:13:42,615 - INFO - Trade closed at 2024-07-01 04:00:00, action: BUY, profit: 333.1382516866821.
-2024-07-09 12:13:42,630 - INFO - Trade closed at 2024-07-01 05:00:00, action: BUY, profit: 364.66652394240293.
-2024-07-09 12:13:42,654 - INFO - Trade closed at 2024-07-03 15:00:00, action: BUY, profit: 295.733788540109.
-2024-07-09 12:13:42,679 - INFO - Trade closed at 2024-07-03 16:00:00, action: BUY, profit: 339.20617856846303.
-2024-07-09 12:13:42,711 - INFO - Trade closed at 2024-07-03 17:00:00, action: BUY, profit: 398.80986104063874.
-2024-07-09 12:13:42,731 - INFO - Trade closed at 2024-07-03 18:00:00, action: BUY, profit: 420.064794500874.
-2024-07-09 12:13:42,758 - INFO - Trade closed at 2024-07-03 19:00:00, action: BUY, profit: 419.6767678509294.
-2024-07-09 12:13:42,782 - INFO - Backtest completed. Total Profit: 3664.0519521725423, Final Balance: 13664.051952172542, Number of Trades: 21, Win Rate: 0.7619047619047619, Max Drawdown: 1400.0821248787888.
-2024-07-09 12:13:42,809 - INFO - Backtest completed successfully.
-2024-07-09 12:13:42,836 - INFO - Shutting down MetaTrader5...
-2024-07-09 12:13:42,861 - INFO - MetaTrader5 connection gracefully shut down.
-2024-07-10 10:15:15,403 - INFO - STARTING APPLICATION
-2024-07-10 10:15:15,404 - INFO - LOGGING ALL THE CONFIG SETTINGS
-2024-07-10 10:15:15,404 - INFO - MT5_LOGIN: your_mt5_login
-2024-07-10 10:15:15,404 - INFO - MT5_PASSWORD: your_mt5_password
-2024-07-10 10:15:15,404 - INFO - MT5_SERVER: your_mt5_server
-2024-07-10 10:15:15,404 - INFO - MT5_PATH: C:\Program Files\MetaTrader 5\terminal64.exe
-2024-07-10 10:15:15,404 - INFO - MT5_TIMEFRAME: H1
-2024-07-10 10:15:15,405 - INFO - SYMBOLS: ['EURUSD']
-2024-07-10 10:15:15,405 - INFO - TELEGRAM_TOKEN: your_telegram_bot_token
-2024-07-10 10:15:15,405 - INFO - TELEGRAM_IDS: ['telegram_user_id_1', 'telegram_user_id_2']
-2024-07-10 10:15:15,405 - INFO - MIN_TP_PROFIT: 50.0
-2024-07-10 10:15:15,405 - INFO - MAX_LOSS_PER_DAY: 1000.0
-2024-07-10 10:15:15,405 - INFO - STARTING_EQUITY: 10000.0
-2024-07-10 10:15:15,405 - INFO - LIMIT_NO_OF_TRADES: 5
-2024-07-10 10:15:15,406 - INFO - RISK_PER_TRADE: 0.02
-2024-07-10 10:15:15,406 - INFO - PIP_VALUE: 0.0001
-2024-07-10 10:15:30,291 - INFO - STARTING APPLICATION
-2024-07-10 10:15:30,292 - INFO - LOGGING ALL THE CONFIG SETTINGS
-2024-07-10 10:15:30,292 - INFO - MT5_LOGIN: your_mt5_login
-2024-07-10 10:15:30,292 - INFO - MT5_PASSWORD: your_mt5_password
-2024-07-10 10:15:30,292 - INFO - MT5_SERVER: your_mt5_server
-2024-07-10 10:15:30,293 - INFO - MT5_PATH: C:\Program Files\MetaTrader 5\terminal64.exe
-2024-07-10 10:15:30,293 - INFO - MT5_TIMEFRAME: H1
-2024-07-10 10:15:30,293 - INFO - SYMBOLS: ['EURUSD']
-2024-07-10 10:15:30,293 - INFO - TELEGRAM_TOKEN: your_telegram_bot_token
-2024-07-10 10:15:30,294 - INFO - TELEGRAM_IDS: ['telegram_user_id_1', 'telegram_user_id_2']
-2024-07-10 10:15:30,295 - INFO - MIN_TP_PROFIT: 50.0
-2024-07-10 10:15:30,295 - INFO - MAX_LOSS_PER_DAY: 1000.0
-2024-07-10 10:15:30,296 - INFO - STARTING_EQUITY: 10000.0
-2024-07-10 10:15:30,296 - INFO - LIMIT_NO_OF_TRADES: 5
-2024-07-10 10:15:30,296 - INFO - RISK_PER_TRADE: 0.02
-2024-07-10 10:15:30,297 - INFO - PIP_VALUE: 0.0001
-2024-07-10 10:15:33,107 - INFO - Initializing MetaTrader5...
-2024-07-10 10:15:33,117 - INFO - MetaTrader5 initialized successfully.
-2024-07-10 10:15:33,118 - INFO - Running backtest...
-2024-07-10 10:15:33,177 - INFO - Backtest data shape: (480, 8)
-2024-07-10 10:15:33,188 - INFO - Backtest data head:
-                 time     open     high      low    close  tick_volume  spread  real_volume
-0 2024-06-12 07:00:00  1.07403  1.07406  1.07364  1.07367          572       0            0
-1 2024-06-12 08:00:00  1.07367  1.07463  1.07360  1.07459          841       0            0
-2 2024-06-12 09:00:00  1.07462  1.07471  1.07389  1.07415         1460       0            0
-3 2024-06-12 10:00:00  1.07415  1.07455  1.07356  1.07446         1800       0            0
-4 2024-06-12 11:00:00  1.07445  1.07538  1.07445  1.07466         1562       0            0
-2024-07-10 10:15:33,250 - INFO - New trading day: 2024-06-13, resetting daily counters.
-2024-07-10 10:15:33,384 - INFO - Executed SELL trade at 2024-06-13 19:00:00, price: 1.07352, volume: 100000.0.
-2024-07-10 10:15:33,559 - INFO - New trading day: 2024-06-14, resetting daily counters.
-2024-07-10 10:15:34,058 - INFO - Executed SELL trade at 2024-06-14 11:00:00, price: 1.06918, volume: 100000.0.
-2024-07-10 10:15:34,117 - INFO - Executed SELL trade at 2024-06-14 12:00:00, price: 1.06873, volume: 100000.0.
-2024-07-10 10:15:34,328 - INFO - Executed SELL trade at 2024-06-14 16:00:00, price: 1.06692, volume: 100000.0.
-2024-07-10 10:15:34,581 - INFO - New trading day: 2024-06-17, resetting daily counters.
-2024-07-10 10:15:35,308 - INFO - New trading day: 2024-06-18, resetting daily counters.
-2024-07-10 10:15:36,173 - INFO - New trading day: 2024-06-19, resetting daily counters.
-2024-07-10 10:15:36,968 - INFO - New trading day: 2024-06-20, resetting daily counters.
-2024-07-10 10:15:37,733 - INFO - New trading day: 2024-06-21, resetting daily counters.
-2024-07-10 10:15:38,074 - INFO - Executed SELL trade at 2024-06-21 10:00:00, price: 1.06779, volume: 100000.0.
-2024-07-10 10:15:38,852 - INFO - New trading day: 2024-06-24, resetting daily counters.
-2024-07-10 10:15:39,415 - INFO - Executed BUY trade at 2024-06-24 13:00:00, price: 1.07301, volume: 100000.0.
-2024-07-10 10:15:39,467 - INFO - Executed BUY trade at 2024-06-24 14:00:00, price: 1.07357, volume: 100000.0.
-2024-07-10 10:15:39,510 - INFO - Executed BUY trade at 2024-06-24 15:00:00, price: 1.07346, volume: 100000.0.
-2024-07-10 10:15:39,549 - INFO - Executed BUY trade at 2024-06-24 16:00:00, price: 1.07426, volume: 100000.0.
-2024-07-10 10:15:39,933 - INFO - New trading day: 2024-06-25, resetting daily counters.
-2024-07-10 10:15:40,789 - INFO - New trading day: 2024-06-26, resetting daily counters.
-2024-07-10 10:15:41,545 - INFO - New trading day: 2024-06-27, resetting daily counters.
-2024-07-10 10:15:42,028 - INFO - Executed BUY trade at 2024-06-27 15:00:00, price: 1.07195, volume: 100000.0.
-2024-07-10 10:15:42,065 - INFO - Executed BUY trade at 2024-06-27 16:00:00, price: 1.07205, volume: 100000.0.
-2024-07-10 10:15:42,335 - INFO - New trading day: 2024-06-28, resetting daily counters.
-2024-07-10 10:15:43,273 - INFO - New trading day: 2024-07-01, resetting daily counters.
-2024-07-10 10:15:43,313 - INFO - Executed BUY trade at 2024-07-01 00:00:00, price: 1.07383, volume: 100000.0.
-2024-07-10 10:15:43,351 - INFO - Executed BUY trade at 2024-07-01 01:00:00, price: 1.0737, volume: 100000.0.
-2024-07-10 10:15:43,435 - INFO - Executed BUY trade at 2024-07-01 03:00:00, price: 1.07457, volume: 100000.0.
-2024-07-10 10:15:43,472 - INFO - Executed BUY trade at 2024-07-01 04:00:00, price: 1.07483, volume: 100000.0.
-2024-07-10 10:15:43,514 - INFO - Executed BUY trade at 2024-07-01 05:00:00, price: 1.0755, volume: 100000.0.
-2024-07-10 10:15:43,515 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,515 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,516 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,517 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,518 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,518 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,519 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,520 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,522 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,523 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,523 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,524 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,525 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,525 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,526 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,527 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,527 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,528 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 10:15:43,530 - INFO - New trading day: 2024-07-02, resetting daily counters.
-2024-07-10 10:15:43,931 - INFO - New trading day: 2024-07-03, resetting daily counters.
-2024-07-10 10:15:44,418 - INFO - Executed BUY trade at 2024-07-03 15:00:00, price: 1.07744, volume: 100000.0.
-2024-07-10 10:15:44,452 - INFO - Executed BUY trade at 2024-07-03 16:00:00, price: 1.07883, volume: 100000.0.
-2024-07-10 10:15:44,496 - INFO - Executed BUY trade at 2024-07-03 17:00:00, price: 1.08058, volume: 100000.0.
-2024-07-10 10:15:44,535 - INFO - Executed BUY trade at 2024-07-03 18:00:00, price: 1.07988, volume: 100000.0.
-2024-07-10 10:15:44,575 - INFO - Executed BUY trade at 2024-07-03 19:00:00, price: 1.07957, volume: 100000.0.
-2024-07-10 10:15:44,576 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
-2024-07-10 10:15:44,577 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
-2024-07-10 10:15:44,577 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
-2024-07-10 10:15:44,578 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
-2024-07-10 10:15:44,579 - INFO - New trading day: 2024-07-04, resetting daily counters.
-2024-07-10 10:15:45,448 - INFO - New trading day: 2024-07-05, resetting daily counters.
-2024-07-10 10:15:46,249 - INFO - New trading day: 2024-07-08, resetting daily counters.
-2024-07-10 10:15:47,036 - INFO - New trading day: 2024-07-09, resetting daily counters.
-2024-07-10 10:15:48,800 - INFO - New trading day: 2024-07-10, resetting daily counters.
-2024-07-10 10:15:50,202 - INFO - Trade closed at 2024-06-13 19:00:00, action: SELL, profit: -311.48238946587804.
-2024-07-10 10:15:50,203 - INFO - Trade closed at 2024-06-14 11:00:00, action: SELL, profit: -292.52549484055646.
-2024-07-10 10:15:50,203 - INFO - Trade closed at 2024-06-14 12:00:00, action: SELL, profit: -287.7816915195064.
-2024-07-10 10:15:50,204 - INFO - Trade closed at 2024-06-14 16:00:00, action: SELL, profit: -357.8258277800561.
-2024-07-10 10:15:50,204 - INFO - Trade closed at 2024-06-21 10:00:00, action: SELL, profit: -150.4667212727906.
-2024-07-10 10:15:50,205 - INFO - Trade closed at 2024-06-24 13:00:00, action: BUY, profit: 237.61525735177537.
-2024-07-10 10:15:50,205 - INFO - Trade closed at 2024-06-24 14:00:00, action: BUY, profit: 288.8601737865981.
-2024-07-10 10:15:50,207 - INFO - Trade closed at 2024-06-24 15:00:00, action: BUY, profit: 323.37097809436165.
-2024-07-10 10:15:50,208 - INFO - Trade closed at 2024-06-24 16:00:00, action: BUY, profit: 365.81669266395613.
-2024-07-10 10:15:50,209 - INFO - Trade closed at 2024-06-27 15:00:00, action: BUY, profit: 200.86182734455616.
-2024-07-10 10:15:50,210 - INFO - Trade closed at 2024-06-27 16:00:00, action: BUY, profit: 243.34761794166937.
-2024-07-10 10:15:50,210 - INFO - Trade closed at 2024-07-01 00:00:00, action: BUY, profit: 244.0018119000742.
-2024-07-10 10:15:50,211 - INFO - Trade closed at 2024-07-01 01:00:00, action: BUY, profit: 275.78166421244885.
-2024-07-10 10:15:50,211 - INFO - Trade closed at 2024-07-01 03:00:00, action: BUY, profit: 313.1818876257908.
-2024-07-10 10:15:50,212 - INFO - Trade closed at 2024-07-01 04:00:00, action: BUY, profit: 333.1382516866821.
-2024-07-10 10:15:50,212 - INFO - Trade closed at 2024-07-01 05:00:00, action: BUY, profit: 364.66652394240293.
-2024-07-10 10:15:50,213 - INFO - Trade closed at 2024-07-03 15:00:00, action: BUY, profit: 295.733788540109.
-2024-07-10 10:15:50,213 - INFO - Trade closed at 2024-07-03 16:00:00, action: BUY, profit: 339.20617856846303.
-2024-07-10 10:15:50,214 - INFO - Trade closed at 2024-07-03 17:00:00, action: BUY, profit: 398.80986104063874.
-2024-07-10 10:15:50,214 - INFO - Trade closed at 2024-07-03 18:00:00, action: BUY, profit: 420.064794500874.
-2024-07-10 10:15:50,215 - INFO - Trade closed at 2024-07-03 19:00:00, action: BUY, profit: 419.6767678509294.
-2024-07-10 10:15:50,216 - INFO - Backtest completed. Total Profit: 3664.0519521725423, Final Balance: 13664.051952172542, Number of Trades: 21, Win Rate: 0.7619047619047619, Max Drawdown: 1400.0821248787888.
-2024-07-10 10:15:50,217 - INFO - Backtest completed successfully.
-2024-07-10 10:15:50,217 - INFO - Shutting down MetaTrader5...
-2024-07-10 10:15:50,218 - INFO - MetaTrader5 connection gracefully shut down.
-2024-07-10 11:48:38,754 - INFO - STARTING APPLICATION
-2024-07-10 11:48:38,755 - INFO - LOGGING ALL THE CONFIG SETTINGS
-2024-07-10 11:48:38,755 - INFO - MT5_LOGIN: your_mt5_login
-2024-07-10 11:48:38,756 - INFO - MT5_PASSWORD: your_mt5_password
-2024-07-10 11:48:38,756 - INFO - MT5_SERVER: your_mt5_server
-2024-07-10 11:48:38,756 - INFO - MT5_PATH: C:\Program Files\MetaTrader 5\terminal64.exe
-2024-07-10 11:48:38,756 - INFO - MT5_TIMEFRAME: H1
-2024-07-10 11:48:38,756 - INFO - SYMBOLS: ['EURUSD']
-2024-07-10 11:48:38,756 - INFO - TELEGRAM_TOKEN: your_telegram_bot_token
-2024-07-10 11:48:38,757 - INFO - TELEGRAM_IDS: ['telegram_user_id_1', 'telegram_user_id_2']
-2024-07-10 11:48:38,757 - INFO - MIN_TP_PROFIT: 50.0
-2024-07-10 11:48:38,757 - INFO - MAX_LOSS_PER_DAY: 1000.0
-2024-07-10 11:48:38,757 - INFO - STARTING_EQUITY: 10000.0
-2024-07-10 11:48:38,757 - INFO - LIMIT_NO_OF_TRADES: 5
-2024-07-10 11:48:38,757 - INFO - RISK_PER_TRADE: 0.02
-2024-07-10 11:48:38,758 - INFO - PIP_VALUE: 0.0001
-2024-07-10 11:48:40,623 - INFO - Initializing MetaTrader5...
-2024-07-10 11:48:40,631 - INFO - MetaTrader5 initialized successfully.
-2024-07-10 11:48:40,631 - INFO - Running backtest...
-2024-07-10 11:48:40,688 - INFO - Backtest data shape: (481, 8)
-2024-07-10 11:48:40,698 - INFO - Backtest data head:
-                 time     open     high      low    close  tick_volume  spread  real_volume
-0 2024-06-12 07:00:00  1.07403  1.07406  1.07364  1.07367          572       0            0
-1 2024-06-12 08:00:00  1.07367  1.07463  1.07360  1.07459          841       0            0
-2 2024-06-12 09:00:00  1.07462  1.07471  1.07389  1.07415         1460       0            0
-3 2024-06-12 10:00:00  1.07415  1.07455  1.07356  1.07446         1800       0            0
-4 2024-06-12 11:00:00  1.07445  1.07538  1.07445  1.07466         1562       0            0
-2024-07-10 11:48:40,768 - INFO - New trading day: 2024-06-13, resetting daily counters.
-2024-07-10 11:48:40,913 - INFO - Executed SELL trade at 2024-06-13 19:00:00, price: 1.07352, volume: 100000.0.
-2024-07-10 11:48:41,082 - INFO - New trading day: 2024-06-14, resetting daily counters.
-2024-07-10 11:48:41,556 - INFO - Executed SELL trade at 2024-06-14 11:00:00, price: 1.06918, volume: 100000.0.
-2024-07-10 11:48:41,611 - INFO - Executed SELL trade at 2024-06-14 12:00:00, price: 1.06873, volume: 100000.0.
-2024-07-10 11:48:41,812 - INFO - Executed SELL trade at 2024-06-14 16:00:00, price: 1.06692, volume: 100000.0.
-2024-07-10 11:48:42,055 - INFO - New trading day: 2024-06-17, resetting daily counters.
-2024-07-10 11:48:42,708 - INFO - New trading day: 2024-06-18, resetting daily counters.
-2024-07-10 11:48:43,355 - INFO - New trading day: 2024-06-19, resetting daily counters.
-2024-07-10 11:48:44,011 - INFO - New trading day: 2024-06-20, resetting daily counters.
-2024-07-10 11:48:44,685 - INFO - New trading day: 2024-06-21, resetting daily counters.
-2024-07-10 11:48:45,001 - INFO - Executed SELL trade at 2024-06-21 10:00:00, price: 1.06779, volume: 100000.0.
-2024-07-10 11:48:45,416 - INFO - New trading day: 2024-06-24, resetting daily counters.
-2024-07-10 11:48:45,841 - INFO - Executed BUY trade at 2024-06-24 13:00:00, price: 1.07301, volume: 100000.0.
-2024-07-10 11:48:45,877 - INFO - Executed BUY trade at 2024-06-24 14:00:00, price: 1.07357, volume: 100000.0.
-2024-07-10 11:48:45,914 - INFO - Executed BUY trade at 2024-06-24 15:00:00, price: 1.07346, volume: 100000.0.
-2024-07-10 11:48:45,950 - INFO - Executed BUY trade at 2024-06-24 16:00:00, price: 1.07426, volume: 100000.0.
-2024-07-10 11:48:46,166 - INFO - New trading day: 2024-06-25, resetting daily counters.
-2024-07-10 11:48:46,848 - INFO - New trading day: 2024-06-26, resetting daily counters.
-2024-07-10 11:48:47,541 - INFO - New trading day: 2024-06-27, resetting daily counters.
-2024-07-10 11:48:48,042 - INFO - Executed BUY trade at 2024-06-27 15:00:00, price: 1.07195, volume: 100000.0.
-2024-07-10 11:48:48,080 - INFO - Executed BUY trade at 2024-06-27 16:00:00, price: 1.07205, volume: 100000.0.
-2024-07-10 11:48:48,288 - INFO - New trading day: 2024-06-28, resetting daily counters.
-2024-07-10 11:48:48,988 - INFO - New trading day: 2024-07-01, resetting daily counters.
-2024-07-10 11:48:49,025 - INFO - Executed BUY trade at 2024-07-01 00:00:00, price: 1.07383, volume: 100000.0.
-2024-07-10 11:48:49,063 - INFO - Executed BUY trade at 2024-07-01 01:00:00, price: 1.0737, volume: 100000.0.
-2024-07-10 11:48:49,141 - INFO - Executed BUY trade at 2024-07-01 03:00:00, price: 1.07457, volume: 100000.0.
-2024-07-10 11:48:49,179 - INFO - Executed BUY trade at 2024-07-01 04:00:00, price: 1.07483, volume: 100000.0.
-2024-07-10 11:48:49,218 - INFO - Executed BUY trade at 2024-07-01 05:00:00, price: 1.0755, volume: 100000.0.
-2024-07-10 11:48:49,219 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,221 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,221 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,222 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,222 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,223 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,223 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,224 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,225 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,226 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,227 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,228 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,229 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,230 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,230 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,231 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,231 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,232 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
-2024-07-10 11:48:49,233 - INFO - New trading day: 2024-07-02, resetting daily counters.
-2024-07-10 11:48:49,628 - INFO - New trading day: 2024-07-03, resetting daily counters.
-2024-07-10 11:48:50,117 - INFO - Executed BUY trade at 2024-07-03 15:00:00, price: 1.07744, volume: 100000.0.
-2024-07-10 11:48:50,153 - INFO - Executed BUY trade at 2024-07-03 16:00:00, price: 1.07883, volume: 100000.0.
-2024-07-10 11:48:50,193 - INFO - Executed BUY trade at 2024-07-03 17:00:00, price: 1.08058, volume: 100000.0.
-2024-07-10 11:48:50,231 - INFO - Executed BUY trade at 2024-07-03 18:00:00, price: 1.07988, volume: 100000.0.
-2024-07-10 11:48:50,272 - INFO - Executed BUY trade at 2024-07-03 19:00:00, price: 1.07957, volume: 100000.0.
-2024-07-10 11:48:50,273 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
-2024-07-10 11:48:50,274 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
-2024-07-10 11:48:50,275 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
-2024-07-10 11:48:50,276 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
-2024-07-10 11:48:50,276 - INFO - New trading day: 2024-07-04, resetting daily counters.
-2024-07-10 11:48:51,022 - INFO - New trading day: 2024-07-05, resetting daily counters.
-2024-07-10 11:48:51,739 - INFO - New trading day: 2024-07-08, resetting daily counters.
-2024-07-10 11:48:52,471 - INFO - New trading day: 2024-07-09, resetting daily counters.
-2024-07-10 11:48:53,206 - INFO - New trading day: 2024-07-10, resetting daily counters.
-2024-07-10 11:48:53,791 - INFO - Trade closed at 2024-06-13 19:00:00, action: SELL, profit: -311.48238946587804.
-2024-07-10 11:48:53,791 - INFO - Trade closed at 2024-06-14 11:00:00, action: SELL, profit: -292.52549484055646.
-2024-07-10 11:48:53,791 - INFO - Trade closed at 2024-06-14 12:00:00, action: SELL, profit: -287.7816915195064.
-2024-07-10 11:48:53,791 - INFO - Trade closed at 2024-06-14 16:00:00, action: SELL, profit: -357.8258277800561.
-2024-07-10 11:48:53,792 - INFO - Trade closed at 2024-06-21 10:00:00, action: SELL, profit: -150.4667212727906.
-2024-07-10 11:48:53,792 - INFO - Trade closed at 2024-06-24 13:00:00, action: BUY, profit: 237.61525735177537.
-2024-07-10 11:48:53,792 - INFO - Trade closed at 2024-06-24 14:00:00, action: BUY, profit: 288.8601737865981.
-2024-07-10 11:48:53,793 - INFO - Trade closed at 2024-06-24 15:00:00, action: BUY, profit: 323.37097809436165.
-2024-07-10 11:48:53,793 - INFO - Trade closed at 2024-06-24 16:00:00, action: BUY, profit: 365.81669266395613.
-2024-07-10 11:48:53,793 - INFO - Trade closed at 2024-06-27 15:00:00, action: BUY, profit: 200.86182734455616.
-2024-07-10 11:48:53,794 - INFO - Trade closed at 2024-06-27 16:00:00, action: BUY, profit: 243.34761794166937.
-2024-07-10 11:48:53,794 - INFO - Trade closed at 2024-07-01 00:00:00, action: BUY, profit: 244.0018119000742.
-2024-07-10 11:48:53,794 - INFO - Trade closed at 2024-07-01 01:00:00, action: BUY, profit: 275.78166421244885.
-2024-07-10 11:48:53,795 - INFO - Trade closed at 2024-07-01 03:00:00, action: BUY, profit: 313.1818876257908.
-2024-07-10 11:48:53,795 - INFO - Trade closed at 2024-07-01 04:00:00, action: BUY, profit: 333.1382516866821.
-2024-07-10 11:48:53,795 - INFO - Trade closed at 2024-07-01 05:00:00, action: BUY, profit: 364.66652394240293.
-2024-07-10 11:48:53,796 - INFO - Trade closed at 2024-07-03 15:00:00, action: BUY, profit: 295.733788540109.
-2024-07-10 11:48:53,796 - INFO - Trade closed at 2024-07-03 16:00:00, action: BUY, profit: 339.20617856846303.
-2024-07-10 11:48:53,796 - INFO - Trade closed at 2024-07-03 17:00:00, action: BUY, profit: 398.80986104063874.
-2024-07-10 11:48:53,797 - INFO - Trade closed at 2024-07-03 18:00:00, action: BUY, profit: 420.064794500874.
-2024-07-10 11:48:53,797 - INFO - Trade closed at 2024-07-03 19:00:00, action: BUY, profit: 419.6767678509294.
-2024-07-10 11:48:53,798 - INFO - Backtest completed. Total Profit: 3664.0519521725423, Final Balance: 13664.051952172542, Number of Trades: 21, Win Rate: 0.7619047619047619, Max Drawdown: 1400.0821248787888.
-2024-07-10 11:48:53,799 - INFO - Backtest completed successfully.
-2024-07-10 11:48:53,799 - INFO - Shutting down MetaTrader5...
-2024-07-10 11:48:53,800 - INFO - MetaTrader5 connection gracefully shut down.
+2024-07-11 12:42:50,687 - INFO - New trading day: 2024-06-13, resetting daily counters.
+2024-07-11 12:42:50,706 - INFO - Executed SELL trade at 2024-06-13 17:00:00, price: 1.07715, volume: 100000.0.
+2024-07-11 12:42:50,726 - INFO - Executed SELL trade at 2024-06-13 18:00:00, price: 1.07554, volume: 100000.0.
+2024-07-11 12:42:50,745 - INFO - Executed SELL trade at 2024-06-13 19:00:00, price: 1.07352, volume: 100000.0.
+2024-07-11 12:42:50,765 - INFO - Executed SELL trade at 2024-06-13 20:00:00, price: 1.07425, volume: 100000.0.
+2024-07-11 12:42:50,785 - INFO - Executed SELL trade at 2024-06-13 21:00:00, price: 1.07393, volume: 100000.0.
+2024-07-11 12:42:50,785 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-13.
+2024-07-11 12:42:50,786 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-13.
+2024-07-11 12:42:50,786 - INFO - New trading day: 2024-06-14, resetting daily counters.
+2024-07-11 12:42:50,807 - INFO - Executed SELL trade at 2024-06-14 00:00:00, price: 1.07382, volume: 100000.0.
+2024-07-11 12:42:50,828 - INFO - Executed SELL trade at 2024-06-14 01:00:00, price: 1.07385, volume: 100000.0.
+2024-07-11 12:42:50,849 - INFO - Executed SELL trade at 2024-06-14 02:00:00, price: 1.07375, volume: 100000.0.
+2024-07-11 12:42:50,871 - INFO - Executed SELL trade at 2024-06-14 03:00:00, price: 1.07363, volume: 100000.0.
+2024-07-11 12:42:50,893 - INFO - Executed SELL trade at 2024-06-14 04:00:00, price: 1.07415, volume: 100000.0.
+2024-07-11 12:42:50,893 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,893 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,894 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,894 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,894 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,894 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,895 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,895 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,895 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,895 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,896 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,896 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,896 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,896 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,897 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,897 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,897 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,897 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,898 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-14.
+2024-07-11 12:42:50,898 - INFO - New trading day: 2024-06-17, resetting daily counters.
+2024-07-11 12:42:50,985 - INFO - Executed SELL trade at 2024-06-17 04:00:00, price: 1.07016, volume: 100000.0.
+2024-07-11 12:42:51,053 - INFO - Executed SELL trade at 2024-06-17 08:00:00, price: 1.06997, volume: 100000.0.
+2024-07-11 12:42:51,071 - INFO - Executed SELL trade at 2024-06-17 09:00:00, price: 1.06976, volume: 100000.0.
+2024-07-11 12:42:51,089 - INFO - Executed SELL trade at 2024-06-17 10:00:00, price: 1.07005, volume: 100000.0.
+2024-07-11 12:42:51,125 - INFO - Executed BUY trade at 2024-06-17 12:00:00, price: 1.0711, volume: 100000.0.
+2024-07-11 12:42:51,125 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-17.
+2024-07-11 12:42:51,125 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-17.
+2024-07-11 12:42:51,126 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-17.
+2024-07-11 12:42:51,126 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-17.
+2024-07-11 12:42:51,126 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-17.
+2024-07-11 12:42:51,127 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-17.
+2024-07-11 12:42:51,127 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-17.
+2024-07-11 12:42:51,127 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-17.
+2024-07-11 12:42:51,127 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-17.
+2024-07-11 12:42:51,128 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-17.
+2024-07-11 12:42:51,128 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-17.
+2024-07-11 12:42:51,128 - INFO - New trading day: 2024-06-18, resetting daily counters.
+2024-07-11 12:42:51,147 - INFO - Executed BUY trade at 2024-06-18 00:00:00, price: 1.07318, volume: 100000.0.
+2024-07-11 12:42:51,165 - INFO - Executed BUY trade at 2024-06-18 01:00:00, price: 1.07374, volume: 100000.0.
+2024-07-11 12:42:51,183 - INFO - Executed BUY trade at 2024-06-18 02:00:00, price: 1.07399, volume: 100000.0.
+2024-07-11 12:42:51,202 - INFO - Executed BUY trade at 2024-06-18 03:00:00, price: 1.0735999999999999, volume: 100000.0.
+2024-07-11 12:42:51,307 - INFO - Executed BUY trade at 2024-06-18 09:00:00, price: 1.0733, volume: 100000.0.
+2024-07-11 12:42:51,307 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-18.
+2024-07-11 12:42:51,308 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-18.
+2024-07-11 12:42:51,308 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-18.
+2024-07-11 12:42:51,308 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-18.
+2024-07-11 12:42:51,308 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-18.
+2024-07-11 12:42:51,309 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-18.
+2024-07-11 12:42:51,309 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-18.
+2024-07-11 12:42:51,309 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-18.
+2024-07-11 12:42:51,309 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-18.
+2024-07-11 12:42:51,310 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-18.
+2024-07-11 12:42:51,310 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-18.
+2024-07-11 12:42:51,310 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-18.
+2024-07-11 12:42:51,310 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-18.
+2024-07-11 12:42:51,311 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-18.
+2024-07-11 12:42:51,311 - INFO - New trading day: 2024-06-19, resetting daily counters.
+2024-07-11 12:42:51,330 - INFO - Executed BUY trade at 2024-06-19 00:00:00, price: 1.07396, volume: 100000.0.
+2024-07-11 12:42:51,348 - INFO - Executed BUY trade at 2024-06-19 01:00:00, price: 1.07405, volume: 100000.0.
+2024-07-11 12:42:51,366 - INFO - Executed BUY trade at 2024-06-19 02:00:00, price: 1.07388, volume: 100000.0.
+2024-07-11 12:42:51,401 - INFO - Executed BUY trade at 2024-06-19 04:00:00, price: 1.07407, volume: 100000.0.
+2024-07-11 12:42:51,489 - INFO - Executed SELL trade at 2024-06-19 09:00:00, price: 1.07312, volume: 100000.0.
+2024-07-11 12:42:51,490 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-19.
+2024-07-11 12:42:51,490 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-19.
+2024-07-11 12:42:51,490 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-19.
+2024-07-11 12:42:51,491 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-19.
+2024-07-11 12:42:51,491 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-19.
+2024-07-11 12:42:51,491 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-19.
+2024-07-11 12:42:51,492 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-19.
+2024-07-11 12:42:51,492 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-19.
+2024-07-11 12:42:51,492 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-19.
+2024-07-11 12:42:51,492 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-19.
+2024-07-11 12:42:51,493 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-19.
+2024-07-11 12:42:51,493 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-19.
+2024-07-11 12:42:51,493 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-19.
+2024-07-11 12:42:51,493 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-19.
+2024-07-11 12:42:51,494 - INFO - New trading day: 2024-06-20, resetting daily counters.
+2024-07-11 12:42:51,530 - INFO - Executed BUY trade at 2024-06-20 01:00:00, price: 1.07455, volume: 100000.0.
+2024-07-11 12:42:51,548 - INFO - Executed BUY trade at 2024-06-20 02:00:00, price: 1.07472, volume: 100000.0.
+2024-07-11 12:42:51,567 - INFO - Executed BUY trade at 2024-06-20 03:00:00, price: 1.07462, volume: 100000.0.
+2024-07-11 12:42:51,602 - INFO - Executed SELL trade at 2024-06-20 05:00:00, price: 1.07394, volume: 100000.0.
+2024-07-11 12:42:51,656 - INFO - Executed SELL trade at 2024-06-20 08:00:00, price: 1.07373, volume: 100000.0.
+2024-07-11 12:42:51,657 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-20.
+2024-07-11 12:42:51,657 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-20.
+2024-07-11 12:42:51,658 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-20.
+2024-07-11 12:42:51,658 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-20.
+2024-07-11 12:42:51,658 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-20.
+2024-07-11 12:42:51,658 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-20.
+2024-07-11 12:42:51,659 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-20.
+2024-07-11 12:42:51,659 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-20.
+2024-07-11 12:42:51,659 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-20.
+2024-07-11 12:42:51,659 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-20.
+2024-07-11 12:42:51,660 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-20.
+2024-07-11 12:42:51,660 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-20.
+2024-07-11 12:42:51,660 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-20.
+2024-07-11 12:42:51,660 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-20.
+2024-07-11 12:42:51,661 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-20.
+2024-07-11 12:42:51,661 - INFO - New trading day: 2024-06-21, resetting daily counters.
+2024-07-11 12:42:51,679 - INFO - Executed SELL trade at 2024-06-21 00:00:00, price: 1.07035, volume: 100000.0.
+2024-07-11 12:42:51,698 - INFO - Executed SELL trade at 2024-06-21 01:00:00, price: 1.07023, volume: 100000.0.
+2024-07-11 12:42:51,717 - INFO - Executed SELL trade at 2024-06-21 02:00:00, price: 1.07061, volume: 100000.0.
+2024-07-11 12:42:51,735 - INFO - Executed SELL trade at 2024-06-21 03:00:00, price: 1.07067, volume: 100000.0.
+2024-07-11 12:42:51,839 - INFO - Executed SELL trade at 2024-06-21 09:00:00, price: 1.07099, volume: 100000.0.
+2024-07-11 12:42:51,840 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-21.
+2024-07-11 12:42:51,840 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-21.
+2024-07-11 12:42:51,841 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-21.
+2024-07-11 12:42:51,841 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-21.
+2024-07-11 12:42:51,841 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-21.
+2024-07-11 12:42:51,841 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-21.
+2024-07-11 12:42:51,842 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-21.
+2024-07-11 12:42:51,842 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-21.
+2024-07-11 12:42:51,842 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-21.
+2024-07-11 12:42:51,842 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-21.
+2024-07-11 12:42:51,843 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-21.
+2024-07-11 12:42:51,843 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-21.
+2024-07-11 12:42:51,843 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-21.
+2024-07-11 12:42:51,843 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-21.
+2024-07-11 12:42:51,844 - INFO - New trading day: 2024-06-24, resetting daily counters.
+2024-07-11 12:42:51,897 - INFO - Executed SELL trade at 2024-06-24 02:00:00, price: 1.06878, volume: 100000.0.
+2024-07-11 12:42:51,932 - INFO - Executed SELL trade at 2024-06-24 04:00:00, price: 1.06907, volume: 100000.0.
+2024-07-11 12:42:51,950 - INFO - Executed SELL trade at 2024-06-24 05:00:00, price: 1.06892, volume: 100000.0.
+2024-07-11 12:42:52,006 - INFO - Executed BUY trade at 2024-06-24 08:00:00, price: 1.06986, volume: 100000.0.
+2024-07-11 12:42:52,025 - INFO - Executed BUY trade at 2024-06-24 09:00:00, price: 1.0703, volume: 100000.0.
+2024-07-11 12:42:52,025 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-24.
+2024-07-11 12:42:52,026 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-24.
+2024-07-11 12:42:52,026 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-24.
+2024-07-11 12:42:52,026 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-24.
+2024-07-11 12:42:52,026 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-24.
+2024-07-11 12:42:52,027 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-24.
+2024-07-11 12:42:52,027 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-24.
+2024-07-11 12:42:52,028 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-24.
+2024-07-11 12:42:52,028 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-24.
+2024-07-11 12:42:52,028 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-24.
+2024-07-11 12:42:52,028 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-24.
+2024-07-11 12:42:52,029 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-24.
+2024-07-11 12:42:52,029 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-24.
+2024-07-11 12:42:52,029 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-24.
+2024-07-11 12:42:52,029 - INFO - New trading day: 2024-06-25, resetting daily counters.
+2024-07-11 12:42:52,048 - INFO - Executed BUY trade at 2024-06-25 00:00:00, price: 1.07327, volume: 100000.0.
+2024-07-11 12:42:52,068 - INFO - Executed BUY trade at 2024-06-25 01:00:00, price: 1.07329, volume: 100000.0.
+2024-07-11 12:42:52,088 - INFO - Executed BUY trade at 2024-06-25 02:00:00, price: 1.07322, volume: 100000.0.
+2024-07-11 12:42:52,107 - INFO - Executed BUY trade at 2024-06-25 03:00:00, price: 1.07341, volume: 100000.0.
+2024-07-11 12:42:52,126 - INFO - Executed BUY trade at 2024-06-25 04:00:00, price: 1.07345, volume: 100000.0.
+2024-07-11 12:42:52,127 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,127 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,127 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,127 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,128 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,128 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,128 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,128 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,129 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,129 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,129 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,129 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,130 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,130 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,130 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,130 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,131 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,131 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,131 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-25.
+2024-07-11 12:42:52,131 - INFO - New trading day: 2024-06-26, resetting daily counters.
+2024-07-11 12:42:52,185 - INFO - Executed SELL trade at 2024-06-26 02:00:00, price: 1.07091, volume: 100000.0.
+2024-07-11 12:42:52,239 - INFO - Executed SELL trade at 2024-06-26 05:00:00, price: 1.07099, volume: 100000.0.
+2024-07-11 12:42:52,275 - INFO - Executed SELL trade at 2024-06-26 07:00:00, price: 1.07103, volume: 100000.0.
+2024-07-11 12:42:52,294 - INFO - Executed SELL trade at 2024-06-26 08:00:00, price: 1.07038, volume: 100000.0.
+2024-07-11 12:42:52,312 - INFO - Executed SELL trade at 2024-06-26 09:00:00, price: 1.06947, volume: 100000.0.
+2024-07-11 12:42:52,313 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-26.
+2024-07-11 12:42:52,313 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-26.
+2024-07-11 12:42:52,313 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-26.
+2024-07-11 12:42:52,313 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-26.
+2024-07-11 12:42:52,314 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-26.
+2024-07-11 12:42:52,314 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-26.
+2024-07-11 12:42:52,314 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-26.
+2024-07-11 12:42:52,314 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-26.
+2024-07-11 12:42:52,315 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-26.
+2024-07-11 12:42:52,315 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-26.
+2024-07-11 12:42:52,315 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-26.
+2024-07-11 12:42:52,315 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-26.
+2024-07-11 12:42:52,316 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-26.
+2024-07-11 12:42:52,316 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-26.
+2024-07-11 12:42:52,316 - INFO - New trading day: 2024-06-27, resetting daily counters.
+2024-07-11 12:42:52,335 - INFO - Executed SELL trade at 2024-06-27 00:00:00, price: 1.06798, volume: 100000.0.
+2024-07-11 12:42:52,354 - INFO - Executed SELL trade at 2024-06-27 01:00:00, price: 1.06804, volume: 100000.0.
+2024-07-11 12:42:52,372 - INFO - Executed SELL trade at 2024-06-27 02:00:00, price: 1.06798, volume: 100000.0.
+2024-07-11 12:42:52,391 - INFO - Executed SELL trade at 2024-06-27 03:00:00, price: 1.06782, volume: 100000.0.
+2024-07-11 12:42:52,447 - INFO - Executed BUY trade at 2024-06-27 06:00:00, price: 1.06907, volume: 100000.0.
+2024-07-11 12:42:52,447 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-27.
+2024-07-11 12:42:52,448 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-27.
+2024-07-11 12:42:52,448 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-27.
+2024-07-11 12:42:52,448 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-27.
+2024-07-11 12:42:52,449 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-27.
+2024-07-11 12:42:52,449 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-27.
+2024-07-11 12:42:52,449 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-27.
+2024-07-11 12:42:52,449 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-27.
+2024-07-11 12:42:52,449 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-27.
+2024-07-11 12:42:52,450 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-27.
+2024-07-11 12:42:52,450 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-27.
+2024-07-11 12:42:52,450 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-27.
+2024-07-11 12:42:52,450 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-27.
+2024-07-11 12:42:52,451 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-27.
+2024-07-11 12:42:52,451 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-27.
+2024-07-11 12:42:52,451 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-27.
+2024-07-11 12:42:52,451 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-27.
+2024-07-11 12:42:52,452 - INFO - New trading day: 2024-06-28, resetting daily counters.
+2024-07-11 12:42:52,506 - INFO - Executed BUY trade at 2024-06-28 02:00:00, price: 1.07076, volume: 100000.0.
+2024-07-11 12:42:52,525 - INFO - Executed SELL trade at 2024-06-28 03:00:00, price: 1.06977, volume: 100000.0.
+2024-07-11 12:42:52,544 - INFO - Executed SELL trade at 2024-06-28 04:00:00, price: 1.0691, volume: 100000.0.
+2024-07-11 12:42:52,570 - INFO - Executed SELL trade at 2024-06-28 05:00:00, price: 1.06939, volume: 100000.0.
+2024-07-11 12:42:52,591 - INFO - Executed SELL trade at 2024-06-28 06:00:00, price: 1.06921, volume: 100000.0.
+2024-07-11 12:42:52,592 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-28.
+2024-07-11 12:42:52,592 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-28.
+2024-07-11 12:42:52,592 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-28.
+2024-07-11 12:42:52,593 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-28.
+2024-07-11 12:42:52,593 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-28.
+2024-07-11 12:42:52,593 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-28.
+2024-07-11 12:42:52,593 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-28.
+2024-07-11 12:42:52,594 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-28.
+2024-07-11 12:42:52,594 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-28.
+2024-07-11 12:42:52,594 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-28.
+2024-07-11 12:42:52,594 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-28.
+2024-07-11 12:42:52,594 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-28.
+2024-07-11 12:42:52,595 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-28.
+2024-07-11 12:42:52,595 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-28.
+2024-07-11 12:42:52,595 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-28.
+2024-07-11 12:42:52,595 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-28.
+2024-07-11 12:42:52,596 - INFO - Reached max trades per day: 5, skipping further trades for 2024-06-28.
+2024-07-11 12:42:52,596 - INFO - New trading day: 2024-07-01, resetting daily counters.
+2024-07-11 12:42:52,615 - INFO - Executed BUY trade at 2024-07-01 00:00:00, price: 1.07383, volume: 100000.0.
+2024-07-11 12:42:52,634 - INFO - Executed BUY trade at 2024-07-01 01:00:00, price: 1.0737, volume: 100000.0.
+2024-07-11 12:42:52,652 - INFO - Executed BUY trade at 2024-07-01 02:00:00, price: 1.07351, volume: 100000.0.
+2024-07-11 12:42:52,671 - INFO - Executed BUY trade at 2024-07-01 03:00:00, price: 1.07457, volume: 100000.0.
+2024-07-11 12:42:52,689 - INFO - Executed BUY trade at 2024-07-01 04:00:00, price: 1.07483, volume: 100000.0.
+2024-07-11 12:42:52,690 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,690 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,691 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,691 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,691 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,692 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,692 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,692 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,692 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,693 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,693 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,693 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,693 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,694 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,694 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,694 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,694 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,695 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,695 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-01.
+2024-07-11 12:42:52,695 - INFO - New trading day: 2024-07-02, resetting daily counters.
+2024-07-11 12:42:52,837 - INFO - Executed SELL trade at 2024-07-02 07:00:00, price: 1.07295, volume: 100000.0.
+2024-07-11 12:42:52,855 - INFO - Executed SELL trade at 2024-07-02 08:00:00, price: 1.07318, volume: 100000.0.
+2024-07-11 12:42:52,873 - INFO - Executed SELL trade at 2024-07-02 09:00:00, price: 1.07249, volume: 100000.0.
+2024-07-11 12:42:52,892 - INFO - Executed SELL trade at 2024-07-02 10:00:00, price: 1.07181, volume: 100000.0.
+2024-07-11 12:42:52,912 - INFO - Executed SELL trade at 2024-07-02 11:00:00, price: 1.07201, volume: 100000.0.
+2024-07-11 12:42:52,912 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-02.
+2024-07-11 12:42:52,912 - INFO - New trading day: 2024-07-03, resetting daily counters.
+2024-07-11 12:42:52,931 - INFO - Executed BUY trade at 2024-07-03 00:00:00, price: 1.07443, volume: 100000.0.
+2024-07-11 12:42:52,950 - INFO - Executed BUY trade at 2024-07-03 01:00:00, price: 1.0749, volume: 100000.0.
+2024-07-11 12:42:52,969 - INFO - Executed BUY trade at 2024-07-03 02:00:00, price: 1.07481, volume: 100000.0.
+2024-07-11 12:42:52,988 - INFO - Executed BUY trade at 2024-07-03 03:00:00, price: 1.0748, volume: 100000.0.
+2024-07-11 12:42:53,007 - INFO - Executed BUY trade at 2024-07-03 04:00:00, price: 1.07419, volume: 100000.0.
+2024-07-11 12:42:53,007 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,008 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,008 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,008 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,009 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,009 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,009 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,009 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,009 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,010 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,010 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,010 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,010 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,011 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,011 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,011 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,012 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,012 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,012 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-03.
+2024-07-11 12:42:53,012 - INFO - New trading day: 2024-07-04, resetting daily counters.
+2024-07-11 12:42:53,032 - INFO - Executed BUY trade at 2024-07-04 00:00:00, price: 1.07863, volume: 100000.0.
+2024-07-11 12:42:53,050 - INFO - Executed BUY trade at 2024-07-04 01:00:00, price: 1.07895, volume: 100000.0.
+2024-07-11 12:42:53,070 - INFO - Executed BUY trade at 2024-07-04 02:00:00, price: 1.07911, volume: 100000.0.
+2024-07-11 12:42:53,089 - INFO - Executed BUY trade at 2024-07-04 03:00:00, price: 1.07926, volume: 100000.0.
+2024-07-11 12:42:53,109 - INFO - Executed BUY trade at 2024-07-04 04:00:00, price: 1.07907, volume: 100000.0.
+2024-07-11 12:42:53,109 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,109 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,110 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,110 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,110 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,111 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,111 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,111 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,111 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,112 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,112 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,112 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,112 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,113 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,113 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,113 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,113 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,114 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,114 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-04.
+2024-07-11 12:42:53,114 - INFO - New trading day: 2024-07-05, resetting daily counters.
+2024-07-11 12:42:53,134 - INFO - Executed BUY trade at 2024-07-05 00:00:00, price: 1.08105, volume: 100000.0.
+2024-07-11 12:42:53,153 - INFO - Executed BUY trade at 2024-07-05 01:00:00, price: 1.08117, volume: 100000.0.
+2024-07-11 12:42:53,173 - INFO - Executed BUY trade at 2024-07-05 02:00:00, price: 1.08104, volume: 100000.0.
+2024-07-11 12:42:53,193 - INFO - Executed BUY trade at 2024-07-05 03:00:00, price: 1.08147, volume: 100000.0.
+2024-07-11 12:42:53,212 - INFO - Executed BUY trade at 2024-07-05 04:00:00, price: 1.08158, volume: 100000.0.
+2024-07-11 12:42:53,212 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,213 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,213 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,213 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,214 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,214 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,214 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,214 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,214 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,215 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,215 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,215 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,215 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,216 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,216 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,216 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,216 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,217 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,217 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-05.
+2024-07-11 12:42:53,217 - INFO - New trading day: 2024-07-08, resetting daily counters.
+2024-07-11 12:42:53,236 - INFO - Executed SELL trade at 2024-07-08 00:00:00, price: 1.08191, volume: 100000.0.
+2024-07-11 12:42:53,293 - INFO - Executed SELL trade at 2024-07-08 03:00:00, price: 1.08216, volume: 100000.0.
+2024-07-11 12:42:53,314 - INFO - Executed BUY trade at 2024-07-08 04:00:00, price: 1.08291, volume: 100000.0.
+2024-07-11 12:42:53,352 - INFO - Executed BUY trade at 2024-07-08 06:00:00, price: 1.08314, volume: 100000.0.
+2024-07-11 12:42:53,390 - INFO - Executed SELL trade at 2024-07-08 08:00:00, price: 1.08223, volume: 100000.0.
+2024-07-11 12:42:53,391 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-08.
+2024-07-11 12:42:53,391 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-08.
+2024-07-11 12:42:53,391 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-08.
+2024-07-11 12:42:53,392 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-08.
+2024-07-11 12:42:53,392 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-08.
+2024-07-11 12:42:53,392 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-08.
+2024-07-11 12:42:53,392 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-08.
+2024-07-11 12:42:53,393 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-08.
+2024-07-11 12:42:53,393 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-08.
+2024-07-11 12:42:53,393 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-08.
+2024-07-11 12:42:53,393 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-08.
+2024-07-11 12:42:53,394 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-08.
+2024-07-11 12:42:53,394 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-08.
+2024-07-11 12:42:53,394 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-08.
+2024-07-11 12:42:53,394 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-08.
+2024-07-11 12:42:53,395 - INFO - New trading day: 2024-07-09, resetting daily counters.
+2024-07-11 12:42:53,414 - INFO - Executed SELL trade at 2024-07-09 00:00:00, price: 1.08245, volume: 100000.0.
+2024-07-11 12:42:53,433 - INFO - Executed SELL trade at 2024-07-09 01:00:00, price: 1.08257, volume: 100000.0.
+2024-07-11 12:42:53,490 - INFO - Executed SELL trade at 2024-07-09 04:00:00, price: 1.08236, volume: 100000.0.
+2024-07-11 12:42:53,589 - INFO - Executed SELL trade at 2024-07-09 09:00:00, price: 1.08249, volume: 100000.0.
+2024-07-11 12:42:53,608 - INFO - Executed SELL trade at 2024-07-09 10:00:00, price: 1.08175, volume: 100000.0.
+2024-07-11 12:42:53,608 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-09.
+2024-07-11 12:42:53,608 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-09.
+2024-07-11 12:42:53,609 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-09.
+2024-07-11 12:42:53,609 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-09.
+2024-07-11 12:42:53,609 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-09.
+2024-07-11 12:42:53,609 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-09.
+2024-07-11 12:42:53,610 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-09.
+2024-07-11 12:42:53,610 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-09.
+2024-07-11 12:42:53,610 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-09.
+2024-07-11 12:42:53,610 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-09.
+2024-07-11 12:42:53,611 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-09.
+2024-07-11 12:42:53,611 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-09.
+2024-07-11 12:42:53,611 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-09.
+2024-07-11 12:42:53,611 - INFO - New trading day: 2024-07-10, resetting daily counters.
+2024-07-11 12:42:53,650 - INFO - Executed SELL trade at 2024-07-10 01:00:00, price: 1.08145, volume: 100000.0.
+2024-07-11 12:42:53,670 - INFO - Executed SELL trade at 2024-07-10 02:00:00, price: 1.08144, volume: 100000.0.
+2024-07-11 12:42:53,689 - INFO - Executed SELL trade at 2024-07-10 03:00:00, price: 1.08122, volume: 100000.0.
+2024-07-11 12:42:53,746 - INFO - Executed BUY trade at 2024-07-10 06:00:00, price: 1.08201, volume: 100000.0.
+2024-07-11 12:42:53,803 - INFO - Executed BUY trade at 2024-07-10 09:00:00, price: 1.0822, volume: 100000.0.
+2024-07-11 12:42:53,804 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-10.
+2024-07-11 12:42:53,804 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-10.
+2024-07-11 12:42:53,804 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-10.
+2024-07-11 12:42:53,805 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-10.
+2024-07-11 12:42:53,805 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-10.
+2024-07-11 12:42:53,805 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-10.
+2024-07-11 12:42:53,805 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-10.
+2024-07-11 12:42:53,806 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-10.
+2024-07-11 12:42:53,806 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-10.
+2024-07-11 12:42:53,806 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-10.
+2024-07-11 12:42:53,806 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-10.
+2024-07-11 12:42:53,807 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-10.
+2024-07-11 12:42:53,807 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-10.
+2024-07-11 12:42:53,807 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-10.
+2024-07-11 12:42:53,808 - INFO - New trading day: 2024-07-11, resetting daily counters.
+2024-07-11 12:42:53,828 - INFO - Executed BUY trade at 2024-07-11 00:00:00, price: 1.08286, volume: 100000.0.
+2024-07-11 12:42:53,848 - INFO - Executed BUY trade at 2024-07-11 01:00:00, price: 1.08328, volume: 100000.0.
+2024-07-11 12:42:53,867 - INFO - Executed BUY trade at 2024-07-11 02:00:00, price: 1.08331, volume: 100000.0.
+2024-07-11 12:42:53,887 - INFO - Executed BUY trade at 2024-07-11 03:00:00, price: 1.08351, volume: 100000.0.
+2024-07-11 12:42:53,907 - INFO - Executed BUY trade at 2024-07-11 04:00:00, price: 1.08393, volume: 100000.0.
+2024-07-11 12:42:53,907 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-11.
+2024-07-11 12:42:53,908 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-11.
+2024-07-11 12:42:53,908 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-11.
+2024-07-11 12:42:53,908 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-11.
+2024-07-11 12:42:53,909 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-11.
+2024-07-11 12:42:53,909 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-11.
+2024-07-11 12:42:53,909 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-11.
+2024-07-11 12:42:53,909 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-11.
+2024-07-11 12:42:53,910 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-11.
+2024-07-11 12:42:53,910 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-11.
+2024-07-11 12:42:53,910 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-11.
+2024-07-11 12:42:53,910 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-11.
+2024-07-11 12:42:53,911 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-11.
+2024-07-11 12:42:53,911 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-11.
+2024-07-11 12:42:53,911 - INFO - Reached max trades per day: 5, skipping further trades for 2024-07-11.
+2024-07-11 12:42:53,911 - INFO - Trade closed at 2024-06-13 17:00:00, action: SELL, profit: -165.96064847460568.
+2024-07-11 12:42:53,911 - INFO - Trade closed at 2024-06-13 18:00:00, action: SELL, profit: -227.51555614832773.
+2024-07-11 12:42:53,911 - INFO - Trade closed at 2024-06-13 19:00:00, action: SELL, profit: -311.48238946587804.
+2024-07-11 12:42:53,912 - INFO - Trade closed at 2024-06-13 20:00:00, action: SELL, profit: -354.0653847956987.
+2024-07-11 12:42:53,912 - INFO - Trade closed at 2024-06-13 21:00:00, action: SELL, profit: -390.0628795463712.
+2024-07-11 12:42:53,912 - INFO - Trade closed at 2024-06-14 00:00:00, action: SELL, profit: -446.9875152795844.
+2024-07-11 12:42:53,912 - INFO - Trade closed at 2024-06-14 01:00:00, action: SELL, profit: -453.00026141508187.
+2024-07-11 12:42:53,912 - INFO - Trade closed at 2024-06-14 02:00:00, action: SELL, profit: -454.6593714848335.
+2024-07-11 12:42:53,912 - INFO - Trade closed at 2024-06-14 03:00:00, action: SELL, profit: -453.76360353688307.
+2024-07-11 12:42:53,912 - INFO - Trade closed at 2024-06-14 04:00:00, action: SELL, profit: -442.7371799683888.
+2024-07-11 12:42:53,913 - INFO - Trade closed at 2024-06-17 04:00:00, action: SELL, profit: -163.9319017801011.
+2024-07-11 12:42:53,913 - INFO - Trade closed at 2024-06-17 08:00:00, action: SELL, profit: -129.0680053312565.
+2024-07-11 12:42:53,913 - INFO - Trade closed at 2024-06-17 09:00:00, action: SELL, profit: -129.0838772605385.
+2024-07-11 12:42:53,913 - INFO - Trade closed at 2024-06-17 10:00:00, action: SELL, profit: -128.11058904909078.
+2024-07-11 12:42:53,913 - INFO - Trade closed at 2024-06-17 12:00:00, action: BUY, profit: 96.87669862863402.
+2024-07-11 12:42:53,913 - INFO - Trade closed at 2024-06-18 00:00:00, action: BUY, profit: 245.51591223014313.
+2024-07-11 12:42:53,913 - INFO - Trade closed at 2024-06-18 01:00:00, action: BUY, profit: 259.1834140248217.
+2024-07-11 12:42:53,914 - INFO - Trade closed at 2024-06-18 02:00:00, action: BUY, profit: 271.54859989613203.
+2024-07-11 12:42:53,914 - INFO - Trade closed at 2024-06-18 03:00:00, action: BUY, profit: 273.56292454294714.
+2024-07-11 12:42:53,914 - INFO - Trade closed at 2024-06-18 09:00:00, action: BUY, profit: 169.52748573997312.
+2024-07-11 12:42:53,914 - INFO - Trade closed at 2024-06-19 00:00:00, action: BUY, profit: 190.13067528534933.
+2024-07-11 12:42:53,914 - INFO - Trade closed at 2024-06-19 01:00:00, action: BUY, profit: 192.69640698105218.
+2024-07-11 12:42:53,914 - INFO - Trade closed at 2024-06-19 02:00:00, action: BUY, profit: 192.82637404296477.
+2024-07-11 12:42:53,914 - INFO - Trade closed at 2024-06-19 04:00:00, action: BUY, profit: 184.73696806178276.
+2024-07-11 12:42:53,914 - INFO - Trade closed at 2024-06-19 09:00:00, action: SELL, profit: -90.23443151983113.
+2024-07-11 12:42:53,915 - INFO - Trade closed at 2024-06-20 01:00:00, action: BUY, profit: 106.8951281456787.
+2024-07-11 12:42:53,915 - INFO - Trade closed at 2024-06-20 02:00:00, action: BUY, profit: 105.95609815895469.
+2024-07-11 12:42:53,915 - INFO - Trade closed at 2024-06-20 03:00:00, action: BUY, profit: 100.82287752195552.
+2024-07-11 12:42:53,915 - INFO - Trade closed at 2024-06-20 05:00:00, action: SELL, profit: -59.51746758301457.
+2024-07-11 12:42:53,915 - INFO - Trade closed at 2024-06-20 08:00:00, action: SELL, profit: -51.65586403885758.
+2024-07-11 12:42:53,915 - INFO - Trade closed at 2024-06-21 00:00:00, action: SELL, profit: -202.03981336432975.
+2024-07-11 12:42:53,915 - INFO - Trade closed at 2024-06-21 01:00:00, action: SELL, profit: -199.2535081909219.
+2024-07-11 12:42:53,915 - INFO - Trade closed at 2024-06-21 02:00:00, action: SELL, profit: -185.33059188796665.
+2024-07-11 12:42:53,915 - INFO - Trade closed at 2024-06-21 03:00:00, action: SELL, profit: -164.18439569441114.
+2024-07-11 12:42:53,916 - INFO - Trade closed at 2024-06-21 09:00:00, action: SELL, profit: -102.03552013139384.
+2024-07-11 12:42:53,916 - INFO - Trade closed at 2024-06-24 02:00:00, action: SELL, profit: -162.80094400358269.
+2024-07-11 12:42:53,916 - INFO - Trade closed at 2024-06-24 04:00:00, action: SELL, profit: -103.46898848920816.
+2024-07-11 12:42:53,916 - INFO - Trade closed at 2024-06-24 05:00:00, action: SELL, profit: -78.68756923847809.
+2024-07-11 12:42:53,916 - INFO - Trade closed at 2024-06-24 08:00:00, action: BUY, profit: 92.02310922606927.
+2024-07-11 12:42:53,916 - INFO - Trade closed at 2024-06-24 09:00:00, action: BUY, profit: 95.33823444674016.
+2024-07-11 12:42:53,917 - INFO - Trade closed at 2024-06-25 00:00:00, action: BUY, profit: 334.76683165893917.
+2024-07-11 12:42:53,917 - INFO - Trade closed at 2024-06-25 01:00:00, action: BUY, profit: 303.8286220535591.
+2024-07-11 12:42:53,917 - INFO - Trade closed at 2024-06-25 02:00:00, action: BUY, profit: 267.96771211632375.
+2024-07-11 12:42:53,917 - INFO - Trade closed at 2024-06-25 03:00:00, action: BUY, profit: 229.34990505205644.
+2024-07-11 12:42:53,917 - INFO - Trade closed at 2024-06-25 04:00:00, action: BUY, profit: 188.7394193619274.
+2024-07-11 12:42:53,917 - INFO - Trade closed at 2024-06-26 02:00:00, action: SELL, profit: -187.38247369318728.
+2024-07-11 12:42:53,917 - INFO - Trade closed at 2024-06-26 05:00:00, action: SELL, profit: -129.95029414115677.
+2024-07-11 12:42:53,917 - INFO - Trade closed at 2024-06-26 07:00:00, action: SELL, profit: -93.26689207804773.
+2024-07-11 12:42:53,918 - INFO - Trade closed at 2024-06-26 08:00:00, action: SELL, profit: -83.68768302131625.
+2024-07-11 12:42:53,918 - INFO - Trade closed at 2024-06-26 09:00:00, action: SELL, profit: -85.52904631269342.
+2024-07-11 12:42:53,918 - INFO - Trade closed at 2024-06-27 00:00:00, action: SELL, profit: -174.2308359921285.
+2024-07-11 12:42:53,918 - INFO - Trade closed at 2024-06-27 01:00:00, action: SELL, profit: -160.78438283348984.
+2024-07-11 12:42:53,918 - INFO - Trade closed at 2024-06-27 02:00:00, action: SELL, profit: -140.8520220133713.
+2024-07-11 12:42:53,918 - INFO - Trade closed at 2024-06-27 03:00:00, action: SELL, profit: -115.1899204060447.
+2024-07-11 12:42:53,918 - INFO - Trade closed at 2024-06-27 06:00:00, action: BUY, profit: 113.77910269689818.
+2024-07-11 12:42:53,919 - INFO - Trade closed at 2024-06-28 02:00:00, action: BUY, profit: 177.43585942677777.
+2024-07-11 12:42:53,919 - INFO - Trade closed at 2024-06-28 03:00:00, action: SELL, profit: -130.94108759685864.
+2024-07-11 12:42:53,919 - INFO - Trade closed at 2024-06-28 04:00:00, action: SELL, profit: -134.86613977531368.
+2024-07-11 12:42:53,919 - INFO - Trade closed at 2024-06-28 05:00:00, action: SELL, profit: -134.22362281301224.
+2024-07-11 12:42:53,919 - INFO - Trade closed at 2024-06-28 06:00:00, action: SELL, profit: -132.27459476805592.
+2024-07-11 12:42:53,919 - INFO - Trade closed at 2024-07-01 00:00:00, action: BUY, profit: 244.0018119000742.
+2024-07-11 12:42:53,919 - INFO - Trade closed at 2024-07-01 01:00:00, action: BUY, profit: 275.78166421244885.
+2024-07-11 12:42:53,919 - INFO - Trade closed at 2024-07-01 02:00:00, action: BUY, profit: 292.04316551891816.
+2024-07-11 12:42:53,920 - INFO - Trade closed at 2024-07-01 03:00:00, action: BUY, profit: 313.1818876257908.
+2024-07-11 12:42:53,920 - INFO - Trade closed at 2024-07-01 04:00:00, action: BUY, profit: 333.1382516866821.
+2024-07-11 12:42:53,920 - INFO - Trade closed at 2024-07-02 07:00:00, action: SELL, profit: -141.85313708210413.
+2024-07-11 12:42:53,920 - INFO - Trade closed at 2024-07-02 08:00:00, action: SELL, profit: -126.28351561396744.
+2024-07-11 12:42:53,920 - INFO - Trade closed at 2024-07-02 09:00:00, action: SELL, profit: -125.52002094459169.
+2024-07-11 12:42:53,920 - INFO - Trade closed at 2024-07-02 10:00:00, action: SELL, profit: -129.7981124671388.
+2024-07-11 12:42:53,920 - INFO - Trade closed at 2024-07-02 11:00:00, action: SELL, profit: -128.01071860972792.
+2024-07-11 12:42:53,920 - INFO - Trade closed at 2024-07-03 00:00:00, action: BUY, profit: 139.19085723170798.
+2024-07-11 12:42:53,921 - INFO - Trade closed at 2024-07-03 01:00:00, action: BUY, profit: 157.3959138105874.
+2024-07-11 12:42:53,921 - INFO - Trade closed at 2024-07-03 02:00:00, action: BUY, profit: 171.57263307738813.
+2024-07-11 12:42:53,921 - INFO - Trade closed at 2024-07-03 03:00:00, action: BUY, profit: 181.8638877959744.
+2024-07-11 12:42:53,921 - INFO - Trade closed at 2024-07-03 04:00:00, action: BUY, profit: 183.23628691436778.
+2024-07-11 12:42:53,921 - INFO - Trade closed at 2024-07-04 00:00:00, action: BUY, profit: 420.8719145075035.
+2024-07-11 12:42:53,921 - INFO - Trade closed at 2024-07-04 01:00:00, action: BUY, profit: 412.56704718291013.
+2024-07-11 12:42:53,921 - INFO - Trade closed at 2024-07-04 02:00:00, action: BUY, profit: 399.55796628430295.
+2024-07-11 12:42:53,921 - INFO - Trade closed at 2024-07-04 03:00:00, action: BUY, profit: 378.9926259526899.
+2024-07-11 12:42:53,921 - INFO - Trade closed at 2024-07-04 04:00:00, action: BUY, profit: 339.3462910706191.
+2024-07-11 12:42:53,922 - INFO - Trade closed at 2024-07-05 00:00:00, action: BUY, profit: 192.94927067226018.
+2024-07-11 12:42:53,922 - INFO - Trade closed at 2024-07-05 01:00:00, action: BUY, profit: 185.71905777649.
+2024-07-11 12:42:53,922 - INFO - Trade closed at 2024-07-05 02:00:00, action: BUY, profit: 170.76234639903376.
+2024-07-11 12:42:53,922 - INFO - Trade closed at 2024-07-05 03:00:00, action: BUY, profit: 157.90106829518535.
+2024-07-11 12:42:53,922 - INFO - Trade closed at 2024-07-05 04:00:00, action: BUY, profit: 148.880029413756.
+2024-07-11 12:42:53,922 - INFO - Trade closed at 2024-07-08 00:00:00, action: SELL, profit: -102.5826335731006.
+2024-07-11 12:42:53,922 - INFO - Trade closed at 2024-07-08 03:00:00, action: SELL, profit: -97.60997846022246.
+2024-07-11 12:42:53,923 - INFO - Trade closed at 2024-07-08 04:00:00, action: BUY, profit: 128.29944414884943.
+2024-07-11 12:42:53,923 - INFO - Trade closed at 2024-07-08 06:00:00, action: BUY, profit: 124.34265051592952.
+2024-07-11 12:42:53,923 - INFO - Trade closed at 2024-07-08 08:00:00, action: SELL, profit: -94.87516382489235.
+2024-07-11 12:42:53,923 - INFO - Trade closed at 2024-07-09 00:00:00, action: SELL, profit: -97.08262894250197.
+2024-07-11 12:42:53,923 - INFO - Trade closed at 2024-07-09 01:00:00, action: SELL, profit: -97.27720496366388.
+2024-07-11 12:42:53,923 - INFO - Trade closed at 2024-07-09 04:00:00, action: SELL, profit: -96.67298036091232.
+2024-07-11 12:42:53,924 - INFO - Trade closed at 2024-07-09 09:00:00, action: SELL, profit: -84.62149083305891.
+2024-07-11 12:42:53,924 - INFO - Trade closed at 2024-07-09 10:00:00, action: SELL, profit: -92.91005837717137.
+2024-07-11 12:42:53,924 - INFO - Trade closed at 2024-07-10 01:00:00, action: SELL, profit: -94.96673586757431.
+2024-07-11 12:42:53,924 - INFO - Trade closed at 2024-07-10 02:00:00, action: SELL, profit: -88.88689960473428.
+2024-07-11 12:42:53,924 - INFO - Trade closed at 2024-07-10 03:00:00, action: SELL, profit: -79.59196518081413.
+2024-07-11 12:42:53,924 - INFO - Trade closed at 2024-07-10 06:00:00, action: BUY, profit: 82.21384183937363.
+2024-07-11 12:42:53,924 - INFO - Trade closed at 2024-07-10 09:00:00, action: BUY, profit: 69.40225993963267.
+2024-07-11 12:42:53,924 - INFO - Trade closed at 2024-07-11 00:00:00, action: BUY, profit: 88.06002737640206.
+2024-07-11 12:42:53,925 - INFO - Trade closed at 2024-07-11 01:00:00, action: BUY, profit: 95.29809188153493.
+2024-07-11 12:42:53,925 - INFO - Trade closed at 2024-07-11 02:00:00, action: BUY, profit: 103.67479519324263.
+2024-07-11 12:42:53,925 - INFO - Trade closed at 2024-07-11 03:00:00, action: BUY, profit: 111.80038602907061.
+2024-07-11 12:42:53,925 - INFO - Trade closed at 2024-07-11 04:00:00, action: BUY, profit: 124.18064092039049.
+2024-07-11 12:42:53,925 - INFO - Backtest completed. Total Profit: 1188.373976643307, Final Balance: 11188.373976643306, Number of Trades: 105, Win Rate: 0.4857142857142857, Max Drawdown: 4250.429163536639.
+2024-07-11 12:42:53,925 - INFO - Backtest completed successfully.
+2024-07-11 12:42:53,926 - INFO - Shutting down MetaTrader5...
+2024-07-11 12:42:53,926 - INFO - MetaTrader5 connection gracefully shut down.
