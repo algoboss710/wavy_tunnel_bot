@@ -18,6 +18,10 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
     if enable_profiling:
         pr.enable()
 
+    # Check for zero or negative initial balance
+    if initial_balance <= 0:
+        raise ValueError("Initial balance must be greater than zero.")
+    
     # Check for zero risk percentage
     if risk_percent == 0:
         raise ValueError("Risk percentage cannot be zero.")

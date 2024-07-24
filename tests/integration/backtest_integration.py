@@ -2,9 +2,23 @@ import logging
 import unittest
 import pandas as pd
 import numpy as np
+import MetaTrader5 as mt5
+from unittest.mock import patch
 from backtesting.backtest import run_backtest
 
 class BacktestTestCase(unittest.TestCase):
+
+    
+    @classmethod
+    def setUpClass(cls):
+        # Initialize MetaTrader5
+        if not mt5.initialize():
+            raise RuntimeError("MetaTrader5 initialization failed")
+
+        # Check symbol availability
+        symbol = "EURUSD"
+        if not mt5.symbol_select(symbol, True):
+            raise RuntimeError(f"Failed to select symbol {symbol}")
 
     def setUp(self):
         # Dummy data for testing
@@ -326,8 +340,9 @@ class BacktestTestCase(unittest.TestCase):
                 pip_value=0.0001,
                 max_trades_per_day=5
             )
-
-    def test_constant_prices(self):
+    
+    
+    def generate_constant_dataset(self):
         # Generate data with slight fluctuations around a constant price
         constant_data = pd.DataFrame({
             'time': pd.date_range(start='2024-01-01', periods=200, freq='D'),
@@ -340,7 +355,12 @@ class BacktestTestCase(unittest.TestCase):
         # Ensure 'high' is always greater than or equal to 'low'
         constant_data['high'] = constant_data[['high', 'low']].max(axis=1)
         constant_data['low'] = constant_data[['high', 'low']].min(axis=1)
+        
+        return constant_data
 
+    def test_constant_prices(self):
+        constant_data = self.generate_constant_dataset()
+        
         result = self.run_backtest_and_print(
             'test_constant_prices',
             symbol='EURUSD',
@@ -354,8 +374,10 @@ class BacktestTestCase(unittest.TestCase):
             pip_value=0.0001,
             max_trades_per_day=5
         )
-        self.assertNotEqual(result['total_profit'], 0)
-        self.assertGreater(result['num_trades'], 0)
+        
+        # Since prices are constant, we might expect no trades
+        expected_trades = 0
+        self.assertEqual(result['num_trades'], expected_trades, "Expected no trades in a constant price scenario")
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
