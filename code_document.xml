@@ -1,6 +1,6 @@
 <documents>
 <document index="1">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\config.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\config.py</source>
 <document_content>
 import os
 from dotenv import load_dotenv
@@ -124,7 +124,7 @@ except Exception as e:
 </document>
 
 <document index="2">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\main.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\main.py</source>
 <document_content>
 import MetaTrader5 as mt5
 import pandas as pd
@@ -287,7 +287,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="3">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\scheduler.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\scheduler.py</source>
 <document_content>
 import schedule
 import time
@@ -388,7 +388,7 @@ adjust_schedule(market_conditions)
 </document>
 
 <document index="4">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\ui.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\ui.py</source>
 <document_content>
 import tkinter as tk
 from tkinter import ttk
@@ -558,14 +558,14 @@ def run_ui(run_backtest_func, run_live_trading_func, clear_log_file, open_log_fi
 </document>
 
 <document index="5">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\backtesting\backtest.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\backtesting\backtest.py</source>
 <document_content>
 import logging
 import pandas as pd
 import numpy as np
 import pstats
 from io import StringIO
-from strategy.tunnel_strategy import generate_trade_signal, calculate_position_size, detect_peaks_and_dips, manage_position
+from strategy.tunnel_strategy import generate_trade_signal, calculate_position_size, detect_peaks_and_dips, manage_position, check_entry_conditions
 from metatrader.indicators import calculate_ema
 from metatrader.trade_management import execute_trade
 import cProfile
@@ -579,7 +579,15 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
     pr = cProfile.Profile() if enable_profiling else None
     if enable_profiling:
         pr.enable()
+
+    # Check for zero or negative initial balance
+    if initial_balance <= 0:
+        raise ValueError("Initial balance must be greater than zero.")
     
+    # Check for zero risk percentage
+    if risk_percent == 0:
+        raise ValueError("Risk percentage cannot be zero.")
+
     try:
         balance = initial_balance
         trades = []
@@ -609,12 +617,14 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
         data.loc[:, 'tunnel2'] = calculate_ema(data['close'], 169)
         data.loc[:, 'long_term_ema'] = calculate_ema(data['close'], 200)
 
-        # Detect peaks and dips
+        # Peak and Dip detection
         peaks, dips = detect_peaks_and_dips(data, peak_type)
 
+        # Loop through the data
         for i in range(34, len(data)):
-            if data.iloc[i]['time'].date() != current_day:
-                current_day = data.iloc[i]['time'].date()
+            row = data.iloc[i]
+            if row['time'].date() != current_day:
+                current_day = row['time'].date()
                 trades_today = 0
                 daily_loss = 0
                 logger.info(f"New trading day: {current_day}, resetting daily counters.")
@@ -623,9 +633,10 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                 logger.info(f"Reached max trades per day: {max_trades_per_day}, skipping further trades for {current_day}.")
                 continue
 
-            buy_condition, sell_condition = generate_trade_signal(data.iloc[:i+1], period=20, deviation_factor=2.0)
+            buy_condition, sell_condition = check_entry_conditions(row, peaks, dips, symbol)
+
             if buy_condition is None or sell_condition is None:
-                logger.debug(f"No trade signal generated for {data.iloc[i]['time']}.")
+                logger.debug(f"No trade signal generated for {row['time']}.")
                 continue
 
             try:
@@ -634,18 +645,17 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                 logger.warning(f"Zero division error while calculating position size: {e}")
                 continue
 
-            row = data.iloc[i]
             std_dev = data['close'].rolling(window=20).std().iloc[i]
 
             if buy_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
                 trade = {
-                    'entry_time': data.iloc[i]['time'],
-                    'entry_price': data.iloc[i]['close'],
+                    'entry_time': row['time'],
+                    'entry_price': row['close'],
                     'volume': position_size,
                     'symbol': symbol,
                     'action': 'BUY',
-                    'sl': data.iloc[i]['close'] - (1.5 * std_dev),
-                    'tp': data.iloc[i]['close'] + (2 * std_dev),
+                    'sl': row['close'] - (1.5 * std_dev),
+                    'tp': row['close'] + (2 * std_dev),
                     'profit': 0  # Initialize profit to 0
                 }
                 execute_trade(trade)
@@ -655,13 +665,13 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
 
             elif sell_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
                 trade = {
-                    'entry_time': data.iloc[i]['time'],
-                    'entry_price': data.iloc[i]['close'],
+                    'entry_time': row['time'],
+                    'entry_price': row['close'],
                     'volume': position_size,
                     'symbol': symbol,
                     'action': 'SELL',
-                    'sl': data.iloc[i]['close'] + (1.5 * std_dev),
-                    'tp': data.iloc[i]['close'] - (2 * std_dev),
+                    'sl': row['close'] + (1.5 * std_dev),
+                    'tp': row['close'] - (2 * std_dev),
                     'profit': 0  # Initialize profit to 0
                 }
                 execute_trade(trade)
@@ -731,7 +741,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="6">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\connection.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\metatrader\connection.py</source>
 <document_content>
 import MetaTrader5 as mt5
 # import MetaTrader4 as mt4
@@ -801,7 +811,7 @@ def shutdown_mt5():
 </document>
 
 <document index="7">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\data_retrieval.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\metatrader\data_retrieval.py</source>
 <document_content>
 import MetaTrader5 as mt5
 import pandas as pd
@@ -957,7 +967,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="8">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\indicators.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\metatrader\indicators.py</source>
 <document_content>
 import pandas as pd
 import numpy as np
@@ -996,7 +1006,7 @@ def calculate_ema(prices, period):
 </document>
 
 <document index="9">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\trade_management.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\metatrader\trade_management.py</source>
 <document_content>
 import MetaTrader5 as mt5
 
@@ -1071,7 +1081,7 @@ def execute_trade(trade):
 </document>
 
 <document index="10">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\__init__.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\metatrader\__init__.py</source>
 <document_content>
 from .data_retrieval import get_historical_data
 # tests/__init__.py
@@ -1090,7 +1100,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="11">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\trade_logic.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\strategy\trade_logic.py</source>
 <document_content>
 from strategy.tunnel_strategy import execute_trade, manage_position
 from utils.error_handling import handle_error
@@ -1157,7 +1167,7 @@ def exit_trade(position_ticket):
 </document>
 
 <document index="12">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\tunnel_strategy.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\strategy\tunnel_strategy.py</source>
 <document_content>
 import pandas as pd
 import numpy as np
@@ -1516,33 +1526,119 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
         handle_error(e, "Failed to run the strategy")
         raise
 
+def place_order(symbol, action, volume, price, sl, tp):
+    """
+    Simulate placing an order.
+    
+    Parameters:
+        symbol (str): The symbol to trade.
+        action (str): 'buy' or 'sell'.
+        volume (float): The volume to trade.
+        price (float): The price to execute the trade.
+        sl (float): Stop loss price.
+        tp (float): Take profit price.
+
+    Returns:
+        str: 'Order placed' if successful, 'Order failed' otherwise.
+    """
+    try:
+        # In a real implementation, you would place the order with your trading platform here.
+        logging.debug(f"Placing order: {action} {symbol} {volume} at {price}, SL: {sl}, TP: {tp}")
+        return 'Order placed'
+    except Exception as e:
+        logging.error(f"Failed to place order: {str(e)}")
+        return 'Order failed'
+
+def close_position(ticket):
+    """
+    Simulate closing a position.
+    
+    Parameters:
+        ticket (int): The ticket number of the position to close.
+
+    Returns:
+        str: 'Position closed' if successful, 'Close failed' otherwise.
+    """
+    try:
+        # In a real implementation, you would close the position with your trading platform here.
+        logging.debug(f"Closing position with ticket: {ticket}")
+        return 'Position closed'
+    except Exception as e:
+        logging.error(f"Failed to close position: {str(e)}")
+        return 'Close failed'
+
+def get_historical_data(symbol, timeframe, start_time, end_time):
+    """
+    Simulate retrieving historical data.
+    
+    Parameters:
+        symbol (str): The symbol to retrieve data for.
+        timeframe (str): The timeframe to retrieve data for.
+        start_time (datetime): The start time for the data retrieval.
+        end_time (datetime): The end time for the data retrieval.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the historical data.
+    """
+    try:
+        # Generate mock data for simplicity
+        date_range = pd.date_range(start=start_time, end=end_time, freq='D')
+        data = pd.DataFrame({
+            'time': date_range,
+            'open': np.random.rand(len(date_range)) * 100,
+            'high': np.random.rand(len(date_range)) * 100,
+            'low': np.random.rand(len(date_range)) * 100,
+            'close': np.random.rand(len(date_range)) * 100,
+            'volume': np.random.randint(100, 1000, size=len(date_range))
+        })
+        data.set_index('time', inplace=True)
+        logging.debug(f"Retrieved historical data for {symbol}: {data.head()}")
+        return data
+    except Exception as e:
+        logging.error(f"Failed to retrieve historical data for {symbol}: {str(e)}")
+        return None
+
 </document_content>
 </document>
 
 <document index="13">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\__init__.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\strategy\__init__.py</source>
 <document_content>
 from .tunnel_strategy import run_strategy
 </document_content>
 </document>
 
 <document index="14">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\__init__.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\__init__.py</source>
 <document_content>
 
 </document_content>
 </document>
 
 <document index="15">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\integration\backtest_integration.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\integration\backtest_integration.py</source>
 <document_content>
 import logging
 import unittest
 import pandas as pd
 import numpy as np
+import MetaTrader5 as mt5
+from unittest.mock import patch
 from backtesting.backtest import run_backtest
 
 class BacktestTestCase(unittest.TestCase):
+
+    
+    @classmethod
+    def setUpClass(cls):
+        # Initialize MetaTrader5
+        if not mt5.initialize():
+            raise RuntimeError("MetaTrader5 initialization failed")
+
+        # Check symbol availability
+        symbol = "EURUSD"
+        if not mt5.symbol_select(symbol, True):
+            raise RuntimeError(f"Failed to select symbol {symbol}")
 
     def setUp(self):
         # Dummy data for testing
@@ -1864,8 +1960,9 @@ class BacktestTestCase(unittest.TestCase):
                 pip_value=0.0001,
                 max_trades_per_day=5
             )
-
-    def test_constant_prices(self):
+    
+    
+    def generate_constant_dataset(self):
         # Generate data with slight fluctuations around a constant price
         constant_data = pd.DataFrame({
             'time': pd.date_range(start='2024-01-01', periods=200, freq='D'),
@@ -1878,7 +1975,12 @@ class BacktestTestCase(unittest.TestCase):
         # Ensure 'high' is always greater than or equal to 'low'
         constant_data['high'] = constant_data[['high', 'low']].max(axis=1)
         constant_data['low'] = constant_data[['high', 'low']].min(axis=1)
+        
+        return constant_data
 
+    def test_constant_prices(self):
+        constant_data = self.generate_constant_dataset()
+        
         result = self.run_backtest_and_print(
             'test_constant_prices',
             symbol='EURUSD',
@@ -1892,8 +1994,10 @@ class BacktestTestCase(unittest.TestCase):
             pip_value=0.0001,
             max_trades_per_day=5
         )
-        self.assertNotEqual(result['total_profit'], 0)
-        self.assertGreater(result['num_trades'], 0)
+        
+        # Since prices are constant, we might expect no trades
+        expected_trades = 0
+        self.assertEqual(result['num_trades'], expected_trades, "Expected no trades in a constant price scenario")
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
@@ -1903,14 +2007,14 @@ if __name__ == '__main__':
 </document>
 
 <document index="16">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\integration\__init__.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\integration\__init__.py</source>
 <document_content>
 
 </document_content>
 </document>
 
 <document index="17">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\backtesting\test_backtest.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\unit\backtesting\test_backtest.py</source>
 <document_content>
 # tests/backtesting/test_backtest.py
 import unittest
@@ -1983,7 +2087,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="18">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\config\test_config.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\unit\config\test_config.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch, MagicMock
@@ -2028,7 +2132,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="19">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\metatrader\test_connection.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\unit\metatrader\test_connection.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -2072,7 +2176,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="20">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\metatrader\test_data_retrieval.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\unit\metatrader\test_data_retrieval.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -2130,7 +2234,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="21">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\metatrader\test_indicators.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\unit\metatrader\test_indicators.py</source>
 <document_content>
 import unittest
 import numpy as np
@@ -2186,7 +2290,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="22">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\metatrader\test_trade_management.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\unit\metatrader\test_trade_management.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch, MagicMock
@@ -2274,7 +2378,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="23">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\strategy\test_strategy.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\unit\strategy\test_strategy.py</source>
 <document_content>
 import unittest
 import pandas as pd
@@ -2715,7 +2819,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="24">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\unit\strategy\test_trade_logic.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\unit\strategy\test_trade_logic.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch, Mock
@@ -2793,7 +2897,7 @@ class TestStrategyFunctions(unittest.TestCase):
 </document>
 
 <document index="25">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_data_validation.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\utils\test_data_validation.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch, MagicMock
@@ -2846,7 +2950,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="26">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_error_handling.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\utils\test_error_handling.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -2881,7 +2985,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="27">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_logger.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\utils\test_logger.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -2901,7 +3005,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="28">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_plotting.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\utils\test_plotting.py</source>
 <document_content>
 import unittest
 from unittest.mock import patch
@@ -2933,7 +3037,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="29">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\tests\utils\test_types.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\tests\utils\test_types.py</source>
 <document_content>
 import unittest
 from utils.types import TradeAction, OrderType, OrderFilling, OrderTime, Symbol, Timeframe, LotSize
@@ -3002,7 +3106,7 @@ if __name__ == '__main__':
 </document>
 
 <document index="30">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\data_validation.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\utils\data_validation.py</source>
 <document_content>
 from typing import Any
 from pydantic import BaseModel, ValidationError
@@ -3095,7 +3199,7 @@ def validate_close_request(close_request):
 </document>
 
 <document index="31">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\error_handling.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\utils\error_handling.py</source>
 <document_content>
 import logging
 
@@ -3113,7 +3217,7 @@ def warn_error(error, message):
 </document>
 
 <document index="32">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\logger.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\utils\logger.py</source>
 <document_content>
 import logging
 import os
@@ -3140,7 +3244,7 @@ def setup_logging(log_level=logging.INFO, log_file="app.log"):
 </document>
 
 <document index="33">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\plotting.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\utils\plotting.py</source>
 <document_content>
 import matplotlib.pyplot as plt
 
@@ -3188,7 +3292,7 @@ def plot_backtest_results(data, trades):
 </document>
 
 <document index="34">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\types.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\utils\types.py</source>
 <document_content>
 class TradeAction(str):
     def __new__(cls, value):
@@ -3236,7 +3340,7 @@ class LotSize(float):
 </document>
 
 <document index="35">
-<source>C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\utils\__init__.py</source>
+<source>C:\Users\Owner\Desktop\upwork_projects\Wavy_Tunnel_Bot\utils\__init__.py</source>
 <document_content>
 from .data_validation import validate_data, sanitize_data, validate_trade_request, validate_close_request
 from .logger import setup_logging

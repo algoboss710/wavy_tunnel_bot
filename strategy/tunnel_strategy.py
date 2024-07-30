@@ -2,12 +2,23 @@ import pandas as pd
 import numpy as np
 import logging
 import MetaTrader5 as mt5
+from datetime import datetime
+from utils.error_handling import handle_error
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def handle_error(e, context):
-    logging.error(f"Error in {context}: {str(e)}")
+def get_current_data(symbol):
+    tick = mt5.symbol_info_tick(symbol)
+    if tick:
+        return {
+            'time': datetime.fromtimestamp(tick.time),
+            'bid': tick.bid,
+            'ask': tick.ask,
+            'last': tick.last
+        }
+    else:
+        raise ValueError(f"Failed to retrieve current tick data for {symbol}")
 
 def calculate_ema(prices, period):
     if not isinstance(prices, (list, np.ndarray, pd.Series)):
@@ -262,14 +273,21 @@ def adjust_deviation_factor(market_conditions):
 def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, run_backtest=False):
     try:
         for symbol in symbols:
-            start_time = pd.Timestamp.now() - pd.Timedelta(days=30)  # Example: 30 days ago
-            end_time = pd.Timestamp.now()  # Current time
-            data = get_historical_data(symbol, timeframe, start_time, end_time)
-            if data is None or data.empty:
-                raise ValueError(f"Failed to retrieve historical data for {symbol}")
+            current_data = get_current_data(symbol)
+            logging.info(f"Current data for {symbol}: {current_data}")
+
+            # Create a DataFrame with the current data for compatibility with the existing logic
+            data = pd.DataFrame([{
+                'time': current_data['time'],
+                'open': current_data['last'],
+                'high': current_data['last'],
+                'low': current_data['last'],
+                'close': current_data['last'],
+                'volume': 0
+            }])
 
             period = 20
-            market_conditions = 'volatile'  # Placeholder for determining market conditions
+            market_conditions = 'volatile'
             deviation_factor = adjust_deviation_factor(market_conditions)
 
             logging.info("Calculating Wavy Tunnel indicators...")
@@ -282,74 +300,56 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
             logging.info("Indicators calculated.")
 
             logging.info("Detecting peaks and dips...")
-            peak_type = 21  # Define the peak_type variable
+            peak_type = 21
             peaks, dips = detect_peaks_and_dips(data, peak_type)
             logging.info(f"Peaks: {peaks[:5]}")
             logging.info(f"Dips: {dips[:5]}")
-
-            logging.info(f"Historical data shape after calculations: {data.shape}")
-            logging.info(f"Historical data head after calculations:\n{data.head()}")
 
             logging.info("Generating entry signals...")
             data['buy_signal'], data['sell_signal'] = zip(*data.apply(lambda x: check_entry_conditions(x, peaks, dips, symbol), axis=1))
             logging.info("Entry signals generated.")
 
-            if run_backtest:
-                logging.info("Running backtest...")
-                backtest_result = run_backtest(
-                    symbol=symbol,
-                    data=data,
-                    initial_balance=starting_equity,
-                    risk_percent=0.01,
-                    min_take_profit=min_take_profit,
-                    max_loss_per_day=max_loss_per_day,
-                    starting_equity=starting_equity,
-                    stop_loss_pips=20,
-                    pip_value=0.0001,
-                    max_trades_per_day=max_trades_per_day,
-                    slippage=0,
-                    transaction_cost=0
-                )
-                logging.info(f"Backtest result: {backtest_result}")
-            else:
-                buy_condition, sell_condition = generate_trade_signal(data, period, deviation_factor)
+            buy_condition, sell_condition = generate_trade_signal(data, period, deviation_factor)
 
-                if buy_condition:
-                    trade_request = {
-                        'action': 'BUY',
-                        'symbol': symbol,
-                        'volume': lot_size,
-                        'price': data['close'].iloc[-1],
-                        'sl': data['close'].iloc[-1] - (1.5 * np.std(data['close'])),
-                        'tp': data['close'].iloc[-1] + (2 * np.std(data['close'])),
-                        'deviation': 10,
-                        'magic': 12345,
-                        'comment': 'Tunnel Strategy',
-                        'type': 'ORDER_TYPE_BUY',
-                        'type_filling': 'ORDER_FILLING_FOK',
-                        'type_time': 'ORDER_TIME_GTC'
-                    }
-                    logging.info(f"Executing BUY trade for {symbol}...")
-                    execute_trade(trade_request)
-                elif sell_condition:
-                    trade_request = {
-                        'action': 'SELL',
-                        'symbol': symbol,
-                        'volume': lot_size,
-                        'price': data['close'].iloc[-1],
-                        'sl': data['close'].iloc[-1] + (1.5 * np.std(data['close'])),
-                        'tp': data['close'].iloc[-1] - (2 * np.std(data['close'])),
-                        'deviation': 10,
-                        'magic': 12345,
-                        'comment': 'Tunnel Strategy',
-                        'type': 'ORDER_TYPE_SELL',
-                        'type_filling': 'ORDER_FILLING_FOK',
-                        'type_time': 'ORDER_TIME_GTC'
-                    }
-                    logging.info(f"Executing SELL trade for {symbol}...")
-                    execute_trade(trade_request)
+            logging.info(f"Buy Condition: {buy_condition}")
+            logging.info(f"Sell Condition: {sell_condition}")
 
-                manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+            if buy_condition:
+                trade_request = {
+                    'action': 'BUY',
+                    'symbol': symbol,
+                    'volume': lot_size,
+                    'price': data['close'].iloc[-1],
+                    'sl': data['close'].iloc[-1] - (1.5 * np.std(data['close'])),
+                    'tp': data['close'].iloc[-1] + (2 * np.std(data['close'])),
+                    'deviation': 10,
+                    'magic': 12345,
+                    'comment': 'Tunnel Strategy',
+                    'type': 'ORDER_TYPE_BUY',
+                    'type_filling': 'ORDER_FILLING_FOK',
+                    'type_time': 'ORDER_TIME_GTC'
+                }
+                logging.info(f"Executing BUY trade for {symbol} with trade request: {trade_request}")
+                execute_trade(trade_request)
+            elif sell_condition:
+                trade_request = {
+                    'action': 'SELL',
+                    'symbol': symbol,
+                    'volume': lot_size,
+                    'price': data['close'].iloc[-1],
+                    'sl': data['close'].iloc[-1] + (1.5 * np.std(data['close'])),
+                    'tp': data['close'].iloc[-1] - (2 * np.std(data['close'])),
+                    'deviation': 10,
+                    'magic': 12345,
+                    'comment': 'Tunnel Strategy',
+                    'type': 'ORDER_TYPE_SELL',
+                    'type_filling': 'ORDER_FILLING_FOK',
+                    'type_time': 'ORDER_TIME_GTC'
+                }
+                logging.info(f"Executing SELL trade for {symbol} with trade request: {trade_request}")
+                execute_trade(trade_request)
+
+            manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
 
     except Exception as e:
         handle_error(e, "Failed to run the strategy")
@@ -395,34 +395,3 @@ def close_position(ticket):
     except Exception as e:
         logging.error(f"Failed to close position: {str(e)}")
         return 'Close failed'
-
-def get_historical_data(symbol, timeframe, start_time, end_time):
-    """
-    Simulate retrieving historical data.
-    
-    Parameters:
-        symbol (str): The symbol to retrieve data for.
-        timeframe (str): The timeframe to retrieve data for.
-        start_time (datetime): The start time for the data retrieval.
-        end_time (datetime): The end time for the data retrieval.
-
-    Returns:
-        pd.DataFrame: A DataFrame containing the historical data.
-    """
-    try:
-        # Generate mock data for simplicity
-        date_range = pd.date_range(start=start_time, end=end_time, freq='D')
-        data = pd.DataFrame({
-            'time': date_range,
-            'open': np.random.rand(len(date_range)) * 100,
-            'high': np.random.rand(len(date_range)) * 100,
-            'low': np.random.rand(len(date_range)) * 100,
-            'close': np.random.rand(len(date_range)) * 100,
-            'volume': np.random.randint(100, 1000, size=len(date_range))
-        })
-        data.set_index('time', inplace=True)
-        logging.debug(f"Retrieved historical data for {symbol}: {data.head()}")
-        return data
-    except Exception as e:
-        logging.error(f"Failed to retrieve historical data for {symbol}: {str(e)}")
-        return None
