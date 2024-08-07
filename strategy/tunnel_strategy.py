@@ -265,6 +265,10 @@ def adjust_deviation_factor(market_conditions):
 
 def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, run_backtest, data=None):
     try:
+        total_profit = 0
+        total_loss = 0
+        max_drawdown = 0
+
         for symbol in symbols:
             if data is None:
                 current_data = get_current_data(symbol)
@@ -325,7 +329,11 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                     'type_time': 'ORDER_TIME_GTC'
                 }
                 logging.info(f"Executing BUY trade for {symbol} with trade request: {trade_request}")
-                execute_trade(trade_request)
+                result = execute_trade(trade_request)
+                if result:
+                    total_profit += trade_request['tp'] - trade_request['price']
+                    max_drawdown = min(max_drawdown, trade_request['sl'] - trade_request['price'])
+
             elif sell_condition:
                 trade_request = {
                     'action': 'SELL',
@@ -342,13 +350,22 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                     'type_time': 'ORDER_TIME_GTC'
                 }
                 logging.info(f"Executing SELL trade for {symbol} with trade request: {trade_request}")
-                execute_trade(trade_request)
+                result = execute_trade(trade_request)
+                if result:
+                    total_profit += trade_request['price'] - trade_request['tp']
+                    max_drawdown = min(max_drawdown, trade_request['price'] - trade_request['sl'])
 
             manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
 
+        return {
+            'total_profit': total_profit,
+            'total_loss': total_loss,
+            'max_drawdown': max_drawdown
+        }
+
     except Exception as e:
         handle_error(e, "Failed to run the strategy")
-        raise
+        return None
 
 def place_order(symbol, action, volume, price, sl, tp):
     try:

@@ -91,7 +91,7 @@ def run_live_trading_func():
         current_balance = starting_balance
 
         start_time = time.time()
-        max_duration = 10 * 3600  # 10 hours
+        max_duration = 1 * 1800 # 10 hours
 
         while time.time() - start_time < max_duration:
             if max_drawdown_reached:
@@ -115,6 +115,7 @@ def run_live_trading_func():
                     tick = mt5.symbol_info_tick(symbol)
                     if tick is None:
                         logging.warning(f"Failed to retrieve tick data for {symbol}.")
+                        time.sleep(1)
                         continue
 
                     tick_data.append({
@@ -139,32 +140,40 @@ def run_live_trading_func():
                     df['low'] = df['ask']
                     df['close'] = df['last']
 
-                result = run_strategy(
-                    symbols=[symbol],
-                    mt5_init=mt5,
-                    timeframe=mt5.TIMEFRAME_M1,
-                    lot_size=0.01,
-                    min_take_profit=Config.MIN_TP_PROFIT,
-                    max_loss_per_day=Config.MAX_LOSS_PER_DAY,
-                    starting_equity=current_balance,
-                    max_trades_per_day=Config.LIMIT_NO_OF_TRADES,
-                    run_backtest=False,
-                    data=df
-                )
+                try:
+                    result = run_strategy(
+                        symbols=[symbol],
+                        mt5_init=mt5,
+                        timeframe=mt5.TIMEFRAME_M1,
+                        lot_size=0.01,
+                        min_take_profit=Config.MIN_TP_PROFIT,
+                        max_loss_per_day=Config.MAX_LOSS_PER_DAY,
+                        starting_equity=current_balance,
+                        max_trades_per_day=Config.LIMIT_NO_OF_TRADES,
+                        run_backtest=False,
+                        data=df
+                    )
 
-                total_profit += result.get('total_profit', 0)
-                current_balance += result.get('total_profit', 0)
+                    if result is None:
+                        raise ValueError("run_strategy returned None. Check the function implementation.")
 
-                max_drawdown = result.get('max_drawdown', 0)
-                if max_drawdown >= Config.MAX_DRAWDOWN:
-                    max_drawdown_reached = True
-                    logging.info(f"Maximum drawdown of {Config.MAX_DRAWDOWN} reached. Stopping trading.")
-                    break
+                    total_profit += result.get('total_profit', 0.0)
+                    total_loss += result.get('total_loss', 0.0)
+                    current_balance += result.get('total_profit', 0.0)
 
-                daily_trades += 1
-                total_trades += 1
-                logging.info(f"Live trading iteration completed for {symbol}. Total trades today: {daily_trades}")
-                logging.info(f"Current Balance: {current_balance:.2f}")
+                    max_drawdown = result.get('max_drawdown', 0.0)
+                    if max_drawdown >= Config.MAX_DRAWDOWN:
+                        max_drawdown_reached = True
+                        logging.info(f"Maximum drawdown of {Config.MAX_DRAWDOWN} reached. Stopping trading.")
+                        break
+
+                    daily_trades += 1
+                    total_trades += 1
+                    logging.info(f"Live trading iteration completed for {symbol}. Total trades today: {daily_trades}")
+                    logging.info(f"Current Balance: {current_balance:.2f}")
+
+                except Exception as e:
+                    logging.error(f"An error occurred while running strategy for {symbol}: {e}")
 
                 time.sleep(60)
 
