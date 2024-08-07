@@ -268,6 +268,8 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
         total_profit = 0
         total_loss = 0
         max_drawdown = 0
+        current_balance = starting_equity
+        peak_balance = starting_equity
 
         for symbol in symbols:
             if data is None:
@@ -331,8 +333,14 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                 logging.info(f"Executing BUY trade for {symbol} with trade request: {trade_request}")
                 result = execute_trade(trade_request)
                 if result:
-                    total_profit += trade_request['tp'] - trade_request['price']
-                    max_drawdown = min(max_drawdown, trade_request['sl'] - trade_request['price'])
+                    profit = trade_request['tp'] - trade_request['price']
+                    total_profit += profit
+                    current_balance += profit
+                    peak_balance = max(peak_balance, current_balance)
+                    drawdown = peak_balance - current_balance
+                    max_drawdown = max(max_drawdown, drawdown)
+                else:
+                    logging.error("Trade execution failed")
 
             elif sell_condition:
                 trade_request = {
@@ -352,8 +360,14 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                 logging.info(f"Executing SELL trade for {symbol} with trade request: {trade_request}")
                 result = execute_trade(trade_request)
                 if result:
-                    total_profit += trade_request['price'] - trade_request['tp']
-                    max_drawdown = min(max_drawdown, trade_request['price'] - trade_request['sl'])
+                    profit = trade_request['price'] - trade_request['tp']
+                    total_profit += profit
+                    current_balance += profit
+                    peak_balance = max(peak_balance, current_balance)
+                    drawdown = peak_balance - current_balance
+                    max_drawdown = max(max_drawdown, drawdown)
+                else:
+                    logging.error("Trade execution failed")
 
             manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
 

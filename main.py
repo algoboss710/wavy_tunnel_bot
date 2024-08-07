@@ -82,6 +82,15 @@ def run_live_trading_func():
             raise Exception("Failed to initialize MetaTrader5")
         logging.info("MetaTrader5 initialized successfully.")
 
+        # Check if the account is a demo account
+        account_info = mt5.account_info()
+        if account_info is None:
+            raise Exception("Failed to get account info")
+        if account_info.server.endswith("demo"):
+            logging.info("Trading on a demo account.")
+        else:
+            logging.info("Trading on a live account.")
+
         daily_trades = 0
         total_trades = 0
         total_profit = 0.0

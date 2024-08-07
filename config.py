@@ -80,6 +80,11 @@ class Config:
     except ValueError:
         raise ValueError(f"Invalid PIP_VALUE value: {os.getenv('PIP_VALUE')}. Expected a numeric value.")
 
+    try:
+        MAX_DRAWDOWN = float(os.getenv("MAX_DRAWDOWN", 0.2))
+    except ValueError:
+        raise ValueError(f"Invalid MAX_DRAWDOWN value: {os.getenv('MAX_DRAWDOWN')}. Expected a numeric value.")
+
     @classmethod
     def validate(cls):
         try:
@@ -91,7 +96,7 @@ class Config:
                 if not getattr(cls, var, None):
                     raise ValueError(f"Missing required environment variable: {var}")
 
-            numeric_vars = ['MIN_TP_PROFIT', 'MAX_LOSS_PER_DAY', 'STARTING_EQUITY', 'RISK_PER_TRADE', 'PIP_VALUE']
+            numeric_vars = ['MIN_TP_PROFIT', 'MAX_LOSS_PER_DAY', 'STARTING_EQUITY', 'RISK_PER_TRADE', 'PIP_VALUE', 'MAX_DRAWDOWN']
             for var in numeric_vars:
                 if not isinstance(getattr(cls, var, None), (int, float)):
                     raise ValueError(f"Invalid value for {var}. Expected a numeric value.")
@@ -102,7 +107,6 @@ class Config:
         except ValueError as e:
             handle_error(e, "Configuration validation failed")
             critical_error(e, "Invalid configuration settings")
-
 
     @classmethod
     def log_config(cls):
