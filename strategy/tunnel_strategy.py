@@ -23,12 +23,12 @@ def get_current_data(symbol):
 def calculate_ema(prices, period):
     if not isinstance(prices, (list, np.ndarray, pd.Series)):
         raise ValueError("Invalid input type for prices. Expected list, numpy array, or pandas Series.")
-    
+
     logging.debug(f"Calculating EMA for period: {period}, prices: {prices}")
-    
+
     # Convert input to a pandas Series to ensure consistency
     prices = pd.Series(prices)
-    
+
     # Ensure that the series is numeric
     prices = pd.to_numeric(prices, errors='coerce')
     logging.debug(f"Prices converted to numeric: {prices}")
@@ -36,16 +36,16 @@ def calculate_ema(prices, period):
     ema_values = np.full(len(prices), np.nan, dtype=np.float64)
     if len(prices) < period:
         return pd.Series(ema_values, index=prices.index)
-    
+
     sma = np.mean(prices[:period])
     ema_values[period - 1] = sma
     logging.debug(f"Initial SMA: {sma}")
-    
+
     multiplier = 2 / (period + 1)
     for i in range(period, len(prices)):
         ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
         logging.debug(f"EMA value at index {i}: {ema_values[i]}")
-    
+
     ema_series = pd.Series(ema_values, index=prices.index)
     return ema_series
 
@@ -54,26 +54,26 @@ def detect_peaks_and_dips(df, peak_type):
         raise TypeError("High and Low columns must contain numeric data.")
 
     logging.debug(f"Detecting peaks and dips with peak_type: {peak_type}")
-    
+
     highs = df['high'].values
     lows = df['low'].values
     center_index = peak_type // 2
     peaks = []
     dips = []
-    
+
     for i in range(center_index, len(highs) - center_index):
         peak_window = highs[i - center_index:i + center_index + 1]
         dip_window = lows[i - center_index:i + center_index + 1]
-        
+
         if all(peak_window[center_index] > peak_window[j] for j in range(len(peak_window)) if j != center_index):
             peaks.append(highs[i])
-        
+
         if all(dip_window[center_index] < dip_window[j] for j in range(len(dip_window)) if j != center_index):
             dips.append(lows[i])
-    
+
     logging.debug(f"Detected peaks: {peaks}")
     logging.debug(f"Detected dips: {dips}")
-    
+
     return peaks, dips
 
 def check_entry_conditions(row, peaks, dips, symbol):
@@ -99,7 +99,7 @@ def check_entry_conditions(row, peaks, dips, symbol):
         max(wavy_c, wavy_h, wavy_l) < min(tunnel1, tunnel2) and
         any(abs(close_price - dip) <= 0.001 for dip in dips)
     )
-    
+
     logging.debug(f"Initial Buy condition: {buy_condition}")
     logging.debug(f"Initial Sell condition: {sell_condition}")
 
@@ -118,7 +118,7 @@ def check_entry_conditions(row, peaks, dips, symbol):
         if not symbol_info:
             logging.error(f"Failed to get symbol info for {symbol}")
             return False, False
-        
+
         threshold = threshold_values.get(symbol[:3], threshold_values['default']) * symbol_info.trade_tick_size
         logging.debug(f"Threshold: {threshold}")
 
@@ -241,7 +241,7 @@ def generate_trade_signal(data, period, deviation_factor):
         return None, None
 
     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
-    
+
     last_close = pd.to_numeric(data['close'].iloc[-1], errors='coerce')
     upper_bound_last_value = upper_bound.iloc[-1]
     lower_bound_last_value = lower_bound.iloc[-1]
@@ -270,21 +270,23 @@ def adjust_deviation_factor(market_conditions):
     else:
         return 2.0
 
-def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, run_backtest=False):
+def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, run_backtest, data=None):
     try:
         for symbol in symbols:
-            current_data = get_current_data(symbol)
-            logging.info(f"Current data for {symbol}: {current_data}")
+            if data is None:
+                current_data = get_current_data(symbol)
+                logging.info(f"Current data for {symbol}: {current_data}")
 
-            # Create a DataFrame with the current data for compatibility with the existing logic
-            data = pd.DataFrame([{
-                'time': current_data['time'],
-                'open': current_data['last'],
-                'high': current_data['last'],
-                'low': current_data['last'],
-                'close': current_data['last'],
-                'volume': 0
-            }])
+                data = pd.DataFrame([{
+                    'time': current_data['time'],
+                    'open': current_data['last'],
+                    'high': current_data['last'],
+                    'low': current_data['last'],
+                    'close': current_data['last'],
+                    'volume': 0
+                }])
+            else:
+                logging.info(f"Using provided data for {symbol}")
 
             period = 20
             market_conditions = 'volatile'
@@ -358,7 +360,7 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
 def place_order(symbol, action, volume, price, sl, tp):
     """
     Simulate placing an order.
-    
+
     Parameters:
         symbol (str): The symbol to trade.
         action (str): 'buy' or 'sell'.
@@ -381,7 +383,7 @@ def place_order(symbol, action, volume, price, sl, tp):
 def close_position(ticket):
     """
     Simulate closing a position.
-    
+
     Parameters:
         ticket (int): The ticket number of the position to close.
 
