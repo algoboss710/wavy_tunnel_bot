@@ -20,7 +20,6 @@ def clear_log_file():
 
 def run_backtest_func():
     try:
-        # Initialize MetaTrader5
         logging.info("Initializing MetaTrader5...")
         if not initialize_mt5(Config.MT5_PATH):
             raise Exception("Failed to initialize MetaTrader5")
@@ -32,7 +31,7 @@ def run_backtest_func():
             end_date = datetime.now()
             initial_balance = 10000
             risk_percent = Config.RISK_PER_TRADE
-            stop_loss_pips = 20  # Example value for stop loss in pips
+            stop_loss_pips = 20
             pip_value = Config.PIP_VALUE
 
             backtest_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, start_date, end_date)
@@ -43,12 +42,10 @@ def run_backtest_func():
                 logging.error(f"No historical data retrieved for {symbol} for backtesting")
                 continue
 
-            # Ensure there are enough data points for the indicators
             if len(backtest_data) < 20:
                 logging.error(f"Not enough data for symbol {symbol} to perform backtest")
                 continue
 
-            # Process data to avoid SettingWithCopyWarning
             backtest_data.loc[:, 'close'] = pd.to_numeric(backtest_data['close'], errors='coerce')
 
             try:
@@ -61,8 +58,8 @@ def run_backtest_func():
                     max_loss_per_day=Config.MAX_LOSS_PER_DAY,
                     starting_equity=Config.STARTING_EQUITY,
                     max_trades_per_day=Config.LIMIT_NO_OF_TRADES,
-                    stop_loss_pips=stop_loss_pips,  # Pass stop_loss_pips
-                    pip_value=pip_value              # Pass pip_value
+                    stop_loss_pips=stop_loss_pips,
+                    pip_value=pip_value
                 )
                 logging.info("Backtest completed successfully.")
             except Exception as e:
@@ -104,8 +101,8 @@ def run_live_trading_func():
             current_day = datetime.now().date()
             if daily_trades >= Config.LIMIT_NO_OF_TRADES:
                 logging.info("Maximum number of trades for the day reached. Stopping trading for today.")
-                time.sleep(86400)  # Sleep for 24 hours
-                daily_trades = 0  # Reset daily trades count
+                time.sleep(86400)
+                daily_trades = 0
                 continue
 
             for symbol in Config.SYMBOLS:
@@ -136,6 +133,12 @@ def run_live_trading_func():
                 df = pd.DataFrame(tick_data)
                 logging.info(f"Dataframe created with tick data: {df.tail()}")
 
+                # Ensure DataFrame has all necessary columns
+                if 'high' not in df.columns or 'low' not in df.columns or 'close' not in df.columns:
+                    df['high'] = df['bid']
+                    df['low'] = df['ask']
+                    df['close'] = df['last']
+
                 result = run_strategy(
                     symbols=[symbol],
                     mt5_init=mt5,
@@ -146,14 +149,12 @@ def run_live_trading_func():
                     starting_equity=current_balance,
                     max_trades_per_day=Config.LIMIT_NO_OF_TRADES,
                     run_backtest=False,
-                    data=df  # Pass the collected tick data
+                    data=df
                 )
 
-                # Update current balance, total profit, and total loss
                 total_profit += result.get('total_profit', 0)
                 current_balance += result.get('total_profit', 0)
 
-                # Check for maximum drawdown condition
                 max_drawdown = result.get('max_drawdown', 0)
                 if max_drawdown >= Config.MAX_DRAWDOWN:
                     max_drawdown_reached = True
@@ -165,7 +166,6 @@ def run_live_trading_func():
                 logging.info(f"Live trading iteration completed for {symbol}. Total trades today: {daily_trades}")
                 logging.info(f"Current Balance: {current_balance:.2f}")
 
-                # Sleep for a bit before the next iteration to avoid excessive API calls
                 time.sleep(60)
 
             if time.time() - start_time >= max_duration:
@@ -182,7 +182,6 @@ def run_live_trading_func():
         shutdown_mt5()
         logging.info("MetaTrader5 connection gracefully shut down.")
 
-        # Print summary of trading session
         logging.info("Summary of Trading Session:")
         logging.info(f"Total trades: {total_trades}")
         logging.info(f"Starting balance: {starting_balance:.2f}")
@@ -190,14 +189,12 @@ def run_live_trading_func():
         logging.info(f"Total profit: {total_profit:.2f}")
         logging.info(f"Total loss: {total_loss:.2f}")
 
-
-
 def open_log_file():
     import subprocess
     log_file_path = os.path.abspath("app.log")
-    if os.name == "nt":  # for Windows
+    if os.name == "nt":
         os.startfile(log_file_path)
-    elif os.name == "posix":  # for MacOS and Linux
+    elif os.name == "posix":
         subprocess.call(["open", log_file_path])
 
 def main():
@@ -209,14 +206,12 @@ def main():
         setup_logging()
         logging.info("STARTING APPLICATION")
 
-        # Log configuration settings
         logging.info("LOGGING ALL THE CONFIG SETTINGS")
         Config.log_config()
 
         if args.ui:
             run_ui(run_backtest_func, run_live_trading_func, clear_log_file, open_log_file)
         else:
-            # Prompt the user to choose between backtesting and live trading
             print("Choose an option:")
             print("1. Run Backtesting")
             print("2. Run Live Trading")

@@ -5,7 +5,6 @@ import MetaTrader5 as mt5
 from datetime import datetime
 from utils.error_handling import handle_error
 
-# Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_current_data(symbol):
@@ -26,10 +25,7 @@ def calculate_ema(prices, period):
 
     logging.debug(f"Calculating EMA for period: {period}, prices: {prices}")
 
-    # Convert input to a pandas Series to ensure consistency
     prices = pd.Series(prices)
-
-    # Ensure that the series is numeric
     prices = pd.to_numeric(prices, errors='coerce')
     logging.debug(f"Prices converted to numeric: {prices}")
 
@@ -137,12 +133,10 @@ def check_entry_conditions(row, peaks, dips, symbol):
 def execute_trade(trade_request):
     logging.debug(f"Executing trade with request: {trade_request}")
     try:
-        # Set initial trade details
         trade_request['entry_time'] = pd.Timestamp.now()
         trade_request['entry_price'] = trade_request['price']
-        trade_request['profit'] = 0  # Initialize profit to 0
+        trade_request['profit'] = 0
 
-        # Place the order (simulated for this example)
         result = place_order(
             trade_request['symbol'],
             trade_request['action'].lower(),
@@ -171,7 +165,6 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
 
                 current_equity = mt5.account_info().equity
 
-                # Check for take profit, stop loss, or maximum loss per day conditions
                 if position.profit >= min_take_profit:
                     logging.debug(f"Closing position {position.ticket} for profit")
                     close_position(position.ticket)
@@ -186,7 +179,7 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
                     position['exit_price'] = mt5.symbol_info_tick(symbol).bid
                     position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
 
-                elif current_equity <= starting_equity * 0.9:  # Close position if equity drops by 10%
+                elif current_equity <= starting_equity * 0.9:
                     logging.debug(f"Closing position {position.ticket} due to equity drop")
                     close_position(position.ticket)
                     position['exit_time'] = pd.Timestamp.now()
@@ -208,7 +201,7 @@ def calculate_tunnel_bounds(data, period, deviation_factor):
     if len(data) < period:
         return pd.Series([np.nan] * len(data)), pd.Series([np.nan] * len(data))
 
-    data = data.copy()  # Avoid SettingWithCopyWarning by operating on a copy
+    data = data.copy()
     data['close'] = pd.to_numeric(data['close'], errors='coerce')
 
     ema = calculate_ema(data['close'], period)
@@ -358,22 +351,7 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
         raise
 
 def place_order(symbol, action, volume, price, sl, tp):
-    """
-    Simulate placing an order.
-
-    Parameters:
-        symbol (str): The symbol to trade.
-        action (str): 'buy' or 'sell'.
-        volume (float): The volume to trade.
-        price (float): The price to execute the trade.
-        sl (float): Stop loss price.
-        tp (float): Take profit price.
-
-    Returns:
-        str: 'Order placed' if successful, 'Order failed' otherwise.
-    """
     try:
-        # In a real implementation, you would place the order with your trading platform here.
         logging.debug(f"Placing order: {action} {symbol} {volume} at {price}, SL: {sl}, TP: {tp}")
         return 'Order placed'
     except Exception as e:
@@ -381,17 +359,7 @@ def place_order(symbol, action, volume, price, sl, tp):
         return 'Order failed'
 
 def close_position(ticket):
-    """
-    Simulate closing a position.
-
-    Parameters:
-        ticket (int): The ticket number of the position to close.
-
-    Returns:
-        str: 'Position closed' if successful, 'Close failed' otherwise.
-    """
     try:
-        # In a real implementation, you would close the position with your trading platform here.
         logging.debug(f"Closing position with ticket: {ticket}")
         return 'Position closed'
     except Exception as e:
