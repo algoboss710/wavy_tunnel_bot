@@ -134,20 +134,37 @@ def execute_trade(trade_request):
     logging.debug(f"Executing trade with request: {trade_request}")
     try:
         trade_request['entry_time'] = pd.Timestamp.now()
-        trade_request['entry_price'] = trade_request['price']
+
+        # Fetch current price from the market
+        tick = mt5.symbol_info_tick(trade_request['symbol'])
+        if not tick:
+            raise Exception(f"Failed to get tick data for {trade_request['symbol']}")
+
+        trade_request['entry_price'] = tick.bid if trade_request['action'] == 'BUY' else tick.ask
         trade_request['profit'] = 0
 
-        result = place_order(
-            trade_request['symbol'],
-            trade_request['action'].lower(),
-            trade_request['volume'],
-            trade_request['entry_price'],
-            trade_request['sl'],
-            trade_request['tp']
-        )
+        order = {
+            'action': mt5.TRADE_ACTION_DEAL,
+            'symbol': trade_request['symbol'],
+            'volume': trade_request['volume'],
+            'type': mt5.ORDER_TYPE_BUY if trade_request['action'] == 'BUY' else mt5.ORDER_TYPE_SELL,
+            'price': trade_request['entry_price'],
+            'sl': trade_request['sl'],
+            'tp': trade_request['tp'],
+            'deviation': trade_request['deviation'],
+            'magic': trade_request['magic'],
+            'comment': trade_request['comment'],
+            'type_time': mt5.ORDER_TIME_GTC,
+            'type_filling': mt5.ORDER_FILLING_FOK,
+        }
 
-        if result == 'Order failed':
-            raise Exception("Failed to execute trade")
+        logging.info(f"Placing order: {order}")
+        result = mt5.order_send(order)
+        logging.info(f"Order response: {result}")
+
+        if result.retcode != mt5.TRADE_RETCODE_DONE:
+            logging.error(f"Failed to execute trade: {result.retcode} - {result.comment}")
+            return None
 
         logging.debug(f"Trade executed successfully: {result}")
         return result
@@ -383,7 +400,29 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
 
 def place_order(symbol, action, volume, price, sl, tp):
     try:
-        logging.debug(f"Placing order: {action} {symbol} {volume} at {price}, SL: {sl}, TP: {tp}")
+        order_type = mt5.ORDER_TYPE_BUY if action == 'buy' else mt5.ORDER_TYPE_SELL
+        order = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": symbol,
+            "volume": volume,
+            "type": order_type,
+            "price": price,
+            "sl": sl,
+            "tp": tp,
+            "deviation": 10,
+            "magic": 12345,
+            "comment": "Tunnel Strategy",
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_FOK,
+        }
+
+        logging.debug(f"Placing order: {order}")
+        result = mt5.order_send(order)
+        logging.info(f"Order send result: {result}")
+
+        if result.retcode != mt5.TRADE_RETCODE_DONE:
+            logging.error(f"Failed to place order: {result.comment}")
+            return 'Order failed'
         return 'Order placed'
     except Exception as e:
         logging.error(f"Failed to place order: {str(e)}")
@@ -391,8 +430,31 @@ def place_order(symbol, action, volume, price, sl, tp):
 
 def close_position(ticket):
     try:
-        logging.debug(f"Closing position with ticket: {ticket}")
-        return 'Position closed'
+        position = mt5.positions_get(ticket=ticket)
+        if position:
+            close_request = {
+                'action': mt5.TRADE_ACTION_DEAL,
+                'symbol': position[0].symbol,
+                'volume': position[0].volume,
+                'type': mt5.ORDER_TYPE_SELL if position[0].type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY,
+                'position': ticket,
+                'price': mt5.symbol_info_tick(position[0].symbol).bid if position[0].type == mt5.ORDER_TYPE_BUY else mt5.symbol_info_tick(position[0].symbol).ask,
+                'deviation': 10,
+                'magic': 12345,
+                'comment': 'Tunnel Strategy Close',
+                'type_time': mt5.ORDER_TIME_GTC,
+                'type_filling': mt5.ORDER_FILLING_FOK,
+            }
+
+            logging.debug(f"Closing position with request: {close_request}")
+            result = mt5.order_send(close_request)
+            logging.info(f"Close position result: {result}")
+
+            if result.retcode != mt5.TRADE_RETCODE_DONE:
+                logging.error(f"Failed to close position: {result.comment}")
+                return 'Close failed'
+            return 'Position closed'
+        return 'Position not found'
     except Exception as e:
         logging.error(f"Failed to close position: {str(e)}")
         return 'Close failed'

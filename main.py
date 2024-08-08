@@ -18,62 +18,13 @@ def clear_log_file():
     with open("app.log", "w"):
         pass
 
-def run_backtest_func():
-    try:
-        logging.info("Initializing MetaTrader5...")
-        if not initialize_mt5(Config.MT5_PATH):
-            raise Exception("Failed to initialize MetaTrader5")
-        logging.info("MetaTrader5 initialized successfully.")
-
-        for symbol in Config.SYMBOLS:
-            logging.info("Running backtest...")
-            start_date = datetime(2024, 6, 12)
-            end_date = datetime.now()
-            initial_balance = 10000
-            risk_percent = Config.RISK_PER_TRADE
-            stop_loss_pips = 20
-            pip_value = Config.PIP_VALUE
-
-            backtest_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, start_date, end_date)
-            if backtest_data is not None and not backtest_data.empty:
-                logging.info(f"Backtest data shape: {backtest_data.shape}")
-                logging.info(f"Backtest data head:\n{backtest_data.head()}")
-            else:
-                logging.error(f"No historical data retrieved for {symbol} for backtesting")
-                continue
-
-            if len(backtest_data) < 20:
-                logging.error(f"Not enough data for symbol {symbol} to perform backtest")
-                continue
-
-            backtest_data.loc[:, 'close'] = pd.to_numeric(backtest_data['close'], errors='coerce')
-
-            try:
-                run_backtest(
-                    symbol=symbol,
-                    data=backtest_data,
-                    initial_balance=initial_balance,
-                    risk_percent=risk_percent,
-                    min_take_profit=Config.MIN_TP_PROFIT,
-                    max_loss_per_day=Config.MAX_LOSS_PER_DAY,
-                    starting_equity=Config.STARTING_EQUITY,
-                    max_trades_per_day=Config.LIMIT_NO_OF_TRADES,
-                    stop_loss_pips=stop_loss_pips,
-                    pip_value=pip_value
-                )
-                logging.info("Backtest completed successfully.")
-            except Exception as e:
-                handle_error(e, f"An error occurred during backtesting for {symbol}")
-
-    except Exception as e:
-        error_code = mt5.last_error()
-        error_message = str(e)
-        handle_error(e, f"An error occurred in the run_backtest_func: {error_code} - {error_message}")
-
-    finally:
-        logging.info("Shutting down MetaTrader5...")
-        shutdown_mt5()
-        logging.info("MetaTrader5 connection gracefully shut down.")
+def check_auto_trading_enabled():
+    """Check if global auto trading is enabled and log the status."""
+    global_autotrading_enabled = mt5.terminal_info().trade_allowed
+    if not global_autotrading_enabled:
+        logging.error("Global auto trading is disabled. Please enable it manually in the MetaTrader 5 terminal.")
+    else:
+        logging.info("Global auto trading is enabled.")
 
 def run_live_trading_func():
     try:
@@ -81,6 +32,8 @@ def run_live_trading_func():
         if not initialize_mt5(Config.MT5_PATH):
             raise Exception("Failed to initialize MetaTrader5")
         logging.info("MetaTrader5 initialized successfully.")
+        
+        check_auto_trading_enabled()
 
         # Check if the account is a demo account
         account_info = mt5.account_info()
@@ -209,7 +162,6 @@ def run_live_trading_func():
         logging.info(f"Ending balance: {current_balance:.2f}")
         logging.info(f"Total profit: {total_profit:.2f}")
         logging.info(f"Total loss: {total_loss:.2f}")
-
 
 def open_log_file():
     import subprocess
