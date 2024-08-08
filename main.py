@@ -149,6 +149,8 @@ def run_live_trading_func():
                     df['low'] = df['ask']
                     df['close'] = df['last']
 
+                std_dev = df['close'].rolling(window=20).std().iloc[-1]  # Added this line
+
                 try:
                     result = run_strategy(
                         symbols=[symbol],
@@ -160,7 +162,8 @@ def run_live_trading_func():
                         starting_equity=current_balance,
                         max_trades_per_day=Config.LIMIT_NO_OF_TRADES,
                         run_backtest=False,
-                        data=df
+                        data=df,
+                        std_dev=std_dev  # Pass std_dev to run_strategy
                     )
 
                     if result is None:
@@ -206,6 +209,7 @@ def run_live_trading_func():
         logging.info(f"Ending balance: {current_balance:.2f}")
         logging.info(f"Total profit: {total_profit:.2f}")
         logging.info(f"Total loss: {total_loss:.2f}")
+
 
 def open_log_file():
     import subprocess

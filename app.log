@@ -1,134 +1,112 @@
-2024-08-07 12:41:47,790 - INFO - STARTING APPLICATION
-2024-08-07 12:41:47,790 - INFO - LOGGING ALL THE CONFIG SETTINGS
-2024-08-07 12:41:47,790 - INFO - MT5_LOGIN: your_mt5_login
-2024-08-07 12:41:47,791 - INFO - MT5_PASSWORD: your_mt5_password
-2024-08-07 12:41:47,791 - INFO - MT5_SERVER: your_mt5_server
-2024-08-07 12:41:47,791 - INFO - MT5_PATH: C:\Program Files\MetaTrader 5\terminal64.exe
-2024-08-07 12:41:47,791 - INFO - MT5_TIMEFRAME: H1
-2024-08-07 12:41:47,791 - INFO - SYMBOLS: ['EURUSD']
-2024-08-07 12:41:47,791 - INFO - TELEGRAM_TOKEN: your_telegram_bot_token
-2024-08-07 12:41:47,792 - INFO - TELEGRAM_IDS: ['telegram_user_id_1', 'telegram_user_id_2']
-2024-08-07 12:41:47,792 - INFO - MIN_TP_PROFIT: 50.0
-2024-08-07 12:41:47,792 - INFO - MAX_LOSS_PER_DAY: 1000.0
-2024-08-07 12:41:47,792 - INFO - STARTING_EQUITY: 10000.0
-2024-08-07 12:41:47,792 - INFO - LIMIT_NO_OF_TRADES: 5
-2024-08-07 12:41:47,793 - INFO - RISK_PER_TRADE: 0.02
-2024-08-07 12:41:47,793 - INFO - PIP_VALUE: 0.0001
-2024-08-07 12:41:47,793 - INFO - MAX_DRAWDOWN: 0.2
-2024-08-07 12:41:50,171 - INFO - Initializing MetaTrader5...
-2024-08-07 12:41:50,173 - INFO - MetaTrader5 initialized successfully.
-2024-08-07 12:41:50,175 - INFO - Trading on a live account.
-2024-08-07 12:41:50,175 - INFO - Running live trading for EURUSD...
-2024-08-07 12:45:10,249 - INFO - Collected 200 ticks in 200.07 seconds.
-2024-08-07 12:45:10,290 - INFO - Dataframe created with tick data:                    time      bid      ask  last
-195 2024-08-07 15:45:06  1.09251  1.09252   0.0
-196 2024-08-07 15:45:06  1.09251  1.09252   0.0
-197 2024-08-07 15:45:06  1.09251  1.09252   0.0
-198 2024-08-07 15:45:06  1.09251  1.09252   0.0
-199 2024-08-07 15:45:11  1.09250  1.09253   0.0
-2024-08-07 12:45:10,293 - INFO - Using provided data for EURUSD
-2024-08-07 12:45:10,293 - INFO - Calculating Wavy Tunnel indicators...
-2024-08-07 12:45:10,325 - INFO - Indicators calculated.
-2024-08-07 12:45:10,326 - INFO - Detecting peaks and dips...
-2024-08-07 12:45:10,328 - INFO - Peaks: [1.09244, 1.09242]
-2024-08-07 12:45:10,328 - INFO - Dips: [1.09234, 1.09237, 1.09239, 1.09238]
-2024-08-07 12:45:10,328 - INFO - Generating entry signals...
-2024-08-07 12:45:10,480 - INFO - Entry signals generated.
-2024-08-07 12:45:10,541 - INFO - Buy Condition: True
-2024-08-07 12:45:10,542 - INFO - Sell Condition: True
-2024-08-07 12:45:10,542 - INFO - Executing BUY trade for EURUSD with trade request: {'action': 'BUY', 'symbol': 'EURUSD', 'volume': 0.01, 'price': 0.0, 'sl': 0.0, 'tp': 0.0, 'deviation': 10, 'magic': 12345, 'comment': 'Tunnel Strategy', 'type': 'ORDER_TYPE_BUY', 'type_filling': 'ORDER_FILLING_FOK', 'type_time': 'ORDER_TIME_GTC'}
-2024-08-07 12:45:10,544 - INFO - Live trading iteration completed for EURUSD. Total trades today: 1
-2024-08-07 12:45:10,544 - INFO - Current Balance: 10000.00
-2024-08-07 12:46:10,545 - INFO - Running live trading for EURUSD...
-2024-08-07 12:49:30,613 - INFO - Collected 200 ticks in 200.07 seconds.
-2024-08-07 12:49:30,625 - INFO - Dataframe created with tick data:                    time      bid      ask  last
-195 2024-08-07 15:49:27  1.09242  1.09244   0.0
-196 2024-08-07 15:49:27  1.09242  1.09244   0.0
-197 2024-08-07 15:49:29  1.09243  1.09245   0.0
-198 2024-08-07 15:49:29  1.09243  1.09245   0.0
-199 2024-08-07 15:49:31  1.09245  1.09247   0.0
-2024-08-07 12:49:30,629 - INFO - Using provided data for EURUSD
-2024-08-07 12:49:30,629 - INFO - Calculating Wavy Tunnel indicators...
-2024-08-07 12:49:30,665 - INFO - Indicators calculated.
-2024-08-07 12:49:30,666 - INFO - Detecting peaks and dips...
-2024-08-07 12:49:30,668 - INFO - Peaks: []
-2024-08-07 12:49:30,668 - INFO - Dips: [1.0924800000000001]
-2024-08-07 12:49:30,669 - INFO - Generating entry signals...
-2024-08-07 12:49:30,825 - INFO - Entry signals generated.
-2024-08-07 12:49:30,875 - INFO - Buy Condition: True
-2024-08-07 12:49:30,876 - INFO - Sell Condition: True
-2024-08-07 12:49:30,876 - INFO - Executing BUY trade for EURUSD with trade request: {'action': 'BUY', 'symbol': 'EURUSD', 'volume': 0.01, 'price': 0.0, 'sl': 0.0, 'tp': 0.0, 'deviation': 10, 'magic': 12345, 'comment': 'Tunnel Strategy', 'type': 'ORDER_TYPE_BUY', 'type_filling': 'ORDER_FILLING_FOK', 'type_time': 'ORDER_TIME_GTC'}
-2024-08-07 12:49:30,877 - INFO - Live trading iteration completed for EURUSD. Total trades today: 2
-2024-08-07 12:49:30,878 - INFO - Current Balance: 10000.00
-2024-08-07 12:50:30,879 - INFO - Running live trading for EURUSD...
-2024-08-07 12:53:50,955 - INFO - Collected 200 ticks in 200.08 seconds.
-2024-08-07 12:53:50,966 - INFO - Dataframe created with tick data:                    time      bid      ask  last
-195 2024-08-07 15:53:47  1.09234  1.09236   0.0
-196 2024-08-07 15:53:49  1.09234  1.09236   0.0
-197 2024-08-07 15:53:50  1.09235  1.09237   0.0
-198 2024-08-07 15:53:50  1.09235  1.09237   0.0
-199 2024-08-07 15:53:52  1.09238  1.09239   0.0
-2024-08-07 12:53:50,971 - INFO - Using provided data for EURUSD
-2024-08-07 12:53:50,971 - INFO - Calculating Wavy Tunnel indicators...
-2024-08-07 12:53:51,002 - INFO - Indicators calculated.
-2024-08-07 12:53:51,002 - INFO - Detecting peaks and dips...
-2024-08-07 12:53:51,004 - INFO - Peaks: [1.09241, 1.09241, 1.09239]
-2024-08-07 12:53:51,005 - INFO - Dips: [1.09239]
-2024-08-07 12:53:51,005 - INFO - Generating entry signals...
-2024-08-07 12:53:51,152 - INFO - Entry signals generated.
-2024-08-07 12:53:51,199 - INFO - Buy Condition: True
-2024-08-07 12:53:51,200 - INFO - Sell Condition: True
-2024-08-07 12:53:51,200 - INFO - Executing BUY trade for EURUSD with trade request: {'action': 'BUY', 'symbol': 'EURUSD', 'volume': 0.01, 'price': 0.0, 'sl': 0.0, 'tp': 0.0, 'deviation': 10, 'magic': 12345, 'comment': 'Tunnel Strategy', 'type': 'ORDER_TYPE_BUY', 'type_filling': 'ORDER_FILLING_FOK', 'type_time': 'ORDER_TIME_GTC'}
-2024-08-07 12:53:51,201 - INFO - Live trading iteration completed for EURUSD. Total trades today: 3
-2024-08-07 12:53:51,201 - INFO - Current Balance: 10000.00
-2024-08-07 12:54:51,202 - INFO - Running live trading for EURUSD...
-2024-08-07 12:58:11,269 - INFO - Collected 200 ticks in 200.07 seconds.
-2024-08-07 12:58:11,291 - INFO - Dataframe created with tick data:                    time      bid      ask  last
-195 2024-08-07 15:58:08  1.09231  1.09232   0.0
-196 2024-08-07 15:58:09  1.09230  1.09231   0.0
-197 2024-08-07 15:58:09  1.09230  1.09231   0.0
-198 2024-08-07 15:58:10  1.09231  1.09232   0.0
-199 2024-08-07 15:58:12  1.09230  1.09231   0.0
-2024-08-07 12:58:11,296 - INFO - Using provided data for EURUSD
-2024-08-07 12:58:11,296 - INFO - Calculating Wavy Tunnel indicators...
-2024-08-07 12:58:11,328 - INFO - Indicators calculated.
-2024-08-07 12:58:11,329 - INFO - Detecting peaks and dips...
-2024-08-07 12:58:11,331 - INFO - Peaks: [1.09231, 1.09234, 1.09232]
-2024-08-07 12:58:11,331 - INFO - Dips: [1.09224, 1.09225, 1.09224]
-2024-08-07 12:58:11,332 - INFO - Generating entry signals...
-2024-08-07 12:58:11,489 - INFO - Entry signals generated.
-2024-08-07 12:58:11,533 - INFO - Buy Condition: True
-2024-08-07 12:58:11,534 - INFO - Sell Condition: True
-2024-08-07 12:58:11,534 - INFO - Executing BUY trade for EURUSD with trade request: {'action': 'BUY', 'symbol': 'EURUSD', 'volume': 0.01, 'price': 0.0, 'sl': 0.0, 'tp': 0.0, 'deviation': 10, 'magic': 12345, 'comment': 'Tunnel Strategy', 'type': 'ORDER_TYPE_BUY', 'type_filling': 'ORDER_FILLING_FOK', 'type_time': 'ORDER_TIME_GTC'}
-2024-08-07 12:58:11,535 - INFO - Live trading iteration completed for EURUSD. Total trades today: 4
-2024-08-07 12:58:11,535 - INFO - Current Balance: 10000.00
-2024-08-07 12:59:11,535 - INFO - Running live trading for EURUSD...
-2024-08-07 13:02:31,606 - INFO - Collected 200 ticks in 200.07 seconds.
-2024-08-07 13:02:31,622 - INFO - Dataframe created with tick data:                    time      bid      ask  last
-195 2024-08-07 16:02:24  1.09217  1.09218   0.0
-196 2024-08-07 16:02:29  1.09216  1.09217   0.0
-197 2024-08-07 16:02:29  1.09216  1.09217   0.0
-198 2024-08-07 16:02:31  1.09217  1.09220   0.0
-199 2024-08-07 16:02:32  1.09216  1.09217   0.0
-2024-08-07 13:02:31,625 - INFO - Using provided data for EURUSD
-2024-08-07 13:02:31,625 - INFO - Calculating Wavy Tunnel indicators...
-2024-08-07 13:02:31,649 - INFO - Indicators calculated.
-2024-08-07 13:02:31,650 - INFO - Detecting peaks and dips...
-2024-08-07 13:02:31,652 - INFO - Peaks: [1.09234]
-2024-08-07 13:02:31,652 - INFO - Dips: [1.0922]
-2024-08-07 13:02:31,653 - INFO - Generating entry signals...
-2024-08-07 13:02:31,805 - INFO - Entry signals generated.
-2024-08-07 13:02:31,850 - INFO - Buy Condition: True
-2024-08-07 13:02:31,850 - INFO - Sell Condition: True
-2024-08-07 13:02:31,851 - INFO - Executing BUY trade for EURUSD with trade request: {'action': 'BUY', 'symbol': 'EURUSD', 'volume': 0.01, 'price': 0.0, 'sl': 0.0, 'tp': 0.0, 'deviation': 10, 'magic': 12345, 'comment': 'Tunnel Strategy', 'type': 'ORDER_TYPE_BUY', 'type_filling': 'ORDER_FILLING_FOK', 'type_time': 'ORDER_TIME_GTC'}
-2024-08-07 13:02:31,852 - INFO - Live trading iteration completed for EURUSD. Total trades today: 5
-2024-08-07 13:02:31,852 - INFO - Current Balance: 10000.00
-2024-08-07 13:03:31,853 - INFO - Maximum number of trades for the day reached. Stopping trading for today.
-2024-08-07 13:35:31,140 - INFO - Shutting down MetaTrader5...
-2024-08-07 13:35:31,155 - INFO - MetaTrader5 connection gracefully shut down.
-2024-08-07 13:35:31,156 - INFO - Summary of Trading Session:
-2024-08-07 13:35:31,156 - INFO - Total trades: 5
-2024-08-07 13:35:31,157 - INFO - Starting balance: 10000.00
-2024-08-07 13:35:31,159 - INFO - Ending balance: 10000.00
-2024-08-07 13:35:31,160 - INFO - Total profit: 0.00
-2024-08-07 13:35:31,160 - INFO - Total loss: 0.00
+2024-08-07 20:43:02,846 - INFO - STARTING APPLICATION
+2024-08-07 20:43:02,846 - INFO - LOGGING ALL THE CONFIG SETTINGS
+2024-08-07 20:43:02,846 - INFO - MT5_LOGIN: your_mt5_login
+2024-08-07 20:43:02,846 - INFO - MT5_PASSWORD: your_mt5_password
+2024-08-07 20:43:02,847 - INFO - MT5_SERVER: your_mt5_server
+2024-08-07 20:43:02,847 - INFO - MT5_PATH: C:\Program Files\MetaTrader 5\terminal64.exe
+2024-08-07 20:43:02,847 - INFO - MT5_TIMEFRAME: H1
+2024-08-07 20:43:02,847 - INFO - SYMBOLS: ['EURUSD']
+2024-08-07 20:43:02,847 - INFO - TELEGRAM_TOKEN: your_telegram_bot_token
+2024-08-07 20:43:02,847 - INFO - TELEGRAM_IDS: ['telegram_user_id_1', 'telegram_user_id_2']
+2024-08-07 20:43:02,847 - INFO - MIN_TP_PROFIT: 50.0
+2024-08-07 20:43:02,847 - INFO - MAX_LOSS_PER_DAY: 1000.0
+2024-08-07 20:43:02,847 - INFO - STARTING_EQUITY: 10000.0
+2024-08-07 20:43:02,847 - INFO - LIMIT_NO_OF_TRADES: 5
+2024-08-07 20:43:02,847 - INFO - RISK_PER_TRADE: 0.02
+2024-08-07 20:43:02,848 - INFO - PIP_VALUE: 0.0001
+2024-08-07 20:43:02,848 - INFO - MAX_DRAWDOWN: 0.2
+2024-08-07 20:43:05,043 - INFO - Initializing MetaTrader5...
+2024-08-07 20:43:05,044 - INFO - MetaTrader5 initialized successfully.
+2024-08-07 20:43:05,044 - INFO - Trading on a live account.
+2024-08-07 20:43:05,044 - INFO - Running live trading for EURUSD...
+2024-08-07 20:46:27,065 - INFO - Collected 200 ticks in 202.02 seconds.
+2024-08-07 20:46:27,071 - INFO - Dataframe created with tick data:                    time      bid      ask  last
+195 2024-08-07 23:46:19  1.09339  1.09340   0.0
+196 2024-08-07 23:46:19  1.09339  1.09340   0.0
+197 2024-08-07 23:46:19  1.09339  1.09340   0.0
+198 2024-08-07 23:46:19  1.09339  1.09340   0.0
+199 2024-08-07 23:46:25  1.09337  1.09338   0.0
+2024-08-07 20:46:27,072 - INFO - Using provided data for EURUSD
+2024-08-07 20:46:27,072 - INFO - Calculating Wavy Tunnel indicators...
+2024-08-07 20:46:27,085 - INFO - Indicators calculated.
+2024-08-07 20:46:27,085 - INFO - Detecting peaks and dips...
+2024-08-07 20:46:27,086 - INFO - Peaks: []
+2024-08-07 20:46:27,086 - INFO - Dips: [1.09326]
+2024-08-07 20:46:27,086 - INFO - Generating entry signals...
+2024-08-07 20:46:27,157 - INFO - Entry signals generated.
+2024-08-07 20:46:27,177 - INFO - Buy Condition: True
+2024-08-07 20:46:27,177 - INFO - Sell Condition: True
+2024-08-07 20:46:27,177 - INFO - Executing BUY trade for EURUSD with trade request: {'action': 'BUY', 'symbol': 'EURUSD', 'volume': 0.01, 'price': 0.0, 'sl': 0.0, 'tp': 0.0, 'deviation': 10, 'magic': 12345, 'comment': 'Tunnel Strategy', 'type': 'ORDER_TYPE_BUY', 'type_filling': 'ORDER_FILLING_FOK', 'type_time': 'ORDER_TIME_GTC'}
+2024-08-07 20:46:27,178 - INFO - Live trading iteration completed for EURUSD. Total trades today: 1
+2024-08-07 20:46:27,178 - INFO - Current Balance: 10000.00
+2024-08-07 20:47:27,182 - INFO - Running live trading for EURUSD...
+2024-08-07 20:50:48,993 - INFO - Collected 200 ticks in 201.81 seconds.
+2024-08-07 20:50:48,997 - INFO - Dataframe created with tick data:                    time      bid      ask  last
+195 2024-08-07 23:50:42  1.09328  1.09329   0.0
+196 2024-08-07 23:50:42  1.09328  1.09329   0.0
+197 2024-08-07 23:50:45  1.09328  1.09330   0.0
+198 2024-08-07 23:50:45  1.09328  1.09330   0.0
+199 2024-08-07 23:50:47  1.09328  1.09329   0.0
+2024-08-07 20:50:48,998 - INFO - Using provided data for EURUSD
+2024-08-07 20:50:48,999 - INFO - Calculating Wavy Tunnel indicators...
+2024-08-07 20:50:49,009 - INFO - Indicators calculated.
+2024-08-07 20:50:49,009 - INFO - Detecting peaks and dips...
+2024-08-07 20:50:49,009 - INFO - Peaks: [1.09337]
+2024-08-07 20:50:49,010 - INFO - Dips: [1.09332]
+2024-08-07 20:50:49,010 - INFO - Generating entry signals...
+2024-08-07 20:50:49,079 - INFO - Entry signals generated.
+2024-08-07 20:50:49,097 - INFO - Buy Condition: True
+2024-08-07 20:50:49,098 - INFO - Sell Condition: True
+2024-08-07 20:50:49,098 - INFO - Executing BUY trade for EURUSD with trade request: {'action': 'BUY', 'symbol': 'EURUSD', 'volume': 0.01, 'price': 0.0, 'sl': 0.0, 'tp': 0.0, 'deviation': 10, 'magic': 12345, 'comment': 'Tunnel Strategy', 'type': 'ORDER_TYPE_BUY', 'type_filling': 'ORDER_FILLING_FOK', 'type_time': 'ORDER_TIME_GTC'}
+2024-08-07 20:50:49,098 - INFO - Live trading iteration completed for EURUSD. Total trades today: 2
+2024-08-07 20:50:49,098 - INFO - Current Balance: 10000.00
+2024-08-07 20:51:49,105 - INFO - Running live trading for EURUSD...
+2024-08-07 20:55:11,073 - INFO - Collected 200 ticks in 201.97 seconds.
+2024-08-07 20:55:11,077 - INFO - Dataframe created with tick data:                    time      bid      ask  last
+195 2024-08-07 23:55:04  1.09345  1.09347   0.0
+196 2024-08-07 23:55:04  1.09345  1.09347   0.0
+197 2024-08-07 23:55:04  1.09345  1.09347   0.0
+198 2024-08-07 23:55:04  1.09345  1.09347   0.0
+199 2024-08-07 23:55:04  1.09345  1.09347   0.0
+2024-08-07 20:55:11,078 - INFO - Using provided data for EURUSD
+2024-08-07 20:55:11,078 - INFO - Calculating Wavy Tunnel indicators...
+2024-08-07 20:55:11,088 - INFO - Indicators calculated.
+2024-08-07 20:55:11,088 - INFO - Detecting peaks and dips...
+2024-08-07 20:55:11,089 - INFO - Peaks: [1.09337]
+2024-08-07 20:55:11,089 - INFO - Dips: []
+2024-08-07 20:55:11,089 - INFO - Generating entry signals...
+2024-08-07 20:55:11,159 - INFO - Entry signals generated.
+2024-08-07 20:55:11,177 - INFO - Buy Condition: True
+2024-08-07 20:55:11,178 - INFO - Sell Condition: True
+2024-08-07 20:55:11,178 - INFO - Executing BUY trade for EURUSD with trade request: {'action': 'BUY', 'symbol': 'EURUSD', 'volume': 0.01, 'price': 0.0, 'sl': 0.0, 'tp': 0.0, 'deviation': 10, 'magic': 12345, 'comment': 'Tunnel Strategy', 'type': 'ORDER_TYPE_BUY', 'type_filling': 'ORDER_FILLING_FOK', 'type_time': 'ORDER_TIME_GTC'}
+2024-08-07 20:55:11,178 - INFO - Live trading iteration completed for EURUSD. Total trades today: 3
+2024-08-07 20:55:11,178 - INFO - Current Balance: 10000.00
+2024-08-07 20:56:11,185 - INFO - Running live trading for EURUSD...
+2024-08-07 20:59:33,292 - INFO - Collected 200 ticks in 202.11 seconds.
+2024-08-07 20:59:33,296 - INFO - Dataframe created with tick data:                    time      bid      ask  last
+195 2024-08-07 23:59:26  1.09349  1.09351   0.0
+196 2024-08-07 23:59:26  1.09349  1.09351   0.0
+197 2024-08-07 23:59:26  1.09349  1.09351   0.0
+198 2024-08-07 23:59:30  1.09351  1.09353   0.0
+199 2024-08-07 23:59:31  1.09351  1.09352   0.0
+2024-08-07 20:59:33,298 - INFO - Using provided data for EURUSD
+2024-08-07 20:59:33,298 - INFO - Calculating Wavy Tunnel indicators...
+2024-08-07 20:59:33,307 - INFO - Indicators calculated.
+2024-08-07 20:59:33,308 - INFO - Detecting peaks and dips...
+2024-08-07 20:59:33,308 - INFO - Peaks: [1.09345, 1.09345]
+2024-08-07 20:59:33,309 - INFO - Dips: [1.09348, 1.09345]
+2024-08-07 20:59:33,309 - INFO - Generating entry signals...
+2024-08-07 20:59:33,380 - INFO - Entry signals generated.
+2024-08-07 20:59:33,399 - INFO - Buy Condition: True
+2024-08-07 20:59:33,399 - INFO - Sell Condition: True
+2024-08-07 20:59:33,399 - INFO - Executing BUY trade for EURUSD with trade request: {'action': 'BUY', 'symbol': 'EURUSD', 'volume': 0.01, 'price': 0.0, 'sl': 0.0, 'tp': 0.0, 'deviation': 10, 'magic': 12345, 'comment': 'Tunnel Strategy', 'type': 'ORDER_TYPE_BUY', 'type_filling': 'ORDER_FILLING_FOK', 'type_time': 'ORDER_TIME_GTC'}
+2024-08-07 20:59:33,400 - INFO - Live trading iteration completed for EURUSD. Total trades today: 4
+2024-08-07 20:59:33,400 - INFO - Current Balance: 10000.00
+2024-08-07 21:00:21,709 - INFO - Shutting down MetaTrader5...
+2024-08-07 21:00:21,709 - INFO - MetaTrader5 connection gracefully shut down.
+2024-08-07 21:00:21,709 - INFO - Summary of Trading Session:
+2024-08-07 21:00:21,709 - INFO - Total trades: 4
+2024-08-07 21:00:21,709 - INFO - Starting balance: 10000.00
+2024-08-07 21:00:21,710 - INFO - Ending balance: 10000.00
+2024-08-07 21:00:21,710 - INFO - Total profit: 0.00
+2024-08-07 21:00:21,710 - INFO - Total loss: 0.00

@@ -263,7 +263,7 @@ def adjust_deviation_factor(market_conditions):
     else:
         return 2.0
 
-def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, run_backtest, data=None):
+def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, run_backtest, data=None, std_dev=None):
     try:
         total_profit = 0
         total_loss = 0
@@ -321,8 +321,8 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                     'symbol': symbol,
                     'volume': lot_size,
                     'price': data['close'].iloc[-1],
-                    'sl': data['close'].iloc[-1] - (1.5 * np.std(data['close'])),
-                    'tp': data['close'].iloc[-1] + (2 * np.std(data['close'])),
+                    'sl': data['close'].iloc[-1] - (1.5 * std_dev),  # Updated to use std_dev
+                    'tp': data['close'].iloc[-1] + (2 * std_dev),   # Updated to use std_dev
                     'deviation': 10,
                     'magic': 12345,
                     'comment': 'Tunnel Strategy',
@@ -348,8 +348,8 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                     'symbol': symbol,
                     'volume': lot_size,
                     'price': data['close'].iloc[-1],
-                    'sl': data['close'].iloc[-1] + (1.5 * np.std(data['close'])),
-                    'tp': data['close'].iloc[-1] - (2 * np.std(data['close'])),
+                    'sl': data['close'].iloc[-1] + (1.5 * std_dev),  # Updated to use std_dev
+                    'tp': data['close'].iloc[-1] - (2 * std_dev),   # Updated to use std_dev
                     'deviation': 10,
                     'magic': 12345,
                     'comment': 'Tunnel Strategy',
