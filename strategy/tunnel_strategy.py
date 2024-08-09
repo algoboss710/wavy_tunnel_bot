@@ -133,22 +133,27 @@ def check_entry_conditions(row, peaks, dips, symbol):
 def execute_trade(trade_request):
     logging.debug(f"Executing trade with request: {trade_request}")
     try:
-        trade_request['entry_time'] = pd.Timestamp.now()
+        # Log the exact timestamp before fetching the latest tick data
+        timestamp_before_tick = time.time()
+        latest_data = get_current_data(trade_request['symbol'])
+        timestamp_after_tick = time.time()
 
-        # Fetch current price from the market
-        tick = mt5.symbol_info_tick(trade_request['symbol'])
-        if not tick:
-            raise Exception(f"Failed to get tick data for {trade_request['symbol']}")
+        logging.info(f"Latest price data for {trade_request['symbol']} at {datetime.now()}: {latest_data}")
+        logging.info(f"Time taken to fetch latest tick: {timestamp_after_tick - timestamp_before_tick:.6f} seconds")
 
-        trade_request['entry_price'] = tick.bid if trade_request['action'] == 'BUY' else tick.ask
-        trade_request['profit'] = 0
+        # Update the trade request with the latest price
+        trade_request['price'] = latest_data['bid'] if trade_request['action'] == 'BUY' else latest_data['ask']
+        trade_request['sl'] = trade_request['price'] - (1.5 * trade_request.get('std_dev', 0)) if trade_request['action'] == 'BUY' else trade_request['price'] + (1.5 * trade_request.get('std_dev', 0))
+        trade_request['tp'] = trade_request['price'] + (2 * trade_request.get('std_dev', 0)) if trade_request['action'] == 'BUY' else trade_request['price'] - (2 * trade_request.get('std_dev', 0))
+
+        logging.info(f"Placing order with updated price: {trade_request}")
 
         order = {
             'action': mt5.TRADE_ACTION_DEAL,
             'symbol': trade_request['symbol'],
             'volume': trade_request['volume'],
             'type': mt5.ORDER_TYPE_BUY if trade_request['action'] == 'BUY' else mt5.ORDER_TYPE_SELL,
-            'price': trade_request['entry_price'],
+            'price': trade_request['price'],
             'sl': trade_request['sl'],
             'tp': trade_request['tp'],
             'deviation': trade_request['deviation'],
@@ -158,12 +163,16 @@ def execute_trade(trade_request):
             'type_filling': mt5.ORDER_FILLING_FOK,
         }
 
-        logging.info(f"Placing order: {order}")
+        # Log the exact timestamp before sending the order
+        timestamp_before_order = time.time()
         result = mt5.order_send(order)
-        logging.info(f"Order response: {result}")
+        timestamp_after_order = time.time()
+
+        logging.info(f"Order response received at {datetime.now()} after {timestamp_after_order - timestamp_before_order:.6f} seconds: {result}")
 
         if result.retcode != mt5.TRADE_RETCODE_DONE:
             logging.error(f"Failed to execute trade: {result.retcode} - {result.comment}")
+            logging.error(f"Broker response details: retcode_external={result.retcode_external}, request_id={result.request_id}")
             return None
 
         logging.debug(f"Trade executed successfully: {result}")
@@ -171,6 +180,7 @@ def execute_trade(trade_request):
     except Exception as e:
         handle_error(e, "Failed to execute trade")
         return None
+
 
 def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
     logging.debug(f"Managing position for symbol: {symbol}")
@@ -332,52 +342,30 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
             logging.info(f"Buy Condition: {buy_condition}")
             logging.info(f"Sell Condition: {sell_condition}")
 
-            if buy_condition:
-                trade_request = {
-                    'action': 'BUY',
-                    'symbol': symbol,
-                    'volume': lot_size,
-                    'price': data['close'].iloc[-1],
-                    'sl': data['close'].iloc[-1] - (1.5 * std_dev),  # Updated to use std_dev
-                    'tp': data['close'].iloc[-1] + (2 * std_dev),   # Updated to use std_dev
-                    'deviation': 10,
-                    'magic': 12345,
-                    'comment': 'Tunnel Strategy',
-                    'type': 'ORDER_TYPE_BUY',
-                    'type_filling': 'ORDER_FILLING_FOK',
-                    'type_time': 'ORDER_TIME_GTC'
-                }
-                logging.info(f"Executing BUY trade for {symbol} with trade request: {trade_request}")
-                result = execute_trade(trade_request)
-                if result:
-                    profit = trade_request['tp'] - trade_request['price']
-                    total_profit += profit
-                    current_balance += profit
-                    peak_balance = max(peak_balance, current_balance)
-                    drawdown = peak_balance - current_balance
-                    max_drawdown = max(max_drawdown, drawdown)
-                else:
-                    logging.error("Trade execution failed")
+            if buy_condition or sell_condition:
+                # Retrieve the latest price before executing a trade
+                current_tick = get_current_data(symbol)
+                logging.info(f"Latest price data for {symbol}: {current_tick}")
 
-            elif sell_condition:
                 trade_request = {
-                    'action': 'SELL',
+                    'action': 'BUY' if buy_condition else 'SELL',
                     'symbol': symbol,
                     'volume': lot_size,
-                    'price': data['close'].iloc[-1],
-                    'sl': data['close'].iloc[-1] + (1.5 * std_dev),  # Updated to use std_dev
-                    'tp': data['close'].iloc[-1] - (2 * std_dev),   # Updated to use std_dev
+                    'price': current_tick['bid'] if buy_condition else current_tick['ask'],
+                    'sl': current_tick['bid'] - (1.5 * std_dev) if buy_condition else current_tick['ask'] + (1.5 * std_dev),
+                    'tp': current_tick['bid'] + (2 * std_dev) if buy_condition else current_tick['ask'] - (2 * std_dev),
                     'deviation': 10,
                     'magic': 12345,
                     'comment': 'Tunnel Strategy',
-                    'type': 'ORDER_TYPE_SELL',
+                    'type': 'ORDER_TYPE_BUY' if buy_condition else 'ORDER_TYPE_SELL',
                     'type_filling': 'ORDER_FILLING_FOK',
                     'type_time': 'ORDER_TIME_GTC'
                 }
-                logging.info(f"Executing SELL trade for {symbol} with trade request: {trade_request}")
+
+                logging.info(f"Executing {'BUY' if buy_condition else 'SELL'} trade for {symbol} with trade request: {trade_request}")
                 result = execute_trade(trade_request)
                 if result:
-                    profit = trade_request['price'] - trade_request['tp']
+                    profit = trade_request['tp'] - trade_request['price'] if buy_condition else trade_request['price'] - trade_request['tp']
                     total_profit += profit
                     current_balance += profit
                     peak_balance = max(peak_balance, current_balance)

@@ -21,7 +21,7 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
     # Check for zero or negative initial balance
     if initial_balance <= 0:
         raise ValueError("Initial balance must be greater than zero.")
-    
+
     # Check for zero risk percentage
     if risk_percent == 0:
         raise ValueError("Risk percentage cannot be zero.")
@@ -132,7 +132,7 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
         num_trades = len(trades)
         win_rate = sum(1 for trade in trades if trade.get('profit', 0) > 0) / num_trades if num_trades > 0 else 0
         max_drawdown = calculate_max_drawdown(trades, initial_balance)
-        
+
         final_balance = balance + total_profit
 
         logger.info(f"Backtest completed. Total Profit: {total_profit}, Final Balance: {final_balance}, Number of Trades: {num_trades}, Win Rate: {win_rate}, Max Drawdown: {max_drawdown}.")
