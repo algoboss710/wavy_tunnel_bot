@@ -4,7 +4,7 @@ from datetime import datetime
 from config import Config
 from metatrader.connection import initialize_mt5, shutdown_mt5
 from metatrader.data_retrieval import get_historical_data
-from strategy.tunnel_strategy import run_strategy, calculate_ema, detect_peaks_and_dips, check_entry_conditions
+from strategy.tunnel_strategy import run_strategy, calculate_ema, detect_peaks_and_dips, check_entry_conditions, check_broker_connection, check_market_open
 from backtesting.backtest import run_backtest
 from utils.logger import setup_logging
 from utils.error_handling import handle_error
@@ -103,6 +103,13 @@ def run_live_trading_func():
         else:
             logging.info("Trading on a live account.")
 
+        # Perform additional checks
+        if not check_broker_connection():
+            return
+
+        if not check_market_open():
+            return
+
         daily_trades = 0
         total_trades = 0
         total_profit = 0.0
@@ -128,6 +135,18 @@ def run_live_trading_func():
 
             for symbol in Config.SYMBOLS:
                 logging.info(f"Running live trading for {symbol}...")
+
+                # Validate symbol availability and timeframe
+                symbol_info = mt5.symbol_info(symbol)
+                if symbol_info is None:
+                    logging.error(f"Symbol {symbol} is not available.")
+                    continue
+
+                if not symbol_info.visible:
+                    logging.info(f"Symbol {symbol} is not visible, attempting to make it visible.")
+                    if not mt5.symbol_select(symbol, True):
+                        logging.error(f"Failed to select symbol {symbol}")
+                        continue
 
                 tick_data = []
                 tick_start_time = time.time()

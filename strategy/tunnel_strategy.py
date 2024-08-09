@@ -2,8 +2,9 @@ import pandas as pd
 import numpy as np
 import logging
 import MetaTrader5 as mt5
-from datetime import datetime
+from datetime import datetime, time as dtime
 from utils.error_handling import handle_error
+import time
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -130,57 +131,86 @@ def check_entry_conditions(row, peaks, dips, symbol):
 
     return buy_condition, sell_condition
 
-def execute_trade(trade_request):
-    logging.debug(f"Executing trade with request: {trade_request}")
-    try:
-        # Log the exact timestamp before fetching the latest tick data
-        timestamp_before_tick = time.time()
-        latest_data = get_current_data(trade_request['symbol'])
-        timestamp_after_tick = time.time()
+def execute_trade(trade_request, retries=4, delay=4):  # Increased retries to 4 and delay to 4 seconds
+    """
+    Attempts to execute a trade with retry logic in case of failure due to 'No prices' error.
 
-        logging.info(f"Latest price data for {trade_request['symbol']} at {datetime.now()}: {latest_data}")
-        logging.info(f"Time taken to fetch latest tick: {timestamp_after_tick - timestamp_before_tick:.6f} seconds")
+    Parameters:
+    - trade_request (dict): The trade request dictionary.
+    - retries (int): Number of times to retry in case of failure.
+    - delay (int): Delay in seconds between retries.
 
-        # Update the trade request with the latest price
-        trade_request['price'] = latest_data['bid'] if trade_request['action'] == 'BUY' else latest_data['ask']
-        trade_request['sl'] = trade_request['price'] - (1.5 * trade_request.get('std_dev', 0)) if trade_request['action'] == 'BUY' else trade_request['price'] + (1.5 * trade_request.get('std_dev', 0))
-        trade_request['tp'] = trade_request['price'] + (2 * trade_request.get('std_dev', 0)) if trade_request['action'] == 'BUY' else trade_request['price'] - (2 * trade_request.get('std_dev', 0))
+    Returns:
+    - result: The result of the trade execution, or None if it fails after retries.
+    """
+    attempt = 0
+    while attempt <= retries:
+        try:
+            logging.debug(f"Attempt {attempt + 1} to execute trade with request: {trade_request}")
 
-        logging.info(f"Placing order with updated price: {trade_request}")
+            # Log the exact timestamp before fetching the latest tick data
+            timestamp_before_tick = time.time()
+            latest_data = get_current_data(trade_request['symbol'])
+            timestamp_after_tick = time.time()
 
-        order = {
-            'action': mt5.TRADE_ACTION_DEAL,
-            'symbol': trade_request['symbol'],
-            'volume': trade_request['volume'],
-            'type': mt5.ORDER_TYPE_BUY if trade_request['action'] == 'BUY' else mt5.ORDER_TYPE_SELL,
-            'price': trade_request['price'],
-            'sl': trade_request['sl'],
-            'tp': trade_request['tp'],
-            'deviation': trade_request['deviation'],
-            'magic': trade_request['magic'],
-            'comment': trade_request['comment'],
-            'type_time': mt5.ORDER_TIME_GTC,
-            'type_filling': mt5.ORDER_FILLING_FOK,
-        }
+            logging.info(f"Latest price data for {trade_request['symbol']} at {datetime.now()}: {latest_data}")
+            logging.info(f"Time taken to fetch latest tick: {timestamp_after_tick - timestamp_before_tick:.6f} seconds")
 
-        # Log the exact timestamp before sending the order
-        timestamp_before_order = time.time()
-        result = mt5.order_send(order)
-        timestamp_after_order = time.time()
+            # Update the trade request with the latest price
+            trade_request['price'] = latest_data['bid'] if trade_request['action'] == 'BUY' else latest_data['ask']
+            trade_request['sl'] = trade_request['price'] - (1.5 * trade_request.get('std_dev', 0)) if trade_request['action'] == 'BUY' else trade_request['price'] + (1.5 * trade_request.get('std_dev', 0))
+            trade_request['tp'] = trade_request['price'] + (2 * trade_request.get('std_dev', 0)) if trade_request['action'] == 'BUY' else trade_request['price'] - (2 * trade_request.get('std_dev', 0))
 
-        logging.info(f"Order response received at {datetime.now()} after {timestamp_after_order - timestamp_before_order:.6f} seconds: {result}")
+            logging.info(f"Placing order with updated price: {trade_request}")
 
-        if result.retcode != mt5.TRADE_RETCODE_DONE:
-            logging.error(f"Failed to execute trade: {result.retcode} - {result.comment}")
-            logging.error(f"Broker response details: retcode_external={result.retcode_external}, request_id={result.request_id}")
-            return None
+            order = {
+                'action': mt5.TRADE_ACTION_DEAL,
+                'symbol': trade_request['symbol'],
+                'volume': trade_request['volume'],
+                'type': mt5.ORDER_TYPE_BUY if trade_request['action'] == 'BUY' else mt5.ORDER_TYPE_SELL,
+                'price': trade_request['price'],
+                'sl': trade_request['sl'],
+                'tp': trade_request['tp'],
+                'deviation': trade_request['deviation'],
+                'magic': trade_request['magic'],
+                'comment': trade_request['comment'],
+                'type_time': mt5.ORDER_TIME_GTC,
+                'type_filling': mt5.ORDER_FILLING_FOK,
+            }
 
-        logging.debug(f"Trade executed successfully: {result}")
-        return result
-    except Exception as e:
-        handle_error(e, "Failed to execute trade")
-        return None
+            # Log the exact timestamp before sending the order
+            timestamp_before_order = time.time()
+            result = mt5.order_send(order)
+            timestamp_after_order = time.time()
 
+            logging.info(f"Order response received at {datetime.now()} after {timestamp_after_order - timestamp_before_order:.6f} seconds: {result}")
+
+            if result.retcode == mt5.TRADE_RETCODE_DONE:
+                logging.debug(f"Trade executed successfully: {result}")
+                return result
+            elif result.retcode == 10021:  # 'No prices' error code
+                logging.warning(f"Failed to execute trade due to 'No prices' error. Attempt {attempt + 1} of {retries + 1}")
+                attempt += 1
+                if attempt <= retries:
+                    logging.info(f"Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                else:
+                    logging.error(f"Failed to execute trade after {retries + 1} attempts due to 'No prices' error.")
+            else:
+                logging.error(f"Failed to execute trade: {result.retcode} - {result.comment}")
+                return None
+
+        except Exception as e:
+            handle_error(e, f"Exception occurred during trade execution attempt {attempt + 1}")
+            attempt += 1
+            if attempt <= retries:
+                logging.info(f"Retrying in {delay} seconds...")
+                time.sleep(delay)
+            else:
+                logging.error(f"Failed to execute trade after {retries + 1} attempts due to an exception.")
+                return None
+
+    return None
 
 def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
     logging.debug(f"Managing position for symbol: {symbol}")
@@ -446,3 +476,20 @@ def close_position(ticket):
     except Exception as e:
         logging.error(f"Failed to close position: {str(e)}")
         return 'Close failed'
+
+def check_broker_connection():
+    if not mt5.terminal_info().connected:
+        logging.error("Broker is not connected.")
+        return False
+    logging.info("Broker is connected.")
+    return True
+
+def check_market_open():
+    current_time = datetime.now().time()
+    market_open = dtime(0, 0)
+    market_close = dtime(23, 59)
+    if not (market_open <= current_time <= market_close):
+        logging.error("Market is closed.")
+        return False
+    logging.info("Market is open.")
+    return True
