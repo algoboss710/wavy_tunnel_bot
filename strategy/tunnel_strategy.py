@@ -11,12 +11,14 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 def get_current_data(symbol):
     tick = mt5.symbol_info_tick(symbol)
     if tick:
-        return {
+        tick_data = {
             'time': datetime.fromtimestamp(tick.time),
             'bid': tick.bid,
             'ask': tick.ask,
             'last': tick.last
         }
+        logging.info(f"Retrieved tick data for {symbol}: {tick_data}")
+        return tick_data
     else:
         raise ValueError(f"Failed to retrieve current tick data for {symbol}")
 
@@ -131,32 +133,22 @@ def check_entry_conditions(row, peaks, dips, symbol):
 
     return buy_condition, sell_condition
 
-def execute_trade(trade_request, retries=4, delay=4):  # Increased retries to 4 and delay to 4 seconds
-    """
-    Attempts to execute a trade with retry logic in case of failure due to 'No prices' error.
-
-    Parameters:
-    - trade_request (dict): The trade request dictionary.
-    - retries (int): Number of times to retry in case of failure.
-    - delay (int): Delay in seconds between retries.
-
-    Returns:
-    - result: The result of the trade execution, or None if it fails after retries.
-    """
+def execute_trade(trade_request, retries=4, delay=4):
     attempt = 0
+    last_tick_time = None
     while attempt <= retries:
         try:
             logging.debug(f"Attempt {attempt + 1} to execute trade with request: {trade_request}")
 
-            # Log the exact timestamp before fetching the latest tick data
-            timestamp_before_tick = time.time()
             latest_data = get_current_data(trade_request['symbol'])
-            timestamp_after_tick = time.time()
+
+            if last_tick_time and last_tick_time == latest_data['time']:
+                logging.warning(f"Tick data for {trade_request['symbol']} has not been updated since last attempt.")
+            else:
+                last_tick_time = latest_data['time']
 
             logging.info(f"Latest price data for {trade_request['symbol']} at {datetime.now()}: {latest_data}")
-            logging.info(f"Time taken to fetch latest tick: {timestamp_after_tick - timestamp_before_tick:.6f} seconds")
 
-            # Update the trade request with the latest price
             trade_request['price'] = latest_data['bid'] if trade_request['action'] == 'BUY' else latest_data['ask']
             trade_request['sl'] = trade_request['price'] - (1.5 * trade_request.get('std_dev', 0)) if trade_request['action'] == 'BUY' else trade_request['price'] + (1.5 * trade_request.get('std_dev', 0))
             trade_request['tp'] = trade_request['price'] + (2 * trade_request.get('std_dev', 0)) if trade_request['action'] == 'BUY' else trade_request['price'] - (2 * trade_request.get('std_dev', 0))
@@ -178,17 +170,14 @@ def execute_trade(trade_request, retries=4, delay=4):  # Increased retries to 4 
                 'type_filling': mt5.ORDER_FILLING_FOK,
             }
 
-            # Log the exact timestamp before sending the order
-            timestamp_before_order = time.time()
             result = mt5.order_send(order)
-            timestamp_after_order = time.time()
 
-            logging.info(f"Order response received at {datetime.now()} after {timestamp_after_order - timestamp_before_order:.6f} seconds: {result}")
+            logging.info(f"Order response received at {datetime.now()}: {result}")
 
             if result.retcode == mt5.TRADE_RETCODE_DONE:
                 logging.debug(f"Trade executed successfully: {result}")
                 return result
-            elif result.retcode == 10021:  # 'No prices' error code
+            elif result.retcode == 10021:
                 logging.warning(f"Failed to execute trade due to 'No prices' error. Attempt {attempt + 1} of {retries + 1}")
                 attempt += 1
                 if attempt <= retries:
