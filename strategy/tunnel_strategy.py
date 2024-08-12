@@ -15,7 +15,9 @@ def get_current_data(symbol):
             'time': datetime.fromtimestamp(tick.time),
             'bid': tick.bid,
             'ask': tick.ask,
-            'last': tick.last
+            'last': tick.last,
+            'spread': tick.ask - tick.bid,  # Log spread
+            'volume': tick.volume  # Log volume
         }
         logging.info(f"Retrieved tick data for {symbol}: {tick_data}")
         return tick_data
@@ -142,12 +144,30 @@ def execute_trade(trade_request, retries=4, delay=4):
 
             latest_data = get_current_data(trade_request['symbol'])
 
+            # Validate tick data
+            if latest_data['volume'] == 0:
+                logging.warning(f"Tick data volume for {trade_request['symbol']} is zero, indicating low or no activity.")
+                time.sleep(delay)
+                continue
+
+            # Check if tick data is fresh and valid
             if last_tick_time and last_tick_time == latest_data['time']:
                 logging.warning(f"Tick data for {trade_request['symbol']} has not been updated since last attempt.")
-            else:
-                last_tick_time = latest_data['time']
+                logging.info(f"Retrying in {delay} seconds...")
+                time.sleep(delay)
+                continue  # Wait for new tick data
 
+            last_tick_time = latest_data['time']
+
+            # Log time difference between tick retrieval and order placement
+            time_diff = (datetime.now() - latest_data['time']).total_seconds()
+            logging.info(f"Time difference between tick retrieval and order placement: {time_diff} seconds")
             logging.info(f"Latest price data for {trade_request['symbol']} at {datetime.now()}: {latest_data}")
+
+            # Check if the data is valid for trading (e.g., price and spread are reasonable)
+            if latest_data['last'] == 0:
+                logging.warning(f"Invalid last price detected for {trade_request['symbol']}, skipping trade execution.")
+                return None
 
             trade_request['price'] = latest_data['bid'] if trade_request['action'] == 'BUY' else latest_data['ask']
             trade_request['sl'] = trade_request['price'] - (1.5 * trade_request.get('std_dev', 0)) if trade_request['action'] == 'BUY' else trade_request['price'] + (1.5 * trade_request.get('std_dev', 0))

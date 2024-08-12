@@ -1,195 +1,35 @@
-#content of backtest.py
+#Tunnel_strategy.py:
+
+import pandas as pd
+import numpy as np
 import logging
-import pandas as pd
-import numpy as np
-import cProfile
-import pstats
-from io import StringIO
-
-def calculate_max_drawdown(trades, initial_balance):
-    balance = initial_balance
-    max_balance = initial_balance
-    max_drawdown = 0
-
-    for trade in trades:
-        if 'profit' in trade:
-            balance += trade['profit']
-            max_balance = max(max_balance, balance)
-            drawdown = max_balance - balance
-            max_drawdown = max(max_drawdown, drawdown)
-
-    return max_drawdown
-
-def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, stop_loss_pips, pip_value, max_trades_per_day=None, slippage=0, transaction_cost=0):
-    from strategy.tunnel_strategy import generate_trade_signal, manage_position, calculate_position_size, detect_peaks_and_dips
-    from metatrader.indicators import calculate_ema
-    from metatrader.trade_management import execute_trade
-
-    # Profiling setup
-    pr = cProfile.Profile()
-    pr.enable()
-
-    try:
-        if initial_balance <= 0:
-            raise ValueError("Initial balance must be positive.")
-        if risk_percent <= 0:
-            raise ValueError("Risk percent must be positive.")
-
-        balance = initial_balance
-        trades = []
-        trades_today = 0
-        current_day = data.iloc[0]['time'].date()
-        max_drawdown = 0
-        daily_loss = 0
-        buy_condition = False
-        sell_condition = False
-
-        logging.info(f"Initial balance: {balance}")
-        print(f"Initial balance: {balance}")
-
-        # Validate critical parameters
-        if stop_loss_pips <= 0 or pip_value <= 0:
-            raise ZeroDivisionError("stop_loss_pips and pip_value must be greater than zero.")
-
-        peak_type = 21
-
-        # Calculate indicators and peaks/dips for the entire dataset
-        data.loc[:, 'wavy_h'] = calculate_ema(data['high'], 34)
-        data.loc[:, 'wavy_c'] = calculate_ema(data['close'], 34)
-        data.loc[:, 'wavy_l'] = calculate_ema(data['low'], 34)
-        data.loc[:, 'tunnel1'] = calculate_ema(data['close'], 144)
-        data.loc[:, 'tunnel2'] = calculate_ema(data['close'], 169)
-        data.loc[:, 'long_term_ema'] = calculate_ema(data['close'], 200)
-
-        peaks, dips = detect_peaks_and_dips(data, peak_type)
-
-        for i in range(34, len(data)):  # Start after enough data points are available
-            logging.info(f"Iteration: {i}, trades_today: {trades_today}, current_day: {current_day}")
-
-            # Check if it's a new day
-            if data.iloc[i]['time'].date() != current_day:
-                logging.info(f"New day detected: {data.iloc[i]['time'].date()}, resetting trades_today and daily_loss.")
-                current_day = data.iloc[i]['time'].date()
-                trades_today = 0
-                daily_loss = 0
-
-            if max_trades_per_day is not None and trades_today >= max_trades_per_day:
-                logging.info(f"Max trades per day reached at row {i}.")
-                continue
-
-            # Generate trading signals
-            buy_condition, sell_condition = generate_trade_signal(data.iloc[:i+1], period=20, deviation_factor=2.0)
-            if buy_condition is None or sell_condition is None:
-                continue
-
-            print(f"Buy Condition at {i}: {buy_condition}, Sell Condition at {i}: {sell_condition}")
-
-            try:
-                position_size = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
-            except ZeroDivisionError as e:
-                logging.error(f"Division by zero occurred in calculate_position_size: {e}. Variables - balance: {balance}, risk_percent: {risk_percent}, stop_loss_pips: {stop_loss_pips}, pip_value: {pip_value}")
-                continue
-
-            row = data.iloc[i]
-
-            if buy_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
-                logging.info(f"Buy condition met at row {i}.")
-                trade = {
-                    'entry_time': data.iloc[i]['time'],
-                    'entry_price': data.iloc[i]['close'],
-                    'volume': position_size,
-                    'symbol': symbol,
-                    'action': 'BUY',
-                    'sl': data.iloc[i]['close'] - (1.5 * data['close'].rolling(window=20).std().iloc[i]),
-                    'tp': data.iloc[i]['close'] + (2 * data['close'].rolling(window=20).std().iloc[i])
-                }
-                trades.append(trade)
-                execute_trade(trade)
-                trades_today += 1
-                logging.info(f"Balance after BUY trade: {balance}")
-
-            elif sell_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
-                logging.info(f"Sell condition met at row {i}.")
-                trade = {
-                    'entry_time': data.iloc[i]['time'],
-                    'entry_price': data.iloc[i]['close'],
-                    'volume': position_size,
-                    'symbol': symbol,
-                    'action': 'SELL',
-                    'sl': data.iloc[i]['close'] + (1.5 * data['close'].rolling(window=20).std().iloc[i]),
-                    'tp': data.iloc[i]['close'] - (2 * data['close'].rolling(window=20).std().iloc[i])
-                }
-                trades.append(trade)
-                execute_trade(trade)
-                trade['exit_time'] = data.iloc[i]['time']
-                trade['exit_price'] = data.iloc[i]['close']
-                trade['profit'] = (trade['entry_price'] - trade['exit_price']) * trade['volume'] * pip_value
-                balance += trade['profit']
-                trades_today += 1
-                logging.info(f"Balance after SELL trade: {balance}")
-
-            manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
-
-        logging.info(f"Final balance: {balance}")
-        print(f"Final balance: {balance}")
-
-        total_profit = sum(trade['profit'] for trade in trades if 'profit' in trade)
-        num_trades = len(trades)
-        win_rate = sum(1 for trade in trades if 'profit' in trade and trade['profit'] > 0) / num_trades if num_trades > 0 else 0
-        max_drawdown = calculate_max_drawdown(trades, initial_balance)
-
-        logging.info(f"Total Profit: {total_profit:.2f}")
-        logging.info(f"Number of Trades: {num_trades}")
-        logging.info(f"Win Rate: {win_rate:.2%}")
-        logging.info(f"Maximum Drawdown: {max_drawdown:.2f}")
-
-        print(f"Total Profit: {total_profit:.2f}")
-        print(f"Number of Trades: {num_trades}")
-        print(f"Win Rate: {win_rate:.2%}")
-        print(f"Maximum Drawdown: {max_drawdown:.2f}")
-
-        return {
-            'total_profit': total_profit,
-            'num_trades': num_trades,
-            'win_rate': win_rate,
-            'max_drawdown': max_drawdown,
-            'buy_condition': buy_condition,
-            'sell_condition': sell_condition,
-            'trades': trades,
-            'total_slippage_costs': len(trades) * slippage,
-            'total_transaction_costs': len(trades) * transaction_cost
-        }
-
-    finally:
-        pr.disable()
-
-        # Output profiling results
-        s = StringIO()
-        ps = pstats.Stats(pr, stream=s).sort_stats(pstats.SortKey.CUMULATIVE)
-        ps.print_stats()
-        print(s.getvalue())
-
-
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
-
-#content of tunnel_strategy.py:
-
-import numpy as np
-from metatrader.data_retrieval import get_historical_data
-from utils.error_handling import handle_error
-from metatrader.indicators import calculate_ema
-from metatrader.trade_management import place_order, close_position, modify_order
-import pandas as pd
 import MetaTrader5 as mt5
-import logging
+from datetime import datetime, time as dtime
+from utils.error_handling import handle_error
+import time
+
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def get_current_data(symbol):
+    tick = mt5.symbol_info_tick(symbol)
+    if tick:
+        tick_data = {
+            'time': datetime.fromtimestamp(tick.time),
+            'bid': tick.bid,
+            'ask': tick.ask,
+            'last': tick.last
+        }
+        logging.info(f"Retrieved tick data for {symbol}: {tick_data}")
+        return tick_data
+    else:
+        raise ValueError(f"Failed to retrieve current tick data for {symbol}")
 
 def calculate_ema(prices, period):
     if not isinstance(prices, (list, np.ndarray, pd.Series)):
         raise ValueError("Invalid input type for prices. Expected list, numpy array, or pandas Series.")
-    
+
     logging.debug(f"Calculating EMA for period: {period}, prices: {prices}")
-    
+
     prices = pd.Series(prices)
     prices = pd.to_numeric(prices, errors='coerce')
     logging.debug(f"Prices converted to numeric: {prices}")
@@ -197,43 +37,44 @@ def calculate_ema(prices, period):
     ema_values = np.full(len(prices), np.nan, dtype=np.float64)
     if len(prices) < period:
         return pd.Series(ema_values, index=prices.index)
-    
+
     sma = np.mean(prices[:period])
     ema_values[period - 1] = sma
     logging.debug(f"Initial SMA: {sma}")
-    
+
     multiplier = 2 / (period + 1)
     for i in range(period, len(prices)):
         ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
         logging.debug(f"EMA value at index {i}: {ema_values[i]}")
-    
-    return pd.Series(ema_values, index=prices.index)
+
+    ema_series = pd.Series(ema_values, index=prices.index)
+    return ema_series
 
 def detect_peaks_and_dips(df, peak_type):
     if not np.issubdtype(df['high'].dtype, np.number) or not np.issubdtype(df['low'].dtype, np.number):
         raise TypeError("High and Low columns must contain numeric data.")
 
     logging.debug(f"Detecting peaks and dips with peak_type: {peak_type}")
-    
+
     highs = df['high'].values
     lows = df['low'].values
     center_index = peak_type // 2
     peaks = []
     dips = []
-    
+
     for i in range(center_index, len(highs) - center_index):
         peak_window = highs[i - center_index:i + center_index + 1]
         dip_window = lows[i - center_index:i + center_index + 1]
-        
+
         if all(peak_window[center_index] > peak_window[j] for j in range(len(peak_window)) if j != center_index):
             peaks.append(highs[i])
-        
+
         if all(dip_window[center_index] < dip_window[j] for j in range(len(dip_window)) if j != center_index):
             dips.append(lows[i])
-    
+
     logging.debug(f"Detected peaks: {peaks}")
     logging.debug(f"Detected dips: {dips}")
-    
+
     return peaks, dips
 
 def check_entry_conditions(row, peaks, dips, symbol):
@@ -252,14 +93,14 @@ def check_entry_conditions(row, peaks, dips, symbol):
     buy_condition = (
         close_price > max(wavy_c, wavy_h, wavy_l) and
         min(wavy_c, wavy_h, wavy_l) > max(tunnel1, tunnel2) and
-        close_price in peaks  # Check if the current close price is a peak
+        any(abs(close_price - peak) <= 0.001 for peak in peaks)
     )
     sell_condition = (
         close_price < min(wavy_c, wavy_h, wavy_l) and
         max(wavy_c, wavy_h, wavy_l) < min(tunnel1, tunnel2) and
-        close_price in dips  # Check if the current close price is a dip
+        any(abs(close_price - dip) <= 0.001 for dip in dips)
     )
-    
+
     logging.debug(f"Initial Buy condition: {buy_condition}")
     logging.debug(f"Initial Sell condition: {sell_condition}")
 
@@ -278,7 +119,7 @@ def check_entry_conditions(row, peaks, dips, symbol):
         if not symbol_info:
             logging.error(f"Failed to get symbol info for {symbol}")
             return False, False
-        
+
         threshold = threshold_values.get(symbol[:3], threshold_values['default']) * symbol_info.trade_tick_size
         logging.debug(f"Threshold: {threshold}")
 
@@ -294,25 +135,73 @@ def check_entry_conditions(row, peaks, dips, symbol):
 
     return buy_condition, sell_condition
 
-def execute_trade(trade_request):
-    logging.debug(f"Executing trade with request: {trade_request}")
-    try:
-        result = place_order(
-            trade_request['symbol'],
-            trade_request['action'].lower(),
-            trade_request['volume'],
-            trade_request['price'],
-            trade_request['sl'],
-            trade_request['tp']
-        )
-        if result == 'Order failed':
-            raise Exception("Failed to execute trade")
-        trade_request['profit'] = 0  # Initialize profit to 0
-        logging.debug(f"Trade executed successfully: {result}")
-        return result
-    except Exception as e:
-        handle_error(e, "Failed to execute trade")
-        return None
+def execute_trade(trade_request, retries=4, delay=4):
+    attempt = 0
+    last_tick_time = None
+    while attempt <= retries:
+        try:
+            logging.debug(f"Attempt {attempt + 1} to execute trade with request: {trade_request}")
+
+            latest_data = get_current_data(trade_request['symbol'])
+
+            if last_tick_time and last_tick_time == latest_data['time']:
+                logging.warning(f"Tick data for {trade_request['symbol']} has not been updated since last attempt.")
+            else:
+                last_tick_time = latest_data['time']
+
+            logging.info(f"Latest price data for {trade_request['symbol']} at {datetime.now()}: {latest_data}")
+
+            trade_request['price'] = latest_data['bid'] if trade_request['action'] == 'BUY' else latest_data['ask']
+            trade_request['sl'] = trade_request['price'] - (1.5 * trade_request.get('std_dev', 0)) if trade_request['action'] == 'BUY' else trade_request['price'] + (1.5 * trade_request.get('std_dev', 0))
+            trade_request['tp'] = trade_request['price'] + (2 * trade_request.get('std_dev', 0)) if trade_request['action'] == 'BUY' else trade_request['price'] - (2 * trade_request.get('std_dev', 0))
+
+            logging.info(f"Placing order with updated price: {trade_request}")
+
+            order = {
+                'action': mt5.TRADE_ACTION_DEAL,
+                'symbol': trade_request['symbol'],
+                'volume': trade_request['volume'],
+                'type': mt5.ORDER_TYPE_BUY if trade_request['action'] == 'BUY' else mt5.ORDER_TYPE_SELL,
+                'price': trade_request['price'],
+                'sl': trade_request['sl'],
+                'tp': trade_request['tp'],
+                'deviation': trade_request['deviation'],
+                'magic': trade_request['magic'],
+                'comment': trade_request['comment'],
+                'type_time': mt5.ORDER_TIME_GTC,
+                'type_filling': mt5.ORDER_FILLING_FOK,
+            }
+
+            result = mt5.order_send(order)
+
+            logging.info(f"Order response received at {datetime.now()}: {result}")
+
+            if result.retcode == mt5.TRADE_RETCODE_DONE:
+                logging.debug(f"Trade executed successfully: {result}")
+                return result
+            elif result.retcode == 10021:
+                logging.warning(f"Failed to execute trade due to 'No prices' error. Attempt {attempt + 1} of {retries + 1}")
+                attempt += 1
+                if attempt <= retries:
+                    logging.info(f"Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                else:
+                    logging.error(f"Failed to execute trade after {retries + 1} attempts due to 'No prices' error.")
+            else:
+                logging.error(f"Failed to execute trade: {result.retcode} - {result.comment}")
+                return None
+
+        except Exception as e:
+            handle_error(e, f"Exception occurred during trade execution attempt {attempt + 1}")
+            attempt += 1
+            if attempt <= retries:
+                logging.info(f"Retrying in {delay} seconds...")
+                time.sleep(delay)
+            else:
+                logging.error(f"Failed to execute trade after {retries + 1} attempts due to an exception.")
+                return None
+
+    return None
 
 def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
     logging.debug(f"Managing position for symbol: {symbol}")
@@ -321,40 +210,56 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
         if positions:
             for position in positions:
                 logging.debug(f"Checking position {position.ticket} with profit {position.profit}")
+
+                current_equity = mt5.account_info().equity
+
                 if position.profit >= min_take_profit:
                     logging.debug(f"Closing position {position.ticket} for profit")
                     close_position(position.ticket)
+                    position['exit_time'] = pd.Timestamp.now()
+                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
+                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+
                 elif position.profit <= -max_loss_per_day:
                     logging.debug(f"Closing position {position.ticket} for loss")
                     close_position(position.ticket)
-                else:
-                    current_equity = mt5.account_info().equity
-                    if current_equity <= starting_equity * 0.9:  # Close position if equity drops by 10%
-                        logging.debug(f"Closing position {position.ticket} due to equity drop")
-                        close_position(position.ticket)
-                    elif mt5.positions_total() >= max_trades_per_day:
-                        logging.debug(f"Closing position {position.ticket} due to max trades exceeded")
-                        close_position(position.ticket)
+                    position['exit_time'] = pd.Timestamp.now()
+                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
+                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+
+                elif current_equity <= starting_equity * 0.9:
+                    logging.debug(f"Closing position {position.ticket} due to equity drop")
+                    close_position(position.ticket)
+                    position['exit_time'] = pd.Timestamp.now()
+                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
+                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+
+                elif mt5.positions_total() >= max_trades_per_day:
+                    logging.debug(f"Closing position {position.ticket} due to max trades exceeded")
+                    close_position(position.ticket)
+                    position['exit_time'] = pd.Timestamp.now()
+                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
+                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
     except Exception as e:
         handle_error(e, "Failed to manage position")
 
 def calculate_tunnel_bounds(data, period, deviation_factor):
-    data['close'] = pd.to_numeric(data['close'], errors='coerce')
     logging.debug(f"Calculating tunnel bounds with period: {period} and deviation_factor: {deviation_factor}")
 
     if len(data) < period:
         return pd.Series([np.nan] * len(data)), pd.Series([np.nan] * len(data))
 
+    data = data.copy()
+    data['close'] = pd.to_numeric(data['close'], errors='coerce')
+
     ema = calculate_ema(data['close'], period)
     rolling_std = data['close'].rolling(window=period).std()
-
-    volatility = rolling_std.mean()
-    deviation = deviation_factor * volatility
-
+    volatility = rolling_std * deviation_factor
+    deviation = volatility / np.sqrt(period)
     upper_bound = ema + deviation
     lower_bound = ema - deviation
 
-    logging.debug(f"EMA Values for Tunnel Bounds: {ema}")
+    logging.debug(f"EMA: {ema}")
     logging.debug(f"Rolling Std: {rolling_std}")
     logging.debug(f"Volatility: {volatility}")
     logging.debug(f"Deviation: {deviation}")
@@ -377,7 +282,7 @@ def generate_trade_signal(data, period, deviation_factor):
         return None, None
 
     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
-    
+
     last_close = pd.to_numeric(data['close'].iloc[-1], errors='coerce')
     upper_bound_last_value = upper_bound.iloc[-1]
     lower_bound_last_value = lower_bound.iloc[-1]
@@ -406,17 +311,32 @@ def adjust_deviation_factor(market_conditions):
     else:
         return 2.0
 
-def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, run_backtest=False):
+def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, run_backtest, data=None, std_dev=None):
     try:
+        total_profit = 0
+        total_loss = 0
+        max_drawdown = 0
+        current_balance = starting_equity
+        peak_balance = starting_equity
+
         for symbol in symbols:
-            start_time = pd.Timestamp.now() - pd.Timedelta(days=30)  # Example: 30 days ago
-            end_time = pd.Timestamp.now()  # Current time
-            data = get_historical_data(symbol, timeframe, start_time, end_time)
-            if data is None or data.empty:
-                raise ValueError(f"Failed to retrieve historical data for {symbol}")
+            if data is None:
+                current_data = get_current_data(symbol)
+                logging.info(f"Current data for {symbol}: {current_data}")
+
+                data = pd.DataFrame([{
+                    'time': current_data['time'],
+                    'open': current_data['last'],
+                    'high': current_data['last'],
+                    'low': current_data['last'],
+                    'close': current_data['last'],
+                    'volume': 0
+                }])
+            else:
+                logging.info(f"Using provided data for {symbol}")
 
             period = 20
-            market_conditions = 'volatile'  # Placeholder for determining market conditions
+            market_conditions = 'volatile'
             deviation_factor = adjust_deviation_factor(market_conditions)
 
             logging.info("Calculating Wavy Tunnel indicators...")
@@ -429,1064 +349,574 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
             logging.info("Indicators calculated.")
 
             logging.info("Detecting peaks and dips...")
-            peak_type = 21  # Define the peak_type variable
+            peak_type = 21
             peaks, dips = detect_peaks_and_dips(data, peak_type)
             logging.info(f"Peaks: {peaks[:5]}")
             logging.info(f"Dips: {dips[:5]}")
-
-            logging.info(f"Historical data shape after calculations: {data.shape}")
-            logging.info(f"Historical data head after calculations:\n{data.head()}")
 
             logging.info("Generating entry signals...")
             data['buy_signal'], data['sell_signal'] = zip(*data.apply(lambda x: check_entry_conditions(x, peaks, dips, symbol), axis=1))
             logging.info("Entry signals generated.")
 
-            if run_backtest:
-                logging.info("Running backtest...")
-                backtest_result = run_backtest(
-                    symbol=symbol,
-                    data=data,
-                    initial_balance=starting_equity,
-                    risk_percent=0.01,
-                    min_take_profit=min_take_profit,
-                    max_loss_per_day=max_loss_per_day,
-                    starting_equity=starting_equity,
-                    stop_loss_pips=20,
-                    pip_value=0.0001,
-                    max_trades_per_day=max_trades_per_day,
-                    slippage=0,
-                    transaction_cost=0
-                )
-                logging.info(f"Backtest result: {backtest_result}")
-            else:
-                buy_condition, sell_condition = generate_trade_signal(data, period, deviation_factor)
+            buy_condition, sell_condition = generate_trade_signal(data, period, deviation_factor)
 
-                if buy_condition:
-                    trade_request = {
-                        'action': 'BUY',
-                        'symbol': symbol,
-                        'volume': lot_size,
-                        'price': data['close'].iloc[-1],
-                        'sl': data['close'].iloc[-1] - (1.5 * np.std(data['close'])),
-                        'tp': data['close'].iloc[-1] + (2 * np.std(data['close'])),
-                        'deviation': 10,
-                        'magic': 12345,
-                        'comment': 'Tunnel Strategy',
-                        'type': 'ORDER_TYPE_BUY',
-                        'type_filling': 'ORDER_FILLING_FOK',
-                        'type_time': 'ORDER_TIME_GTC'
-                    }
-                    logging.info(f"Executing BUY trade for {symbol}...")
-                    execute_trade(trade_request)
-                elif sell_condition:
-                    trade_request = {
-                        'action': 'SELL',
-                        'symbol': symbol,
-                        'volume': lot_size,
-                        'price': data['close'].iloc[-1],
-                        'sl': data['close'].iloc[-1] + (1.5 * np.std(data['close'])),
-                        'tp': data['close'].iloc[-1] - (2 * np.std(data['close'])),
-                        'deviation': 10,
-                        'magic': 12345,
-                        'comment': 'Tunnel Strategy',
-                        'type': 'ORDER_TYPE_SELL',
-                        'type_filling': 'ORDER_FILLING_FOK',
-                        'type_time': 'ORDER_TIME_GTC'
-                    }
-                    logging.info(f"Executing SELL trade for {symbol}...")
-                    execute_trade(trade_request)
+            logging.info(f"Buy Condition: {buy_condition}")
+            logging.info(f"Sell Condition: {sell_condition}")
 
-                manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+            if buy_condition or sell_condition:
+                # Retrieve the latest price before executing a trade
+                current_tick = get_current_data(symbol)
+                logging.info(f"Latest price data for {symbol}: {current_tick}")
+
+                trade_request = {
+                    'action': 'BUY' if buy_condition else 'SELL',
+                    'symbol': symbol,
+                    'volume': lot_size,
+                    'price': current_tick['bid'] if buy_condition else current_tick['ask'],
+                    'sl': current_tick['bid'] - (1.5 * std_dev) if buy_condition else current_tick['ask'] + (1.5 * std_dev),
+                    'tp': current_tick['bid'] + (2 * std_dev) if buy_condition else current_tick['ask'] - (2 * std_dev),
+                    'deviation': 10,
+                    'magic': 12345,
+                    'comment': 'Tunnel Strategy',
+                    'type': 'ORDER_TYPE_BUY' if buy_condition else 'ORDER_TYPE_SELL',
+                    'type_filling': 'ORDER_FILLING_FOK',
+                    'type_time': 'ORDER_TIME_GTC'
+                }
+
+                logging.info(f"Executing {'BUY' if buy_condition else 'SELL'} trade for {symbol} with trade request: {trade_request}")
+                result = execute_trade(trade_request)
+                if result:
+                    profit = trade_request['tp'] - trade_request['price'] if buy_condition else trade_request['price'] - trade_request['tp']
+                    total_profit += profit
+                    current_balance += profit
+                    peak_balance = max(peak_balance, current_balance)
+                    drawdown = peak_balance - current_balance
+                    max_drawdown = max(max_drawdown, drawdown)
+                else:
+                    logging.error("Trade execution failed")
+
+            manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+
+        return {
+            'total_profit': total_profit,
+            'total_loss': total_loss,
+            'max_drawdown': max_drawdown
+        }
 
     except Exception as e:
         handle_error(e, "Failed to run the strategy")
-        raise
+        return None
 
-#content of metatrader.indicators:
-import pandas as pd
-import numpy as np
-import logging
-
-def calculate_ema(prices, period):
-    if not isinstance(prices, (list, np.ndarray, pd.Series)):
-        raise ValueError("Invalid input type for prices. Expected list, numpy array, or pandas Series.")
-    
-    logging.debug(f"Calculating EMA for period: {period}, prices: {prices}")
-    
-    # Convert input to a pandas Series to ensure consistency
-    prices = pd.Series(prices)
-    
-    # Ensure that the series is numeric
-    prices = pd.to_numeric(prices, errors='coerce')
-    logging.debug(f"Prices converted to numeric: {prices}")
-
-    ema_values = np.full(len(prices), np.nan, dtype=np.float64)
-    if len(prices) < period:
-        return pd.Series(ema_values, index=prices.index)
-    
-    sma = np.mean(prices[:period])
-    ema_values[period - 1] = sma
-    logging.debug(f"Initial SMA: {sma}")
-    
-    multiplier = 2 / (period + 1)
-    for i in range(period, len(prices)):
-        ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
-        logging.debug(f"EMA value at index {i}: {ema_values[i]}")
-    
-    ema_series = pd.Series(ema_values, index=prices.index)
-    return ema_series
-
-#content of metatrader.trade_managment
-
-import MetaTrader5 as mt5
-
-def place_order(symbol, order_type, volume, price=None, sl=None, tp=None):
+def place_order(symbol, action, volume, price, sl, tp):
     try:
-        order = mt5.ORDER_TYPE_BUY if order_type == 'buy' else mt5.ORDER_TYPE_SELL
-        request = {
+        order_type = mt5.ORDER_TYPE_BUY if action == 'buy' else mt5.ORDER_TYPE_SELL
+        order = {
             "action": mt5.TRADE_ACTION_DEAL,
             "symbol": symbol,
             "volume": volume,
-            "type": order,
-            "price": mt5.symbol_info_tick(symbol).ask if order_type == 'buy' else mt5.symbol_info_tick(symbol).bid,
+            "type": order_type,
+            "price": price,
             "sl": sl,
             "tp": tp,
             "deviation": 10,
-            "magic": 234000,
-            "comment": "python script order",
+            "magic": 12345,
+            "comment": "Tunnel Strategy",
             "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_IOC,
+            "type_filling": mt5.ORDER_FILLING_FOK,
         }
-        result = mt5.order_send(request)
-        return result.comment if result else 'Order failed'
+
+        logging.debug(f"Placing order: {order}")
+        result = mt5.order_send(order)
+        logging.info(f"Order send result: {result}")
+
+        if result.retcode != mt5.TRADE_RETCODE_DONE:
+            logging.error(f"Failed to place order: {result.comment}")
+            return 'Order failed'
+        return 'Order placed'
     except Exception as e:
-        return f'Order failed: {str(e)}'
+        logging.error(f"Failed to place order: {str(e)}")
+        return 'Order failed'
 
 def close_position(ticket):
     try:
         position = mt5.positions_get(ticket=ticket)
         if position:
-            result = mt5.Close(ticket)
-            return result.comment if result else 'Close failed'
+            close_request = {
+                'action': mt5.TRADE_ACTION_DEAL,
+                'symbol': position[0].symbol,
+                'volume': position[0].volume,
+                'type': mt5.ORDER_TYPE_SELL if position[0].type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY,
+                'position': ticket,
+                'price': mt5.symbol_info_tick(position[0].symbol).bid if position[0].type == mt5.ORDER_TYPE_BUY else mt5.symbol_info_tick(position[0].symbol).ask,
+                'deviation': 10,
+                'magic': 12345,
+                'comment': 'Tunnel Strategy Close',
+                'type_time': mt5.ORDER_TIME_GTC,
+                'type_filling': mt5.ORDER_FILLING_FOK,
+            }
+
+            logging.debug(f"Closing position with request: {close_request}")
+            result = mt5.order_send(close_request)
+            logging.info(f"Close position result: {result}")
+
+            if result.retcode != mt5.TRADE_RETCODE_DONE:
+                logging.error(f"Failed to close position: {result.comment}")
+                return 'Close failed'
+            return 'Position closed'
         return 'Position not found'
     except Exception as e:
-        return f'Close failed: {str(e)}'
+        logging.error(f"Failed to close position: {str(e)}")
+        return 'Close failed'
 
-def modify_order(ticket, sl=None, tp=None):
-    try:
-        result = mt5.order_check(ticket)
-        if result and result.type in [mt5.ORDER_TYPE_BUY, mt5.ORDER_TYPE_SELL]:
-            request = {
-                "action": mt5.TRADE_ACTION_SLTP,
-                "ticket": ticket,
-                "sl": sl,
-                "tp": tp
-            }
-            result = mt5.order_send(request)
-            return result.comment if result else 'Modify failed'
-        return 'Order not found'
-    except Exception as e:
-        return f'Modify failed: {str(e)}'
+def check_broker_connection():
+    if not mt5.terminal_info().connected:
+        logging.error("Broker is not connected.")
+        return False
+    logging.info("Broker is connected.")
+    return True
 
-def execute_trade(trade):
-    """
-    Executes a trade based on the provided trade dictionary.
-    Expected dictionary keys: 'symbol', 'action', 'volume', 'price', 'sl', 'tp'.
-    """
-    symbol = trade.get('symbol')
-    action = trade.get('action')
-    volume = trade.get('volume')
-    price = trade.get('price')
-    sl = trade.get('sl')
-    tp = trade.get('tp')
-    
-    if action == 'BUY':
-        return place_order(symbol, 'buy', volume, price, sl, tp)
-    elif action == 'SELL':
-        return place_order(symbol, 'sell', volume, price, sl, tp)
+def check_market_open():
+    current_time = datetime.now().time()
+    market_open = dtime(0, 0)
+    market_close = dtime(23, 59)
+    if not (market_open <= current_time <= market_close):
+        logging.error("Market is closed.")
+        return False
+    logging.info("Market is open.")
+    return True
+
+#main.py contents
+import MetaTrader5 as mt5
+import pandas as pd
+from datetime import datetime
+from config import Config
+from metatrader.connection import initialize_mt5, shutdown_mt5
+from metatrader.data_retrieval import get_historical_data
+from strategy.tunnel_strategy import run_strategy, calculate_ema, detect_peaks_and_dips, check_entry_conditions, check_broker_connection, check_market_open
+from backtesting.backtest import run_backtest
+from utils.logger import setup_logging
+from utils.error_handling import handle_error
+import logging
+import argparse
+from ui import run_ui
+import os
+import time
+
+def clear_log_file():
+    with open("app.log", "w"):
+        pass
+
+def check_auto_trading_enabled():
+    """Check if global auto trading is enabled and log the status."""
+    global_autotrading_enabled = mt5.terminal_info().trade_allowed
+    if not global_autotrading_enabled:
+        logging.error("Global auto trading is disabled. Please enable it manually in the MetaTrader 5 terminal.")
     else:
-        return 'Invalid trade action'
-
-# content of tests found in backtesting.backtest_new:
-
-import unittest
-import pandas as pd
-from backtesting.backtest import run_backtest
-import logging
-
-class TestRunBacktest(unittest.TestCase):
-
-    def setUp(self):
-        # Create sample data
-        data = {
-            'time': pd.date_range(start='2023-01-01', periods=30, freq='D'),
-            'high': [70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124, 126, 128],
-            'low': [50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108],
-            'close': [60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 112, 114, 116, 118]
-        }
-        self.data = pd.DataFrame(data)
-
-    def test_initial_balance(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        self.assertEqual(result['total_profit'], 0)
-        self.assertEqual(result['num_trades'], 0)
-        self.assertEqual(result['win_rate'], 0)
-        self.assertEqual(result['max_drawdown'], 0)
-
-    def test_max_loss_per_day(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        self.assertIn('trades', result, "Result dictionary does not contain 'trades' key.")
-        
-        actual_loss = sum(trade['profit'] for trade in result['trades'] if 'profit' in trade and trade['profit'] < 0)
-        expected_loss = -100  # Expecting that max loss per day is respected
-        if result['trades']:
-            self.assertLessEqual(actual_loss, expected_loss)
-        else:
-            self.assertEqual(actual_loss, 0)
-
-    def test_pip_value_validation(self):
-        with self.assertRaises(ZeroDivisionError):
-            run_backtest(
-                symbol='EURUSD',
-                data=self.data,
-                initial_balance=10000,
-                risk_percent=0.01,
-                min_take_profit=100,
-                max_loss_per_day=100,
-                starting_equity=10000,
-                stop_loss_pips=20,
-                pip_value=0,
-                max_trades_per_day=5
-            )
-
-    def test_stop_loss_pips_validation(self):
-        with self.assertRaises(ZeroDivisionError):
-            run_backtest(
-                symbol='EURUSD',
-                data=self.data,
-                initial_balance=10000,
-                risk_percent=0.01,
-                min_take_profit=100,
-                max_loss_per_day=100,
-                starting_equity=10000,
-                stop_loss_pips=0,
-                pip_value=0.0001,
-                max_trades_per_day=5
-            )
-
-    def test_max_trades_per_day(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=1  # Limiting to 1 trade per day for this test
-        )
-
-        print(result)  # Debugging line to check the output
-        self.assertIn('trades', result, "Result dictionary does not contain 'trades' key.")
-        
-        trades_per_day = {}
-        for trade in result['trades']:
-            day = trade['entry_time'].date()
-            if day not in trades_per_day:
-                trades_per_day[day] = 0
-            trades_per_day[day] += 1
-        
-        for day, count in trades_per_day.items():
-            self.assertLessEqual(count, 1, f"More than 1 trade executed on {day}")
-
-    def test_total_profit_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        total_profit = sum(trade['profit'] for trade in result['trades'])
-        self.assertEqual(result['total_profit'], total_profit, "Total profit calculation is incorrect.")
-
-    def test_number_of_trades(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        self.assertEqual(result['num_trades'], len(result['trades']), "Number of trades calculation is incorrect.")
-
-    def test_win_rate_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        wins = sum(1 for trade in result['trades'] if trade['profit'] > 0)
-        total_trades = len(result['trades'])
-        win_rate = (wins / total_trades) * 100 if total_trades > 0 else 0
-
-        self.assertAlmostEqual(result['win_rate'], win_rate, places=2, msg="Win rate calculation is incorrect.")
-
-    def test_max_drawdown_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        equity_curve = [trade['equity'] for trade in result['trades']]
-        if equity_curve:
-            max_drawdown = max((max(equity_curve[:i+1]) - equity) / max(equity_curve[:i+1]) for i, equity in enumerate(equity_curve))
-        else:
-            max_drawdown = 0
-
-        self.assertAlmostEqual(result['max_drawdown'], max_drawdown, places=2, msg="Max drawdown calculation is incorrect.")
-
-    def test_profit_factor_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        gross_profit = sum(trade['profit'] for trade in result['trades'] if trade['profit'] > 0)
-        gross_loss = abs(sum(trade['profit'] for trade in result['trades'] if trade['profit'] < 0))
-        profit_factor = gross_profit / gross_loss if gross_loss > 0 else float('inf')
-
-        self.assertAlmostEqual(result.get('profit_factor', profit_factor), profit_factor, places=2, msg="Profit factor calculation is incorrect.")
-
-    def test_return_on_investment_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        total_profit = result['total_profit']
-        initial_balance = 10000
-        roi = (total_profit / initial_balance) * 100
-
-        self.assertAlmostEqual(result.get('roi', roi), roi, places=2, msg="ROI calculation is incorrect.")
-
-    def test_sharpe_ratio_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        returns = [trade['profit'] / 10000 for trade in result['trades']]
-        avg_return = sum(returns) / len(returns) if returns else 0
-        std_return = (sum((x - avg_return) ** 2 for x in returns) / len(returns)) ** 0.5 if returns else 0
-        risk_free_rate = 0.01
-        sharpe_ratio = (avg_return - risk_free_rate) / std_return if std_return != 0 else 0
-
-        self.assertAlmostEqual(result.get('sharpe_ratio', sharpe_ratio), sharpe_ratio, places=2, msg="Sharpe ratio calculation is incorrect.")
-
-    def test_win_loss_ratio_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        wins = sum(1 for trade in result['trades'] if trade['profit'] > 0)
-        losses = sum(1 for trade in result['trades'] if trade['profit'] < 0)
-        win_loss_ratio = wins / losses if losses > 0 else float('inf')
-
-        self.assertAlmostEqual(result.get('win_loss_ratio', win_loss_ratio), win_loss_ratio, places=2, msg="Win/Loss ratio calculation is incorrect.")
-
-    def test_annualized_return_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        total_profit = result['total_profit']
-        days = (self.data['time'].iloc[-1] - self.data['time'].iloc[0]).days
-        annualized_return = ((total_profit / 10000) + 1) ** (365 / days) - 1 if days > 0 else 0
-
-        self.assertAlmostEqual(result.get('annualized_return', annualized_return), annualized_return, places=2, msg="Annualized return calculation is incorrect.")
-
-    def test_expectancy_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        total_trades = len(result['trades'])
-        wins = [trade['profit'] for trade in result['trades'] if trade['profit'] > 0]
-        losses = [trade['profit'] for trade in result['trades'] if trade['profit'] < 0]
-        avg_win = sum(wins) / len(wins) if wins else 0
-        avg_loss = sum(losses) / len(losses) if losses else 0
-        win_rate = len(wins) / total_trades if total_trades > 0 else 0
-        loss_rate = len(losses) / total_trades if total_trades > 0 else 0
-        expectancy = (avg_win * win_rate) - (avg_loss * loss_rate)
-
-        self.assertAlmostEqual(result.get('expectancy', expectancy), expectancy, places=2, msg="Expectancy calculation is incorrect.")
-
-    # Additional test cases
-
- 
-import unittest
-import pandas as pd
-from backtesting.backtest import run_backtest
-import logging
-
-class TestRunBacktest(unittest.TestCase):
-
-    def setUp(self):
-        # Create sample data
-        data = {
-            'time': pd.date_range(start='2023-01-01', periods=30, freq='D'),
-            'high': [70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124, 126, 128],
-            'low': [50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108],
-            'close': [60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 112, 114, 116, 118]
-        }
-        self.data = pd.DataFrame(data)
-
-    def test_initial_balance(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        self.assertEqual(result['total_profit'], 0)
-        self.assertEqual(result['num_trades'], 0)
-        self.assertEqual(result['win_rate'], 0)
-        self.assertEqual(result['max_drawdown'], 0)
-
-    def test_max_loss_per_day(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        self.assertIn('trades', result, "Result dictionary does not contain 'trades' key.")
-        
-        actual_loss = sum(trade['profit'] for trade in result['trades'] if 'profit' in trade and trade['profit'] < 0)
-        expected_loss = -100  # Expecting that max loss per day is respected
-        if result['trades']:
-            self.assertLessEqual(actual_loss, expected_loss)
-        else:
-            self.assertEqual(actual_loss, 0)
-
-    def test_pip_value_validation(self):
-        with self.assertRaises(ZeroDivisionError):
-            run_backtest(
-                symbol='EURUSD',
-                data=self.data,
-                initial_balance=10000,
-                risk_percent=0.01,
-                min_take_profit=100,
-                max_loss_per_day=100,
-                starting_equity=10000,
-                stop_loss_pips=20,
-                pip_value=0,
-                max_trades_per_day=5
-            )
-
-    def test_stop_loss_pips_validation(self):
-        with self.assertRaises(ZeroDivisionError):
-            run_backtest(
-                symbol='EURUSD',
-                data=self.data,
-                initial_balance=10000,
-                risk_percent=0.01,
-                min_take_profit=100,
-                max_loss_per_day=100,
-                starting_equity=10000,
-                stop_loss_pips=0,
-                pip_value=0.0001,
-                max_trades_per_day=5
-            )
-
-    def test_max_trades_per_day(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=1  # Limiting to 1 trade per day for this test
-        )
-
-        print(result)  # Debugging line to check the output
-        self.assertIn('trades', result, "Result dictionary does not contain 'trades' key.")
-        
-        trades_per_day = {}
-        for trade in result['trades']:
-            day = trade['entry_time'].date()
-            if day not in trades_per_day:
-                trades_per_day[day] = 0
-            trades_per_day[day] += 1
-        
-        for day, count in trades_per_day.items():
-            self.assertLessEqual(count, 1, f"More than 1 trade executed on {day}")
-
-    def test_total_profit_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        total_profit = sum(trade['profit'] for trade in result['trades'])
-        self.assertEqual(result['total_profit'], total_profit, "Total profit calculation is incorrect.")
-
-    def test_number_of_trades(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        self.assertEqual(result['num_trades'], len(result['trades']), "Number of trades calculation is incorrect.")
-
-    def test_win_rate_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        wins = sum(1 for trade in result['trades'] if trade['profit'] > 0)
-        total_trades = len(result['trades'])
-        win_rate = (wins / total_trades) * 100 if total_trades > 0 else 0
-
-        self.assertAlmostEqual(result['win_rate'], win_rate, places=2, msg="Win rate calculation is incorrect.")
-
-    def test_max_drawdown_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        equity_curve = [trade['equity'] for trade in result['trades']]
-        if equity_curve:
-            max_drawdown = max((max(equity_curve[:i+1]) - equity) / max(equity_curve[:i+1]) for i, equity in enumerate(equity_curve))
-        else:
-            max_drawdown = 0
-
-        self.assertAlmostEqual(result['max_drawdown'], max_drawdown, places=2, msg="Max drawdown calculation is incorrect.")
-
-    def test_profit_factor_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        gross_profit = sum(trade['profit'] for trade in result['trades'] if trade['profit'] > 0)
-        gross_loss = abs(sum(trade['profit'] for trade in result['trades'] if trade['profit'] < 0))
-        profit_factor = gross_profit / gross_loss if gross_loss > 0 else float('inf')
-
-        self.assertAlmostEqual(result.get('profit_factor', profit_factor), profit_factor, places=2, msg="Profit factor calculation is incorrect.")
-
-    def test_return_on_investment_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        total_profit = result['total_profit']
-        initial_balance = 10000
-        roi = (total_profit / initial_balance) * 100
-
-        self.assertAlmostEqual(result.get('roi', roi), roi, places=2, msg="ROI calculation is incorrect.")
-
-    def test_sharpe_ratio_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        returns = [trade['profit'] / 10000 for trade in result['trades']]
-        avg_return = sum(returns) / len(returns) if returns else 0
-        std_return = (sum((x - avg_return) ** 2 for x in returns) / len(returns)) ** 0.5 if returns else 0
-        risk_free_rate = 0.01
-        sharpe_ratio = (avg_return - risk_free_rate) / std_return if std_return != 0 else 0
-
-        self.assertAlmostEqual(result.get('sharpe_ratio', sharpe_ratio), sharpe_ratio, places=2, msg="Sharpe ratio calculation is incorrect.")
-
-    def test_win_loss_ratio_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        wins = sum(1 for trade in result['trades'] if trade['profit'] > 0)
-        losses = sum(1 for trade in result['trades'] if trade['profit'] < 0)
-        win_loss_ratio = wins / losses if losses > 0 else float('inf')
-
-        self.assertAlmostEqual(result.get('win_loss_ratio', win_loss_ratio), win_loss_ratio, places=2, msg="Win/Loss ratio calculation is incorrect.")
-
-    def test_annualized_return_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        total_profit = result['total_profit']
-        days = (self.data['time'].iloc[-1] - self.data['time'].iloc[0]).days
-        annualized_return = ((total_profit / 10000) + 1) ** (365 / days) - 1 if days > 0 else 0
-
-        self.assertAlmostEqual(result.get('annualized_return', annualized_return), annualized_return, places=2, msg="Annualized return calculation is incorrect.")
-
-    def test_expectancy_calculation(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        total_trades = len(result['trades'])
-        wins = [trade['profit'] for trade in result['trades'] if trade['profit'] > 0]
-        losses = [trade['profit'] for trade in result['trades'] if trade['profit'] < 0]
-        avg_win = sum(wins) / len(wins) if wins else 0
-        avg_loss = sum(losses) / len(losses) if losses else 0
-        win_rate = len(wins) / total_trades if total_trades > 0 else 0
-        loss_rate = len(losses) / total_trades if total_trades > 0 else 0
-        expectancy = (avg_win * win_rate) - (avg_loss * loss_rate)
-
-        self.assertAlmostEqual(result.get('expectancy', expectancy), expectancy, places=2, msg="Expectancy calculation is incorrect.")
-
-    # Additional test cases
-
-    def test_consecutive_wins_and_losses(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
-
-        print(result)  # Debugging line to check the output
-        max_consecutive_wins = 0
-        max_consecutive_losses = 0
-        current_wins = 0
-        current_losses = 0
-
-        for trade in result['trades']:
-            if trade['profit'] > 0:
-                current_wins += 1
-                current_losses = 0
+        logging.info("Global auto trading is enabled.")
+
+def run_backtest_func():
+    try:
+        logging.info("Initializing MetaTrader5...")
+        if not initialize_mt5(Config.MT5_PATH):
+            raise Exception("Failed to initialize MetaTrader5")
+        logging.info("MetaTrader5 initialized successfully.")
+
+        check_auto_trading_enabled()
+
+        for symbol in Config.SYMBOLS:
+            logging.info("Running backtest...")
+            start_date = datetime(2024, 6, 12)
+            end_date = datetime.now()
+            initial_balance = 10000
+            risk_percent = Config.RISK_PER_TRADE
+            stop_loss_pips = 20
+            pip_value = Config.PIP_VALUE
+
+            backtest_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, start_date, end_date)
+            if backtest_data is not None and not backtest_data.empty:
+                logging.info(f"Backtest data shape: {backtest_data.shape}")
+                logging.info(f"Backtest data head:\n{backtest_data.head()}")
             else:
-                current_losses += 1
-                current_wins = 0
+                logging.error(f"No historical data retrieved for {symbol} for backtesting")
+                continue
 
-            max_consecutive_wins = max(max_consecutive_wins, current_wins)
-            max_consecutive_losses = max(max_consecutive_losses, current_losses)
+            if len(backtest_data) < 20:
+                logging.error(f"Not enough data for symbol {symbol} to perform backtest")
+                continue
 
-        self.assertEqual(result.get('max_consecutive_wins', max_consecutive_wins), max_consecutive_wins, "Max consecutive wins calculation is incorrect.")
-        self.assertEqual(result.get('max_consecutive_losses', max_consecutive_losses), max_consecutive_losses, "Max consecutive losses calculation is incorrect.")
+            backtest_data.loc[:, 'close'] = pd.to_numeric(backtest_data['close'], errors='coerce')
 
-    def test_handling_large_datasets(self):
-        large_data = pd.concat([self.data] * 1000, ignore_index=True)
-        chunk_size = len(self.data)  # Adjust chunk size as needed
-        chunks = [large_data[i:i + chunk_size] for i in range(0, len(large_data), chunk_size)]
+            try:
+                run_backtest(
+                    symbol=symbol,
+                    data=backtest_data,
+                    initial_balance=initial_balance,
+                    risk_percent=risk_percent,
+                    min_take_profit=Config.MIN_TP_PROFIT,
+                    max_loss_per_day=Config.MAX_LOSS_PER_DAY,
+                    starting_equity=Config.STARTING_EQUITY,
+                    max_trades_per_day=Config.LIMIT_NO_OF_TRADES,
+                    stop_loss_pips=stop_loss_pips,
+                    pip_value=pip_value
+                )
+                logging.info("Backtest completed successfully.")
+            except Exception as e:
+                handle_error(e, f"An error occurred during backtesting for {symbol}")
 
-        result = None
-        for chunk in chunks:
-            result = run_backtest(
-                symbol='EURUSD',
-                data=chunk,
-                initial_balance=10000,
-                risk_percent=0.01,
-                min_take_profit=100,
-                max_loss_per_day=100,
-                starting_equity=10000,
-                stop_loss_pips=20,
-                pip_value=0.0001,
-                max_trades_per_day=5
-            )
-        
-        print(result)  # Debugging line to check the output
-        self.assertIsNotNone(result, "Handling large datasets failed.")
+    except Exception as e:
+        error_code = mt5.last_error()
+        error_message = str(e)
+        handle_error(e, f"An error occurred in the run_backtest_func: {error_code} - {error_message}")
 
-    def test_handling_missing_values(self):
-        data_with_missing_values = self.data.copy()
-        data_with_missing_values.loc[0, 'close'] = None
-        result = run_backtest(
-            symbol='EURUSD',
-            data=data_with_missing_values,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
+    finally:
+        logging.info("Shutting down MetaTrader5...")
+        shutdown_mt5()
+        logging.info("MetaTrader5 connection gracefully shut down.")
 
-        print(result)  # Debugging line to check the output
-        self.assertIsNotNone(result, "Handling missing values failed.")
+def run_live_trading_func():
+    try:
+        logging.info("Initializing MetaTrader5...")
+        if not initialize_mt5(Config.MT5_PATH):
+            raise Exception("Failed to initialize MetaTrader5")
+        logging.info("MetaTrader5 initialized successfully.")
 
-    def test_transaction_costs(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5,
-            transaction_cost=1  # Adding transaction costs
-        )
+        check_auto_trading_enabled()
 
-        print(result)  # Debugging line to check the output
-        total_transaction_costs = len(result['trades']) * 1
-        self.assertAlmostEqual(result['total_transaction_costs'], total_transaction_costs, places=2, msg="Transaction costs calculation is incorrect.")
+        # Check if the account is a demo account
+        account_info = mt5.account_info()
+        if account_info is None:
+            raise Exception("Failed to get account info")
+        if account_info.server.endswith("demo"):
+            logging.info("Trading on a demo account.")
+        else:
+            logging.info("Trading on a live account.")
 
-    def test_slippage(self):
-        result = run_backtest(
-            symbol='EURUSD',
-            data=self.data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5,
-            slippage=1  # Adding slippage
-        )
+        # Perform additional checks
+        if not check_broker_connection():
+            return
 
-        print(result)  # Debugging line to check the output
-        total_slippage_costs = len(result['trades']) * 1
-        self.assertAlmostEqual(result['total_slippage_costs'], total_slippage_costs, places=2, msg="Slippage calculation is incorrect.")
+        if not check_market_open():
+            return
 
-    def test_negative_initial_balance(self):
-        with self.assertRaises(ValueError):
-            run_backtest(
-                symbol='EURUSD',
-                data=self.data,
-                initial_balance=-10000,
-                risk_percent=0.01,
-                min_take_profit=100,
-                max_loss_per_day=100,
-                starting_equity=10000,
-                stop_loss_pips=20,
-                pip_value=0.0001,
-                max_trades_per_day=5
-            )
+        daily_trades = 0
+        total_trades = 0
+        total_profit = 0.0
+        total_loss = 0.0
+        max_drawdown_reached = False
+        starting_balance = Config.STARTING_EQUITY
+        current_balance = starting_balance
 
-    def test_zero_risk_percent(self):
-        with self.assertRaises(ValueError):
-            run_backtest(
-                symbol='EURUSD',
-                data=self.data,
-                initial_balance=10000,
-                risk_percent=0,
-                min_take_profit=100,
-                max_loss_per_day=100,
-                starting_equity=10000,
-                stop_loss_pips=20,
-                pip_value=0.0001,
-                max_trades_per_day=5
-            )
+        start_time = time.time()
+        max_duration = 1 * 1800 # 10 hours
 
-    def test_constant_prices(self):
-        constant_data = self.data.copy()
-        constant_data['high'] = 100
-        constant_data['low'] = 100
-        constant_data['close'] = 100
+        while time.time() - start_time < max_duration:
+            if max_drawdown_reached:
+                logging.info("Maximum drawdown reached. Stopping trading.")
+                break
 
-        result = run_backtest(
-            symbol='EURUSD',
-            data=constant_data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
+            current_day = datetime.now().date()
+            if daily_trades >= Config.LIMIT_NO_OF_TRADES:
+                logging.info("Maximum number of trades for the day reached. Stopping trading for today.")
+                time.sleep(86400)
+                daily_trades = 0
+                continue
 
-        print(result)  # Debugging line to check the output
-        self.assertEqual(result['total_profit'], 0)
-        self.assertEqual(result['num_trades'], 0)
+            for symbol in Config.SYMBOLS:
+                logging.info(f"Running live trading for {symbol}...")
 
-    def test_uptrend_data(self):
-        uptrend_data = self.data.copy()
-        uptrend_data['high'] = range(100, 130)
-        uptrend_data['low'] = range(80, 110)
-        uptrend_data['close'] = range(90, 120)
+                # Validate symbol availability and timeframe
+                symbol_info = mt5.symbol_info(symbol)
+                if symbol_info is None:
+                    logging.error(f"Symbol {symbol} is not available.")
+                    continue
 
-        result = run_backtest(
-            symbol='EURUSD',
-            data=uptrend_data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
+                if not symbol_info.visible:
+                    logging.info(f"Symbol {symbol} is not visible, attempting to make it visible.")
+                    if not mt5.symbol_select(symbol, True):
+                        logging.error(f"Failed to select symbol {symbol}")
+                        continue
 
-        print(result)  # Debugging line to check the output
-        self.assertGreater(result['total_profit'], 0)
+                tick_data = []
+                tick_start_time = time.time()
 
-    def test_downtrend_data(self):
-        downtrend_data = self.data.copy()
-        downtrend_data['high'] = range(130, 100, -1)
-        downtrend_data['low'] = range(110, 80, -1)
-        downtrend_data['close'] = range(120, 90, -1)
+                while len(tick_data) < 200:
+                    tick = mt5.symbol_info_tick(symbol)
+                    if tick is None:
+                        logging.warning(f"Failed to retrieve tick data for {symbol}.")
+                        time.sleep(1)
+                        continue
 
-        result = run_backtest(
-            symbol='EURUSD',
-            data=downtrend_data,
-            initial_balance=10000,
-            risk_percent=0.01,
-            min_take_profit=100,
-            max_loss_per_day=100,
-            starting_equity=10000,
-            stop_loss_pips=20,
-            pip_value=0.0001,
-            max_trades_per_day=5
-        )
+                    tick_data.append({
+                        'time': datetime.fromtimestamp(tick.time),
+                        'bid': tick.bid,
+                        'ask': tick.ask,
+                        'last': tick.last
+                    })
 
-        print(result)  # Debugging line to check the output
-        self.assertLess(result['total_profit'], 0)
+                    time.sleep(1)
+
+                tick_end_time = time.time()
+                elapsed_time = tick_end_time - tick_start_time
+                logging.info(f"Collected 200 ticks in {elapsed_time:.2f} seconds.")
+
+                df = pd.DataFrame(tick_data)
+                logging.info(f"Dataframe created with tick data: {df.tail()}")
+
+                # Ensure DataFrame has all necessary columns
+                if 'high' not in df.columns or 'low' not in df.columns or 'close' not in df.columns:
+                    df['high'] = df['bid']
+                    df['low'] = df['ask']
+                    df['close'] = df['last']
+
+                std_dev = df['close'].rolling(window=20).std().iloc[-1]  # Added this line
+
+                try:
+                    result = run_strategy(
+                        symbols=[symbol],
+                        mt5_init=mt5,
+                        timeframe=mt5.TIMEFRAME_M1,
+                        lot_size=0.01,
+                        min_take_profit=Config.MIN_TP_PROFIT,
+                        max_loss_per_day=Config.MAX_LOSS_PER_DAY,
+                        starting_equity=current_balance,
+                        max_trades_per_day=Config.LIMIT_NO_OF_TRADES,
+                        run_backtest=False,
+                        data=df,
+                        std_dev=std_dev  # Pass std_dev to run_strategy
+                    )
+
+                    if result is None:
+                        raise ValueError("run_strategy returned None. Check the function implementation.")
+
+                    total_profit += result.get('total_profit', 0.0)
+                    total_loss += result.get('total_loss', 0.0)
+                    current_balance += result.get('total_profit', 0.0)
+
+                    max_drawdown = result.get('max_drawdown', 0.0)
+                    if max_drawdown >= Config.MAX_DRAWDOWN:
+                        max_drawdown_reached = True
+                        logging.info(f"Maximum drawdown of {Config.MAX_DRAWDOWN} reached. Stopping trading.")
+                        break
+
+                    daily_trades += 1
+                    total_trades += 1
+                    logging.info(f"Live trading iteration completed for {symbol}. Total trades today: {daily_trades}")
+                    logging.info(f"Current Balance: {current_balance:.2f}")
+
+                except Exception as e:
+                    logging.error(f"An error occurred while running strategy for {symbol}: {e}")
+
+                time.sleep(60)
+
+            if time.time() - start_time >= max_duration:
+                logging.info("Maximum duration reached. Stopping trading.")
+                break
+
+    except Exception as e:
+        error_code = mt5.last_error()
+        error_message = str(e)
+        handle_error(e, f"An error occurred in the run_live_trading_func: {error_code} - {error_message}")
+
+    finally:
+        logging.info("Shutting down MetaTrader5...")
+        shutdown_mt5()
+        logging.info("MetaTrader5 connection gracefully shut down.")
+
+        logging.info("Summary of Trading Session:")
+        logging.info(f"Total trades: {total_trades}")
+        logging.info(f"Starting balance: {starting_balance:.2f}")
+        logging.info(f"Ending balance: {current_balance:.2f}")
+        logging.info(f"Total profit: {total_profit:.2f}")
+        logging.info(f"Total loss: {total_loss:.2f}")
+
+def open_log_file():
+    import subprocess
+    log_file_path = os.path.abspath("app.log")
+    if os.name == "nt":
+        os.startfile(log_file_path)
+    elif os.name == "posix":
+        subprocess.call(["open", log_file_path])
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ui", action="store_true", help="Run the UI")
+    args = parser.parse_args()
+
+    try:
+        setup_logging()
+        logging.info("STARTING APPLICATION")
+
+        logging.info("LOGGING ALL THE CONFIG SETTINGS")
+        Config.log_config()
+
+        if args.ui:
+            run_ui(run_backtest_func, run_live_trading_func, clear_log_file, open_log_file)
+        else:
+            print("Choose an option:")
+            print("1. Run Backtesting")
+            print("2. Run Live Trading")
+            choice = input("Enter your choice (1 or 2): ")
+
+            if choice == "1":
+                run_backtest_func()
+            elif choice == "2":
+                run_live_trading_func()
+            else:
+                print("Invalid choice. Exiting...")
+
+    except Exception as e:
+        error_code = mt5.last_error()
+        error_message = str(e)
+        handle_error(e, f"An error occurred in the main function: {error_code} - {error_message}")
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
-    unittest.main()
+    main()
 
 
+#config contents:
+import os
+from dotenv import load_dotenv
+from utils.error_handling import handle_error, critical_error
+import logging
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_dir = os.path.dirname(script_dir)
+dotenv_path = os.path.join(project_dir, '.env')
+
+def reload_env():
+    load_dotenv(dotenv_path, override=True)
+
+reload_env()
+
+class Config:
+    MT5_LOGIN = os.getenv("MT5_LOGIN")
+    if not MT5_LOGIN:
+        raise ValueError("MT5_LOGIN environment variable is not set.")
+
+    MT5_PASSWORD = os.getenv("MT5_PASSWORD")
+    if not MT5_PASSWORD:
+        raise ValueError("MT5_PASSWORD environment variable is not set.")
+
+    MT5_SERVER = os.getenv("MT5_SERVER")
+    if not MT5_SERVER:
+        raise ValueError("MT5_SERVER environment variable is not set.")
+
+    MT5_PATH = os.getenv("MT5_PATH")
+    if not MT5_PATH:
+        raise ValueError("MT5_PATH environment variable is not set.")
+
+    MT5_TIMEFRAME = os.getenv("MT5_TIMEFRAME")
+    if MT5_TIMEFRAME not in ["M1", "M5", "M15", "M30", "H1", "H4", "D1"]:
+        raise ValueError(f"Invalid MT5_TIMEFRAME value: {MT5_TIMEFRAME}. Expected values: M1, M5, M15, M30, H1, H4, D1.")
+
+    SYMBOLS = os.getenv("SYMBOLS")
+    if SYMBOLS:
+        SYMBOLS = SYMBOLS.split(",")
+    else:
+        raise ValueError("SYMBOLS environment variable is not set.")
+
+    TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+    TELEGRAM_IDS = os.getenv("TELEGRAM_IDS")
+    if TELEGRAM_TOKEN and TELEGRAM_IDS:
+        TELEGRAM_IDS = TELEGRAM_IDS.split(",")
+    else:
+        TELEGRAM_TOKEN = None
+        TELEGRAM_IDS = None
+
+    try:
+        MIN_TP_PROFIT = float(os.getenv("MIN_TP_PROFIT", 50.0))
+    except (ValueError, TypeError):
+        raise ValueError(f"Invalid MIN_TP_PROFIT value: {os.getenv('MIN_TP_PROFIT')}. Expected a numeric value.")
+
+    try:
+        MAX_LOSS_PER_DAY = float(os.getenv("MAX_LOSS_PER_DAY", 1000.0))
+    except (ValueError, TypeError):
+        raise ValueError(f"Invalid MAX_LOSS_PER_DAY value: {os.getenv('MAX_LOSS_PER_DAY')}. Expected a numeric value.")
+
+    try:
+        STARTING_EQUITY = float(os.getenv("STARTING_EQUITY", 10000.0))
+    except (ValueError, TypeError):
+        raise ValueError(f"Invalid STARTING_EQUITY value: {os.getenv('STARTING_EQUITY')}. Expected a numeric value.")
+
+    try:
+        LIMIT_NO_OF_TRADES = int(os.getenv("LIMIT_NO_OF_TRADES", 5))
+    except (ValueError, TypeError):
+        raise ValueError(f"Invalid LIMIT_NO_OF_TRADES value: {os.getenv('LIMIT_NO_OF_TRADES')}. Expected an integer value.")
+
+    try:
+        RISK_PER_TRADE = float(os.getenv("RISK_PER_TRADE", 0.01))
+    except ValueError:
+        raise ValueError(f"Invalid RISK_PER_TRADE value: {os.getenv('RISK_PER_TRADE')}. Expected a numeric value.")
+
+    if not 0 < RISK_PER_TRADE <= 1:
+        raise ValueError(f"RISK_PER_TRADE value must be between 0 and 1. Current value: {RISK_PER_TRADE}")
+
+    try:
+        PIP_VALUE = float(os.getenv("PIP_VALUE", 1))
+    except ValueError:
+        raise ValueError(f"Invalid PIP_VALUE value: {os.getenv('PIP_VALUE')}. Expected a numeric value.")
+
+    try:
+        MAX_DRAWDOWN = float(os.getenv("MAX_DRAWDOWN", 0.2))
+    except ValueError:
+        raise ValueError(f"Invalid MAX_DRAWDOWN value: {os.getenv('MAX_DRAWDOWN')}. Expected a numeric value.")
+
+    @classmethod
+    def validate(cls):
+        try:
+            required_vars = [
+                'MT5_LOGIN', 'MT5_PASSWORD', 'MT5_SERVER', 'MT5_PATH',
+                'MT5_TIMEFRAME', 'SYMBOLS'
+            ]
+            for var in required_vars:
+                if not getattr(cls, var, None):
+                    raise ValueError(f"Missing required environment variable: {var}")
+
+            numeric_vars = ['MIN_TP_PROFIT', 'MAX_LOSS_PER_DAY', 'STARTING_EQUITY', 'RISK_PER_TRADE', 'PIP_VALUE', 'MAX_DRAWDOWN']
+            for var in numeric_vars:
+                if not isinstance(getattr(cls, var, None), (int, float)):
+                    raise ValueError(f"Invalid value for {var}. Expected a numeric value.")
+
+            if not isinstance(cls.LIMIT_NO_OF_TRADES, int):
+                raise ValueError(f"Invalid value for LIMIT_NO_OF_TRADES. Expected an integer value.")
+
+        except ValueError as e:
+            handle_error(e, "Configuration validation failed")
+            critical_error(e, "Invalid configuration settings")
+
+    @classmethod
+    def log_config(cls):
+        for attr, value in cls.__dict__.items():
+            if not callable(value) and not attr.startswith("__") and not isinstance(value, classmethod):
+                logging.info(f"{attr}: {value}")
+
+try:
+    Config.validate()
+except Exception as e:
+    handle_error(e, "Error occurred during configuration validation")
+    raise
+
+
+#.env contents:
+
+# MetaTrader 5 Configuration
+MT5_LOGIN=your_mt5_login
+MT5_PASSWORD=your_mt5_password
+MT5_SERVER=your_mt5_server
+MT5_PATH=C:\Program Files\MetaTrader 5\terminal64.exe
+MT5_TIMEFRAME=H1
+
+# Trading Symbols
+SYMBOLS=EURUSD
+
+# Telegram Bot Configuration (Optional)
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_IDS=telegram_user_id_1,telegram_user_id_2
+
+# Trading Parameters
+MIN_TP_PROFIT=50.0
+MAX_LOSS_PER_DAY=1000.0
+STARTING_EQUITY=10000.0
+LIMIT_NO_OF_TRADES=12
+RISK_PER_TRADE=0.02
+PIP_VALUE=0.0001

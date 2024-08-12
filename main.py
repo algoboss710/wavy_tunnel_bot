@@ -26,6 +26,33 @@ def check_auto_trading_enabled():
     else:
         logging.info("Global auto trading is enabled.")
 
+def ensure_symbol_subscription(symbol):
+    """
+    Ensure that the symbol is properly subscribed to in MetaTrader 5.
+    If it's not subscribed, the function will attempt to subscribe to it.
+    """
+    # Ensure that MetaTrader 5 is initialized
+    if not mt5.initialize():
+        logging.error("Failed to initialize MetaTrader 5")
+        return False
+    
+    # Check if the symbol is already selected
+    symbol_info = mt5.symbol_info(symbol)
+    if symbol_info is None:
+        logging.error(f"Symbol {symbol} does not exist in MetaTrader 5.")
+        return False
+    
+    if not symbol_info.visible:
+        logging.info(f"Symbol {symbol} is not visible. Attempting to subscribe...")
+        if not mt5.symbol_select(symbol, True):
+            logging.error(f"Failed to subscribe to symbol {symbol}")
+            return False
+        logging.info(f"Successfully subscribed to symbol {symbol}")
+    else:
+        logging.info(f"Symbol {symbol} is already subscribed and visible.")
+
+    return True
+
 def run_backtest_func():
     try:
         logging.info("Initializing MetaTrader5...")
@@ -36,6 +63,11 @@ def run_backtest_func():
         check_auto_trading_enabled()
 
         for symbol in Config.SYMBOLS:
+            logging.info(f"Ensuring subscription to {symbol}...")
+            if not ensure_symbol_subscription(symbol):
+                logging.error(f"Could not subscribe to {symbol}. Skipping backtest for this symbol.")
+                continue
+
             logging.info("Running backtest...")
             start_date = datetime(2024, 6, 12)
             end_date = datetime.now()
@@ -136,17 +168,10 @@ def run_live_trading_func():
             for symbol in Config.SYMBOLS:
                 logging.info(f"Running live trading for {symbol}...")
 
-                # Validate symbol availability and timeframe
-                symbol_info = mt5.symbol_info(symbol)
-                if symbol_info is None:
-                    logging.error(f"Symbol {symbol} is not available.")
+                logging.info(f"Ensuring subscription to {symbol}...")
+                if not ensure_symbol_subscription(symbol):
+                    logging.error(f"Could not subscribe to {symbol}. Skipping trading for this symbol.")
                     continue
-
-                if not symbol_info.visible:
-                    logging.info(f"Symbol {symbol} is not visible, attempting to make it visible.")
-                    if not mt5.symbol_select(symbol, True):
-                        logging.error(f"Failed to select symbol {symbol}")
-                        continue
 
                 tick_data = []
                 tick_start_time = time.time()
