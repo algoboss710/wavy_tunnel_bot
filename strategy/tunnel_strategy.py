@@ -16,8 +16,8 @@ def get_current_data(symbol):
             'bid': tick.bid,
             'ask': tick.ask,
             'last': tick.last,
-            'spread': tick.ask - tick.bid,  # Log spread
-            'volume': tick.volume  # Log volume
+            'spread': tick.ask - tick.bid,
+            'volume': tick.volume
         }
         logging.info(f"Retrieved tick data for {symbol}: {tick_data}")
         return tick_data
@@ -25,37 +25,21 @@ def get_current_data(symbol):
         raise ValueError(f"Failed to retrieve current tick data for {symbol}")
 
 def calculate_ema(prices, period):
-    if not isinstance(prices, (list, np.ndarray, pd.Series)):
-        raise ValueError("Invalid input type for prices. Expected list, numpy array, or pandas Series.")
-
-    logging.debug(f"Calculating EMA for period: {period}, prices: {prices}")
-
     prices = pd.Series(prices)
     prices = pd.to_numeric(prices, errors='coerce')
-    logging.debug(f"Prices converted to numeric: {prices}")
-
     ema_values = np.full(len(prices), np.nan, dtype=np.float64)
     if len(prices) < period:
         return pd.Series(ema_values, index=prices.index)
 
     sma = np.mean(prices[:period])
     ema_values[period - 1] = sma
-    logging.debug(f"Initial SMA: {sma}")
-
     multiplier = 2 / (period + 1)
     for i in range(period, len(prices)):
         ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
-        logging.debug(f"EMA value at index {i}: {ema_values[i]}")
 
-    ema_series = pd.Series(ema_values, index=prices.index)
-    return ema_series
+    return pd.Series(ema_values, index=prices.index)
 
 def detect_peaks_and_dips(df, peak_type):
-    if not np.issubdtype(df['high'].dtype, np.number) or not np.issubdtype(df['low'].dtype, np.number):
-        raise TypeError("High and Low columns must contain numeric data.")
-
-    logging.debug(f"Detecting peaks and dips with peak_type: {peak_type}")
-
     highs = df['high'].values
     lows = df['low'].values
     center_index = peak_type // 2
@@ -72,23 +56,12 @@ def detect_peaks_and_dips(df, peak_type):
         if all(dip_window[center_index] < dip_window[j] for j in range(len(dip_window)) if j != center_index):
             dips.append(lows[i])
 
-    logging.debug(f"Detected peaks: {peaks}")
-    logging.debug(f"Detected dips: {dips}")
-
     return peaks, dips
 
 def check_entry_conditions(row, peaks, dips, symbol):
-    logging.debug(f"Checking entry conditions for row: {row}")
-    logging.debug(f"Peaks: {peaks}")
-    logging.debug(f"Dips: {dips}")
-
     wavy_c, wavy_h, wavy_l = row['wavy_c'], row['wavy_h'], row['wavy_l']
     tunnel1, tunnel2 = row['tunnel1'], row['tunnel2']
     close_price = row['close']
-
-    logging.debug(f"wavy_c: {wavy_c}, wavy_h: {wavy_h}, wavy_l: {wavy_l}")
-    logging.debug(f"tunnel1: {tunnel1}, tunnel2: {tunnel2}")
-    logging.debug(f"close_price: {close_price}")
 
     buy_condition = (
         close_price > max(wavy_c, wavy_h, wavy_l) and
@@ -100,9 +73,6 @@ def check_entry_conditions(row, peaks, dips, symbol):
         max(wavy_c, wavy_h, wavy_l) < min(tunnel1, tunnel2) and
         any(abs(close_price - dip) <= 0.001 for dip in dips)
     )
-
-    logging.debug(f"Initial Buy condition: {buy_condition}")
-    logging.debug(f"Initial Sell condition: {sell_condition}")
 
     threshold_values = {
         'USD': 2,
@@ -121,7 +91,6 @@ def check_entry_conditions(row, peaks, dips, symbol):
             return False, False
 
         threshold = threshold_values.get(symbol[:3], threshold_values['default']) * symbol_info.trade_tick_size
-        logging.debug(f"Threshold: {threshold}")
 
         if threshold == 0:
             logging.error("Division by zero: threshold value is zero in check_entry_conditions")
@@ -130,67 +99,41 @@ def check_entry_conditions(row, peaks, dips, symbol):
         buy_condition &= close_price > max(wavy_c, wavy_h, wavy_l) + threshold
         sell_condition &= close_price < min(wavy_c, wavy_h, wavy_l) - threshold
 
-    logging.debug(f"Final Buy condition: {buy_condition}")
-    logging.debug(f"Final Sell condition: {sell_condition}")
-
     return buy_condition, sell_condition
 
 def execute_trade(trade_request, retries=4, delay=4):
     attempt = 0
-    last_tick_time = None
     while attempt <= retries:
         try:
             logging.debug(f"Attempt {attempt + 1} to execute trade with request: {trade_request}")
 
-            latest_data = get_current_data(trade_request['symbol'])
+            # NEW: Ensure symbol is subscribed and visible
+            if not ensure_symbol_subscription(trade_request['symbol']):                     # NEW
+                logging.error(f"Failed to subscribe to symbol {trade_request['symbol']}")   # NEW
+                return None                                                                 # NEW
 
-            # Validate tick data
-            if latest_data['volume'] == 0:
-                logging.warning(f"Tick data volume for {trade_request['symbol']} is zero, indicating low or no activity.")
-                time.sleep(delay)
-                continue
+            # NEW: Check broker connection and market open status
+            if not check_broker_connection() or not check_market_open():                    # NEW
+                logging.error("Trade execution aborted due to connection issues or market being closed.")  # NEW
+                return None                                                                 # NEW
 
-            # Check if tick data is fresh and valid
-            if last_tick_time and last_tick_time == latest_data['time']:
-                logging.warning(f"Tick data for {trade_request['symbol']} has not been updated since last attempt.")
-                logging.info(f"Retrying in {delay} seconds...")
-                time.sleep(delay)
-                continue  # Wait for new tick data
+            # Fetch the latest tick data right before executing the trade
+            latest_data = get_fresh_tick_data(trade_request['symbol'])
 
-            last_tick_time = latest_data['time']
-
-            # Log time difference between tick retrieval and order placement
-            time_diff = (datetime.now() - latest_data['time']).total_seconds()
-            logging.info(f"Time difference between tick retrieval and order placement: {time_diff} seconds")
-            logging.info(f"Latest price data for {trade_request['symbol']} at {datetime.now()}: {latest_data}")
-
-            # Check if the data is valid for trading (e.g., price and spread are reasonable)
-            if latest_data['last'] == 0:
-                logging.warning(f"Invalid last price detected for {trade_request['symbol']}, skipping trade execution.")
-                return None
+            if not latest_data:
+                logging.error("Failed to retrieve fresh tick data, aborting trade execution.")
+                break
 
             trade_request['price'] = latest_data['bid'] if trade_request['action'] == 'BUY' else latest_data['ask']
             trade_request['sl'] = trade_request['price'] - (1.5 * trade_request.get('std_dev', 0)) if trade_request['action'] == 'BUY' else trade_request['price'] + (1.5 * trade_request.get('std_dev', 0))
             trade_request['tp'] = trade_request['price'] + (2 * trade_request.get('std_dev', 0)) if trade_request['action'] == 'BUY' else trade_request['price'] - (2 * trade_request.get('std_dev', 0))
 
             logging.info(f"Placing order with updated price: {trade_request}")
+            result = mt5.order_send(trade_request)
 
-            order = {
-                'action': mt5.TRADE_ACTION_DEAL,
-                'symbol': trade_request['symbol'],
-                'volume': trade_request['volume'],
-                'type': mt5.ORDER_TYPE_BUY if trade_request['action'] == 'BUY' else mt5.ORDER_TYPE_SELL,
-                'price': trade_request['price'],
-                'sl': trade_request['sl'],
-                'tp': trade_request['tp'],
-                'deviation': trade_request['deviation'],
-                'magic': trade_request['magic'],
-                'comment': trade_request['comment'],
-                'type_time': mt5.ORDER_TIME_GTC,
-                'type_filling': mt5.ORDER_FILLING_FOK,
-            }
-
-            result = mt5.order_send(order)
+            if result is None:
+                logging.error(f"Failed to place order: mt5.order_send returned None. Trade Request: {trade_request}")  # MODIFIED
+                raise ValueError("mt5.order_send returned None.")
 
             logging.info(f"Order response received at {datetime.now()}: {result}")
 
@@ -221,39 +164,33 @@ def execute_trade(trade_request, retries=4, delay=4):
 
     return None
 
+
 def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
-    logging.debug(f"Managing position for symbol: {symbol}")
     try:
         positions = mt5.positions_get(symbol=symbol)
         if positions:
             for position in positions:
-                logging.debug(f"Checking position {position.ticket} with profit {position.profit}")
-
                 current_equity = mt5.account_info().equity
 
                 if position.profit >= min_take_profit:
-                    logging.debug(f"Closing position {position.ticket} for profit")
                     close_position(position.ticket)
                     position['exit_time'] = pd.Timestamp.now()
                     position['exit_price'] = mt5.symbol_info_tick(symbol).bid
                     position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
 
                 elif position.profit <= -max_loss_per_day:
-                    logging.debug(f"Closing position {position.ticket} for loss")
                     close_position(position.ticket)
                     position['exit_time'] = pd.Timestamp.now()
                     position['exit_price'] = mt5.symbol_info_tick(symbol).bid
                     position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
 
                 elif current_equity <= starting_equity * 0.9:
-                    logging.debug(f"Closing position {position.ticket} due to equity drop")
                     close_position(position.ticket)
                     position['exit_time'] = pd.Timestamp.now()
                     position['exit_price'] = mt5.symbol_info_tick(symbol).bid
                     position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
 
                 elif mt5.positions_total() >= max_trades_per_day:
-                    logging.debug(f"Closing position {position.ticket} due to max trades exceeded")
                     close_position(position.ticket)
                     position['exit_time'] = pd.Timestamp.now()
                     position['exit_price'] = mt5.symbol_info_tick(symbol).bid
@@ -262,8 +199,6 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
         handle_error(e, "Failed to manage position")
 
 def calculate_tunnel_bounds(data, period, deviation_factor):
-    logging.debug(f"Calculating tunnel bounds with period: {period} and deviation_factor: {deviation_factor}")
-
     if len(data) < period:
         return pd.Series([np.nan] * len(data)), pd.Series([np.nan] * len(data))
 
@@ -277,13 +212,6 @@ def calculate_tunnel_bounds(data, period, deviation_factor):
     upper_bound = ema + deviation
     lower_bound = ema - deviation
 
-    logging.debug(f"EMA: {ema}")
-    logging.debug(f"Rolling Std: {rolling_std}")
-    logging.debug(f"Volatility: {volatility}")
-    logging.debug(f"Deviation: {deviation}")
-    logging.debug(f"Upper Bound: {upper_bound}")
-    logging.debug(f"Lower Bound: {lower_bound}")
-
     return upper_bound, lower_bound
 
 def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value):
@@ -292,7 +220,6 @@ def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip
         logging.error("Division by zero: stop_loss_pips or pip_value is zero in calculate_position_size")
         raise ZeroDivisionError("stop_loss_pips or pip_value cannot be zero")
     position_size = risk_amount / (stop_loss_pips * pip_value)
-    logging.debug(f"Calculated position size: {position_size}")
     return position_size
 
 def generate_trade_signal(data, period, deviation_factor):
@@ -305,21 +232,11 @@ def generate_trade_signal(data, period, deviation_factor):
     upper_bound_last_value = upper_bound.iloc[-1]
     lower_bound_last_value = lower_bound.iloc[-1]
 
-    logging.debug(f"Data: {data}")
-    logging.debug(f"Upper Bound: {upper_bound}")
-    logging.debug(f"Lower Bound: {lower_bound}")
-    logging.debug(f"Last Close: {last_close}")
-    logging.debug(f"Upper Bound Last Value: {upper_bound_last_value}")
-    logging.debug(f"Lower Bound Last Value: {lower_bound_last_value}")
-
     if pd.isna(last_close) or pd.isna(upper_bound_last_value) or pd.isna(lower_bound_last_value):
         return None, None
 
     buy_condition = last_close >= upper_bound_last_value
     sell_condition = last_close <= lower_bound_last_value
-
-    logging.debug(f"Buy Condition: {buy_condition}")
-    logging.debug(f"Sell Condition: {sell_condition}")
 
     return buy_condition, sell_condition
 
@@ -328,6 +245,21 @@ def adjust_deviation_factor(market_conditions):
         return 2.5
     else:
         return 2.0
+
+def ensure_symbol_subscription(symbol):
+    symbol_info = mt5.symbol_info(symbol)
+    if not symbol_info:
+        logging.error(f"Symbol {symbol} is not available.")
+        return False
+
+    if not symbol_info.visible:
+        logging.info(f"Symbol {symbol} is not visible, attempting to make it visible.")
+        if not mt5.symbol_select(symbol, True):
+            logging.error(f"Failed to select symbol {symbol}")
+            return False
+
+    logging.info(f"Symbol {symbol} is already subscribed and visible.")
+    return True
 
 def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, run_backtest, data=None, std_dev=None):
     try:
@@ -364,7 +296,6 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
             data['tunnel1'] = calculate_ema(data['close'], 144)
             data['tunnel2'] = calculate_ema(data['close'], 169)
             data['long_term_ema'] = calculate_ema(data['close'], 200)
-            logging.info("Indicators calculated.")
 
             logging.info("Detecting peaks and dips...")
             peak_type = 21
@@ -374,7 +305,6 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
 
             logging.info("Generating entry signals...")
             data['buy_signal'], data['sell_signal'] = zip(*data.apply(lambda x: check_entry_conditions(x, peaks, dips, symbol), axis=1))
-            logging.info("Entry signals generated.")
 
             buy_condition, sell_condition = generate_trade_signal(data, period, deviation_factor)
 
@@ -382,7 +312,6 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
             logging.info(f"Sell Condition: {sell_condition}")
 
             if buy_condition or sell_condition:
-                # Retrieve the latest price before executing a trade
                 current_tick = get_current_data(symbol)
                 logging.info(f"Latest price data for {symbol}: {current_tick}")
 
@@ -401,7 +330,6 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                     'type_time': 'ORDER_TIME_GTC'
                 }
 
-                logging.info(f"Executing {'BUY' if buy_condition else 'SELL'} trade for {symbol} with trade request: {trade_request}")
                 result = execute_trade(trade_request)
                 if result:
                     profit = trade_request['tp'] - trade_request['price'] if buy_condition else trade_request['price'] - trade_request['tp']
@@ -502,3 +430,17 @@ def check_market_open():
         return False
     logging.info("Market is open.")
     return True
+
+def get_fresh_tick_data(symbol):
+    tick = mt5.symbol_info_tick(symbol)
+    if tick:
+        return {
+            'symbol': symbol,
+            'time': datetime.fromtimestamp(tick.time),
+            'bid': tick.bid,
+            'ask': tick.ask,
+            'last': tick.last,
+            'volume': tick.volume
+        }
+    else:
+        raise ValueError(f"Failed to retrieve fresh tick data for {symbol}")

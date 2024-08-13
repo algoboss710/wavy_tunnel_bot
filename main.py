@@ -4,10 +4,11 @@ from datetime import datetime
 from config import Config
 from metatrader.connection import initialize_mt5, shutdown_mt5
 from metatrader.data_retrieval import get_historical_data
-from strategy.tunnel_strategy import run_strategy, calculate_ema, detect_peaks_and_dips, check_entry_conditions, check_broker_connection, check_market_open
+from strategy.tunnel_strategy import run_strategy, calculate_ema, detect_peaks_and_dips, check_entry_conditions, check_broker_connection, check_market_open, get_fresh_tick_data, manage_position
 from backtesting.backtest import run_backtest
 from utils.logger import setup_logging
 from utils.error_handling import handle_error
+from utils.mt5_log_checker import start_log_checking, stop_log_checking  # New import
 import logging
 import argparse
 from ui import run_ui
@@ -26,33 +27,6 @@ def check_auto_trading_enabled():
     else:
         logging.info("Global auto trading is enabled.")
 
-def ensure_symbol_subscription(symbol):
-    """
-    Ensure that the symbol is properly subscribed to in MetaTrader 5.
-    If it's not subscribed, the function will attempt to subscribe to it.
-    """
-    # Ensure that MetaTrader 5 is initialized
-    if not mt5.initialize():
-        logging.error("Failed to initialize MetaTrader 5")
-        return False
-    
-    # Check if the symbol is already selected
-    symbol_info = mt5.symbol_info(symbol)
-    if symbol_info is None:
-        logging.error(f"Symbol {symbol} does not exist in MetaTrader 5.")
-        return False
-    
-    if not symbol_info.visible:
-        logging.info(f"Symbol {symbol} is not visible. Attempting to subscribe...")
-        if not mt5.symbol_select(symbol, True):
-            logging.error(f"Failed to subscribe to symbol {symbol}")
-            return False
-        logging.info(f"Successfully subscribed to symbol {symbol}")
-    else:
-        logging.info(f"Symbol {symbol} is already subscribed and visible.")
-
-    return True
-
 def run_backtest_func():
     try:
         logging.info("Initializing MetaTrader5...")
@@ -63,11 +37,6 @@ def run_backtest_func():
         check_auto_trading_enabled()
 
         for symbol in Config.SYMBOLS:
-            logging.info(f"Ensuring subscription to {symbol}...")
-            if not ensure_symbol_subscription(symbol):
-                logging.error(f"Could not subscribe to {symbol}. Skipping backtest for this symbol.")
-                continue
-
             logging.info("Running backtest...")
             start_date = datetime(2024, 6, 12)
             end_date = datetime.now()
@@ -168,11 +137,19 @@ def run_live_trading_func():
             for symbol in Config.SYMBOLS:
                 logging.info(f"Running live trading for {symbol}...")
 
-                logging.info(f"Ensuring subscription to {symbol}...")
-                if not ensure_symbol_subscription(symbol):
-                    logging.error(f"Could not subscribe to {symbol}. Skipping trading for this symbol.")
+                # Validate symbol availability and timeframe
+                symbol_info = mt5.symbol_info(symbol)
+                if symbol_info is None:
+                    logging.error(f"Symbol {symbol} is not available.")
                     continue
 
+                if not symbol_info.visible:
+                    logging.info(f"Symbol {symbol} is not visible, attempting to make it visible.")
+                    if not mt5.symbol_select(symbol, True):
+                        logging.error(f"Failed to select symbol {symbol}")
+                        continue
+
+                # Collect fresh tick data
                 tick_data = []
                 tick_start_time = time.time()
 
@@ -286,6 +263,9 @@ def main():
         logging.info("LOGGING ALL THE CONFIG SETTINGS")
         Config.log_config()
 
+        # Start MT5 log monitoring
+        start_log_checking()  # New: Start the log monitoring process
+
         if args.ui:
             run_ui(run_backtest_func, run_live_trading_func, clear_log_file, open_log_file)
         else:
@@ -305,6 +285,10 @@ def main():
         error_code = mt5.last_error()
         error_message = str(e)
         handle_error(e, f"An error occurred in the main function: {error_code} - {error_message}")
+
+    finally:
+        # Stop MT5 log monitoring
+        stop_log_checking()  # New: Stop the log monitoring process
 
 if __name__ == '__main__':
     main()
