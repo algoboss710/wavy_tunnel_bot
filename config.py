@@ -85,6 +85,9 @@ class Config:
     except ValueError:
         raise ValueError(f"Invalid MAX_DRAWDOWN value: {os.getenv('MAX_DRAWDOWN')}. Expected a numeric value.")
 
+    # New config for enabling pending order fallback
+    ENABLE_PENDING_ORDER_FALLBACK = os.getenv("ENABLE_PENDING_ORDER_FALLBACK", "True").lower() in ("true", "1", "yes")
+
     @classmethod
     def validate(cls):
         try:

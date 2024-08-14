@@ -5,6 +5,7 @@ import MetaTrader5 as mt5
 from datetime import datetime, time as dtime
 from utils.error_handling import handle_error
 import time
+from config import Config
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -107,32 +108,19 @@ def execute_trade(trade_request, retries=4, delay=4):
         try:
             logging.debug(f"Attempt {attempt + 1} to execute trade with request: {trade_request}")
 
-            # NEW: Ensure symbol is subscribed and visible
-            if not ensure_symbol_subscription(trade_request['symbol']):                     # NEW
-                logging.error(f"Failed to subscribe to symbol {trade_request['symbol']}")   # NEW
-                return None                                                                 # NEW
+            if not ensure_symbol_subscription(trade_request['symbol']):
+                logging.error(f"Failed to subscribe to symbol {trade_request['symbol']}")
+                return None
 
-            # NEW: Check broker connection and market open status
-            if not check_broker_connection() or not check_market_open():                    # NEW
-                logging.error("Trade execution aborted due to connection issues or market being closed.")  # NEW
-                return None                                                                 # NEW
+            if not check_broker_connection() or not check_market_open():
+                logging.error("Trade execution aborted due to connection issues or market being closed.")
+                return None
 
-            # Fetch the latest tick data right before executing the trade
-            latest_data = get_fresh_tick_data(trade_request['symbol'])
-
-            if not latest_data:
-                logging.error("Failed to retrieve fresh tick data, aborting trade execution.")
-                break
-
-            trade_request['price'] = latest_data['bid'] if trade_request['action'] == 'BUY' else latest_data['ask']
-            trade_request['sl'] = trade_request['price'] - (1.5 * trade_request.get('std_dev', 0)) if trade_request['action'] == 'BUY' else trade_request['price'] + (1.5 * trade_request.get('std_dev', 0))
-            trade_request['tp'] = trade_request['price'] + (2 * trade_request.get('std_dev', 0)) if trade_request['action'] == 'BUY' else trade_request['price'] - (2 * trade_request.get('std_dev', 0))
-
-            logging.info(f"Placing order with updated price: {trade_request}")
+            logging.info(f"Placing order with price: {trade_request['price']}")
             result = mt5.order_send(trade_request)
 
             if result is None:
-                logging.error(f"Failed to place order: mt5.order_send returned None. Trade Request: {trade_request}")  # MODIFIED
+                logging.error(f"Failed to place order: mt5.order_send returned None. Trade Request: {trade_request}")
                 raise ValueError("mt5.order_send returned None.")
 
             logging.info(f"Order response received at {datetime.now()}: {result}")
@@ -162,8 +150,41 @@ def execute_trade(trade_request, retries=4, delay=4):
                 logging.error(f"Failed to execute trade after {retries + 1} attempts due to an exception.")
                 return None
 
+    if Config.ENABLE_PENDING_ORDER_FALLBACK:
+        logging.info("Attempting to place a pending order as a fallback...")
+        return place_pending_order(trade_request)
+    
     return None
 
+def place_pending_order(trade_request):
+    try:
+        order_type = mt5.ORDER_TYPE_BUY_LIMIT if trade_request['action'] == 'BUY' else mt5.ORDER_TYPE_SELL_LIMIT
+        pending_order_request = {
+            "action": mt5.TRADE_ACTION_PENDING,
+            "symbol": trade_request['symbol'],
+            "volume": trade_request['volume'],
+            "type": order_type,
+            "price": trade_request['price'],
+            "sl": trade_request['sl'],
+            "tp": trade_request['tp'],
+            "deviation": trade_request['deviation'],
+            "magic": trade_request['magic'],
+            "comment": f"Pending {trade_request['comment']}",
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_RETURN,
+        }
+
+        logging.debug(f"Placing pending order: {pending_order_request}")
+        result = mt5.order_send(pending_order_request)
+        logging.info(f"Pending order result: {result}")
+
+        if result.retcode != mt5.TRADE_RETCODE_DONE:
+            logging.error(f"Failed to place pending order: {result.comment}")
+            return None
+        return result
+    except Exception as e:
+        handle_error(e, "Failed to place pending order")
+        return None
 
 def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
     try:
@@ -444,3 +465,4 @@ def get_fresh_tick_data(symbol):
         }
     else:
         raise ValueError(f"Failed to retrieve fresh tick data for {symbol}")
+

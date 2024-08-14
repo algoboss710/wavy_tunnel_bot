@@ -4,14 +4,16 @@ from datetime import datetime
 from config import Config
 from metatrader.connection import initialize_mt5, shutdown_mt5
 from metatrader.data_retrieval import get_historical_data
-from strategy.tunnel_strategy import run_strategy, calculate_ema, detect_peaks_and_dips, check_entry_conditions, check_broker_connection, check_market_open, get_fresh_tick_data, manage_position
+from strategy.tunnel_strategy import (
+    run_strategy, check_broker_connection, check_market_open,
+    get_fresh_tick_data, manage_position, execute_trade, place_pending_order
+)
 from backtesting.backtest import run_backtest
 from utils.logger import setup_logging
 from utils.error_handling import handle_error
-from utils.mt5_log_checker import start_log_checking, stop_log_checking  # New import
+from utils.mt5_log_checker import start_log_checking, stop_log_checking
 import logging
 import argparse
-from ui import run_ui
 import os
 import time
 
@@ -95,7 +97,6 @@ def run_live_trading_func():
 
         check_auto_trading_enabled()
 
-        # Check if the account is a demo account
         account_info = mt5.account_info()
         if account_info is None:
             raise Exception("Failed to get account info")
@@ -104,7 +105,6 @@ def run_live_trading_func():
         else:
             logging.info("Trading on a live account.")
 
-        # Perform additional checks
         if not check_broker_connection():
             return
 
@@ -120,7 +120,7 @@ def run_live_trading_func():
         current_balance = starting_balance
 
         start_time = time.time()
-        max_duration = 1 * 1800 # 10 hours
+        max_duration = 1 * 1800  # 10 hours
 
         while time.time() - start_time < max_duration:
             if max_drawdown_reached:
@@ -137,7 +137,6 @@ def run_live_trading_func():
             for symbol in Config.SYMBOLS:
                 logging.info(f"Running live trading for {symbol}...")
 
-                # Validate symbol availability and timeframe
                 symbol_info = mt5.symbol_info(symbol)
                 if symbol_info is None:
                     logging.error(f"Symbol {symbol} is not available.")
@@ -149,7 +148,6 @@ def run_live_trading_func():
                         logging.error(f"Failed to select symbol {symbol}")
                         continue
 
-                # Collect fresh tick data
                 tick_data = []
                 tick_start_time = time.time()
 
@@ -176,46 +174,55 @@ def run_live_trading_func():
                 df = pd.DataFrame(tick_data)
                 logging.info(f"Dataframe created with tick data: {df.tail()}")
 
-                # Ensure DataFrame has all necessary columns
                 if 'high' not in df.columns or 'low' not in df.columns or 'close' not in df.columns:
                     df['high'] = df['bid']
                     df['low'] = df['ask']
                     df['close'] = df['last']
 
-                std_dev = df['close'].rolling(window=20).std().iloc[-1]  # Added this line
+                std_dev = df['close'].rolling(window=20).std().iloc[-1]  # Calculate standard deviation
+
+                order_request = {
+                    'action': mt5.TRADE_ACTION_DEAL,
+                    'symbol': symbol,
+                    'volume': 0.01,
+                    'price': tick.bid,
+                    'sl': tick.bid - (20 * mt5.symbol_info(symbol).point),  # Example stop loss
+                    'tp': tick.bid + (20 * mt5.symbol_info(symbol).point),  # Example take profit
+                    'deviation': 10,
+                    'magic': 12345,
+                    'comment': 'Tunnel Strategy',
+                    'type': mt5.ORDER_TYPE_BUY,
+                    'type_filling': mt5.ORDER_FILLING_FOK,
+                    'type_time': mt5.ORDER_TIME_GTC,
+                }
+                logging.info(f"Placing order with the following details: {order_request}")
 
                 try:
-                    result = run_strategy(
-                        symbols=[symbol],
-                        mt5_init=mt5,
-                        timeframe=mt5.TIMEFRAME_M1,
-                        lot_size=0.01,
-                        min_take_profit=Config.MIN_TP_PROFIT,
-                        max_loss_per_day=Config.MAX_LOSS_PER_DAY,
-                        starting_equity=current_balance,
-                        max_trades_per_day=Config.LIMIT_NO_OF_TRADES,
-                        run_backtest=False,
-                        data=df,
-                        std_dev=std_dev  # Pass std_dev to run_strategy
-                    )
+                    result = execute_trade(order_request)
+                    logging.info(f"Order send result: {result}")
 
                     if result is None:
-                        raise ValueError("run_strategy returned None. Check the function implementation.")
+                        logging.error("mt5.order_send returned None. This may indicate a silent failure or an internal error.")
+                    elif result.retcode != mt5.TRADE_RETCODE_DONE:
+                        logging.error(f"Order failed with retcode: {result.retcode}")
 
-                    total_profit += result.get('total_profit', 0.0)
-                    total_loss += result.get('total_loss', 0.0)
-                    current_balance += result.get('total_profit', 0.0)
+                        if Config.ENABLE_PENDING_ORDER_FALLBACK:
+                            logging.info("Attempting to place a pending order due to market order failure...")
+                            pending_order_result = place_pending_order(order_request)
+                            if pending_order_result is not None:
+                                logging.info("Pending order placed successfully.")
+                            else:
+                                logging.error("Failed to place pending order.")
+                    else:
+                        logging.info("Order placed successfully.")
 
-                    max_drawdown = result.get('max_drawdown', 0.0)
-                    if max_drawdown >= Config.MAX_DRAWDOWN:
-                        max_drawdown_reached = True
-                        logging.info(f"Maximum drawdown of {Config.MAX_DRAWDOWN} reached. Stopping trading.")
-                        break
+                        total_profit += result.profit if hasattr(result, 'profit') else 0.0
+                        current_balance += result.profit if hasattr(result, 'profit') else 0.0
 
-                    daily_trades += 1
-                    total_trades += 1
-                    logging.info(f"Live trading iteration completed for {symbol}. Total trades today: {daily_trades}")
-                    logging.info(f"Current Balance: {current_balance:.2f}")
+                        daily_trades += 1
+                        total_trades += 1
+                        logging.info(f"Live trading iteration completed for {symbol}. Total trades today: {daily_trades}")
+                        logging.info(f"Current Balance: {current_balance:.2f}")
 
                 except Exception as e:
                     logging.error(f"An error occurred while running strategy for {symbol}: {e}")
@@ -263,8 +270,7 @@ def main():
         logging.info("LOGGING ALL THE CONFIG SETTINGS")
         Config.log_config()
 
-        # Start MT5 log monitoring
-        start_log_checking()  # New: Start the log monitoring process
+        start_log_checking()
 
         if args.ui:
             run_ui(run_backtest_func, run_live_trading_func, clear_log_file, open_log_file)
@@ -287,8 +293,7 @@ def main():
         handle_error(e, f"An error occurred in the main function: {error_code} - {error_message}")
 
     finally:
-        # Stop MT5 log monitoring
-        stop_log_checking()  # New: Stop the log monitoring process
+        stop_log_checking()
 
 if __name__ == '__main__':
     main()
