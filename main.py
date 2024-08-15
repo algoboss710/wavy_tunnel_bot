@@ -5,8 +5,7 @@ from config import Config
 from metatrader.connection import initialize_mt5, shutdown_mt5
 from metatrader.data_retrieval import get_historical_data
 from strategy.tunnel_strategy import (
-    run_strategy, check_broker_connection, check_market_open,
-    get_fresh_tick_data, manage_position, execute_trade, place_pending_order
+    check_broker_connection, check_market_open, execute_trade, place_pending_order, calculate_ema, detect_peaks_and_dips, check_entry_conditions
 )
 from backtesting.backtest import run_backtest
 from utils.logger import setup_logging
@@ -151,7 +150,7 @@ def run_live_trading_func():
                 tick_data = []
                 tick_start_time = time.time()
 
-                while len(tick_data) < 200:
+                while len(tick_data) < 500:  # Adjusted to collect 500 ticks for better data consistency
                     tick = mt5.symbol_info_tick(symbol)
                     if tick is None:
                         logging.warning(f"Failed to retrieve tick data for {symbol}.")
@@ -169,7 +168,7 @@ def run_live_trading_func():
 
                 tick_end_time = time.time()
                 elapsed_time = tick_end_time - tick_start_time
-                logging.info(f"Collected 200 ticks in {elapsed_time:.2f} seconds.")
+                logging.info(f"Collected 500 ticks in {elapsed_time:.2f} seconds.")
 
                 df = pd.DataFrame(tick_data)
                 logging.info(f"Dataframe created with tick data: {df.tail()}")
@@ -179,53 +178,69 @@ def run_live_trading_func():
                     df['low'] = df['ask']
                     df['close'] = df['last']
 
+                # Calculate EMAs and other indicators on collected tick data
+                df['wavy_h'] = calculate_ema(df['high'], 34)
+                df['wavy_c'] = calculate_ema(df['close'], 34)
+                df['wavy_l'] = calculate_ema(df['low'], 34)
+                df['tunnel1'] = calculate_ema(df['close'], 144)
+                df['tunnel2'] = calculate_ema(df['close'], 169)
+                df['long_term_ema'] = calculate_ema(df['close'], 200)
+
+                # Detect peaks and dips
+                peaks, dips = detect_peaks_and_dips(df, 21)
+
+                # Check entry conditions
+                buy_condition, sell_condition = check_entry_conditions(df.iloc[-1], peaks, dips, symbol)
+
                 std_dev = df['close'].rolling(window=20).std().iloc[-1]  # Calculate standard deviation
 
-                order_request = {
-                    'action': mt5.TRADE_ACTION_DEAL,
-                    'symbol': symbol,
-                    'volume': 0.01,
-                    'price': tick.bid,
-                    'sl': tick.bid - (20 * mt5.symbol_info(symbol).point),  # Example stop loss
-                    'tp': tick.bid + (20 * mt5.symbol_info(symbol).point),  # Example take profit
-                    'deviation': 10,
-                    'magic': 12345,
-                    'comment': 'Tunnel Strategy',
-                    'type': mt5.ORDER_TYPE_BUY,
-                    'type_filling': mt5.ORDER_FILLING_FOK,
-                    'type_time': mt5.ORDER_TIME_GTC,
-                }
-                logging.info(f"Placing order with the following details: {order_request}")
+                if buy_condition or sell_condition:
+                    trade_request = {
+                        'action': 'BUY' if buy_condition else 'SELL',
+                        'symbol': symbol,
+                        'volume': 0.01,
+                        'price': df.iloc[-1]['bid'] if buy_condition else df.iloc[-1]['ask'],
+                        'sl': df.iloc[-1]['bid'] - (1.5 * std_dev) if buy_condition else df.iloc[-1]['ask'] + (1.5 * std_dev),
+                        'tp': df.iloc[-1]['bid'] + (2 * std_dev) if buy_condition else df.iloc[-1]['ask'] - (2 * std_dev),
+                        'deviation': 10,
+                        'magic': 12345,
+                        'comment': 'Tunnel Strategy',
+                        'type': mt5.ORDER_TYPE_BUY if buy_condition else mt5.ORDER_TYPE_SELL,
+                        'type_filling': mt5.ORDER_FILLING_FOK,
+                        'type_time': mt5.ORDER_TIME_GTC
+                    }
 
-                try:
-                    result = execute_trade(order_request)
-                    logging.info(f"Order send result: {result}")
+                    logging.info(f"Placing order with the following details: {trade_request}")
 
-                    if result is None:
-                        logging.error("mt5.order_send returned None. This may indicate a silent failure or an internal error.")
-                    elif result.retcode != mt5.TRADE_RETCODE_DONE:
-                        logging.error(f"Order failed with retcode: {result.retcode}")
+                    try:
+                        result = execute_trade(trade_request)
+                        logging.info(f"Order send result: {result}")
 
-                        if Config.ENABLE_PENDING_ORDER_FALLBACK:
-                            logging.info("Attempting to place a pending order due to market order failure...")
-                            pending_order_result = place_pending_order(order_request)
-                            if pending_order_result is not None:
-                                logging.info("Pending order placed successfully.")
-                            else:
-                                logging.error("Failed to place pending order.")
-                    else:
-                        logging.info("Order placed successfully.")
+                        if result is None:
+                            logging.error("mt5.order_send returned None. This may indicate a silent failure or an internal error.")
+                        elif result.retcode != mt5.TRADE_RETCODE_DONE:
+                            logging.error(f"Order failed with retcode: {result.retcode}")
 
-                        total_profit += result.profit if hasattr(result, 'profit') else 0.0
-                        current_balance += result.profit if hasattr(result, 'profit') else 0.0
+                            if Config.ENABLE_PENDING_ORDER_FALLBACK:
+                                logging.info("Attempting to place a pending order due to market order failure...")
+                                pending_order_result = place_pending_order(trade_request)
+                                if pending_order_result is not None:
+                                    logging.info("Pending order placed successfully.")
+                                else:
+                                    logging.error("Failed to place pending order.")
+                        else:
+                            logging.info("Order placed successfully.")
 
-                        daily_trades += 1
-                        total_trades += 1
-                        logging.info(f"Live trading iteration completed for {symbol}. Total trades today: {daily_trades}")
-                        logging.info(f"Current Balance: {current_balance:.2f}")
+                            total_profit += result.profit if hasattr(result, 'profit') else 0.0
+                            current_balance += result.profit if hasattr(result, 'profit') else 0.0
 
-                except Exception as e:
-                    logging.error(f"An error occurred while running strategy for {symbol}: {e}")
+                            daily_trades += 1
+                            total_trades += 1
+                            logging.info(f"Live trading iteration completed for {symbol}. Total trades today: {daily_trades}")
+                            logging.info(f"Current Balance: {current_balance:.2f}")
+
+                    except Exception as e:
+                        logging.error(f"An error occurred while running strategy for {symbol}: {e}")
 
                 time.sleep(60)
 
