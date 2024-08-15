@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from utils.error_handling import handle_error, critical_error
 import logging
 
+# Load environment variables from the .env file
 script_dir = os.path.dirname(os.path.abspath(__file__))
 project_dir = os.path.dirname(script_dir)
 dotenv_path = os.path.join(project_dir, '.env')
@@ -85,12 +86,16 @@ class Config:
     except ValueError:
         raise ValueError(f"Invalid MAX_DRAWDOWN value: {os.getenv('MAX_DRAWDOWN')}. Expected a numeric value.")
 
-    # New config for enabling pending order fallback
+    # Configuration for enabling pending order fallback
     ENABLE_PENDING_ORDER_FALLBACK = os.getenv("ENABLE_PENDING_ORDER_FALLBACK", "True").lower() in ("true", "1", "yes")
+
+    # Configuration for SL/TP adjustment pips
+    SL_TP_ADJUSTMENT_PIPS = float(os.getenv("SL_TP_ADJUSTMENT_PIPS", 0.0001))
 
     @classmethod
     def validate(cls):
         try:
+            # Ensure all required environment variables are set
             required_vars = [
                 'MT5_LOGIN', 'MT5_PASSWORD', 'MT5_SERVER', 'MT5_PATH',
                 'MT5_TIMEFRAME', 'SYMBOLS'
@@ -99,11 +104,13 @@ class Config:
                 if not getattr(cls, var, None):
                     raise ValueError(f"Missing required environment variable: {var}")
 
-            numeric_vars = ['MIN_TP_PROFIT', 'MAX_LOSS_PER_DAY', 'STARTING_EQUITY', 'RISK_PER_TRADE', 'PIP_VALUE', 'MAX_DRAWDOWN']
+            # Ensure all numeric variables have valid numeric values
+            numeric_vars = ['MIN_TP_PROFIT', 'MAX_LOSS_PER_DAY', 'STARTING_EQUITY', 'RISK_PER_TRADE', 'PIP_VALUE', 'MAX_DRAWDOWN', 'SL_TP_ADJUSTMENT_PIPS']
             for var in numeric_vars:
                 if not isinstance(getattr(cls, var, None), (int, float)):
                     raise ValueError(f"Invalid value for {var}. Expected a numeric value.")
 
+            # Validate integer-specific configuration
             if not isinstance(cls.LIMIT_NO_OF_TRADES, int):
                 raise ValueError(f"Invalid value for LIMIT_NO_OF_TRADES. Expected an integer value.")
 
@@ -113,12 +120,15 @@ class Config:
 
     @classmethod
     def log_config(cls):
+        # Log all configuration settings for debugging purposes
         for attr, value in cls.__dict__.items():
             if not callable(value) and not attr.startswith("__") and not isinstance(value, classmethod):
                 logging.info(f"{attr}: {value}")
 
+# Validate configuration and log it
 try:
     Config.validate()
+    Config.log_config()
 except Exception as e:
     handle_error(e, "Error occurred during configuration validation")
     raise

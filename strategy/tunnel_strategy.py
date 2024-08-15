@@ -102,7 +102,7 @@ def check_entry_conditions(row, peaks, dips, symbol):
 
     return buy_condition, sell_condition
 
-def execute_trade(trade_request, retries=4, delay=4):
+def execute_trade(trade_request, retries=4, delay=6):
     attempt = 0
     while attempt <= retries:
         try:
@@ -153,20 +153,23 @@ def execute_trade(trade_request, retries=4, delay=4):
     if Config.ENABLE_PENDING_ORDER_FALLBACK:
         logging.info("Attempting to place a pending order as a fallback...")
         return place_pending_order(trade_request)
-    
+
     return None
 
 def place_pending_order(trade_request):
     try:
-        order_type = mt5.ORDER_TYPE_BUY_LIMIT if trade_request['action'] == 'BUY' else mt5.ORDER_TYPE_SELL_LIMIT
+        order_type = mt5.ORDER_TYPE_BUY_LIMIT if trade_request['action'] == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_SELL_LIMIT
+        adjusted_sl = trade_request['sl'] - Config.SL_TP_ADJUSTMENT_PIPS if trade_request['action'] == mt5.ORDER_TYPE_BUY else trade_request['sl'] + Config.SL_TP_ADJUSTMENT_PIPS
+        adjusted_tp = trade_request['tp'] + Config.SL_TP_ADJUSTMENT_PIPS if trade_request['action'] == mt5.ORDER_TYPE_BUY else trade_request['tp'] - Config.SL_TP_ADJUSTMENT_PIPS
+
         pending_order_request = {
             "action": mt5.TRADE_ACTION_PENDING,
             "symbol": trade_request['symbol'],
             "volume": trade_request['volume'],
             "type": order_type,
             "price": trade_request['price'],
-            "sl": trade_request['sl'],
-            "tp": trade_request['tp'],
+            "sl": adjusted_sl,
+            "tp": adjusted_tp,
             "deviation": trade_request['deviation'],
             "magic": trade_request['magic'],
             "comment": f"Pending {trade_request['comment']}",
