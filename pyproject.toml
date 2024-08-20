@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "wavy-tunnel-bot"
+version = "0.1.0"
+description = ""
+authors = ["sashoor <sarmadashoor1@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+matplotlib = "3.9.2"
+metatrader5 = "5.0.4424"
+numpy = "2.1.0"
+pandas = "2.2.2"
+pydantic = "2.8.2"
+python-dotenv = "1.0.1"
+pywin32 = "306"
+requests-cache = "1.2.1"
+schedule = "1.2.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,9 +1,10 @@
-matplotlib==3.9.0
+matplotlib==3.9.2
 MetaTrader5==5.0.4288
-numpy==1.26.4
-pandas==2.2.1
-pydantic==2.7.1
-python-dotenv==1.0.0
+MetaTrader5==5.0.4424
+numpy==2.1.0
+pandas==2.2.2
+pydantic==2.8.2
+python-dotenv==1.0.1
 pywin32==306
-requests-cache==1.2.1
+requests_cache==1.2.1
 schedule==1.2.1
