@@ -96,22 +96,23 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                 logger.debug("Trade condition met, calculating position size and costs")
                 try:
                     position_size = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
+                    position_size_units = position_size * 100000  # Convert lots to units
                 except Exception as e:
                     logger.warning(f"Error calculating position size: {e}")
                     continue
 
-                entry_costs = calculate_trade_costs(symbol, position_size, pip_value, volatility, 
+                entry_costs = calculate_trade_costs(symbol, position_size_units, pip_value, volatility, 
                                                     slippage_pips, spread_pips, commission_per_lot)
 
                 if buy_condition:
-                    adjusted_entry_price = row['close'] + (entry_costs['slippage'] + entry_costs['spread']) / position_size
+                    adjusted_entry_price = row['close'] + (entry_costs['slippage'] + entry_costs['spread']) / position_size_units
                 else:
-                    adjusted_entry_price = row['close'] - (entry_costs['slippage'] + entry_costs['spread']) / position_size
+                    adjusted_entry_price = row['close'] - (entry_costs['slippage'] + entry_costs['spread']) / position_size_units
 
                 trade = {
                     'entry_time': row['time'],
                     'entry_price': adjusted_entry_price,
-                    'volume': position_size,
+                    'volume': position_size,  # This is now in lots
                     'symbol': symbol,
                     'action': 'BUY' if buy_condition else 'SELL',
                     'sl': adjusted_entry_price - (stop_loss_pips * pip_value) if buy_condition else adjusted_entry_price + (stop_loss_pips * pip_value),
@@ -145,10 +146,10 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                         trade['exit_time'] = row['time']
                         trade['exit_price'] = exit_price
 
-                        exit_costs = calculate_trade_costs(symbol, trade['volume'], pip_value, volatility, 
+                        exit_costs = calculate_trade_costs(symbol, trade['volume'] * 100000, pip_value, volatility, 
                                                            slippage_pips, spread_pips, commission_per_lot)
 
-                        raw_profit = (exit_price - trade['entry_price']) * trade['volume'] if trade['action'] == 'BUY' else (trade['entry_price'] - exit_price) * trade['volume']
+                        raw_profit = (exit_price - trade['entry_price']) * trade['volume'] * 100000 if trade['action'] == 'BUY' else (trade['entry_price'] - exit_price) * trade['volume'] * 100000
 
                         trade['exit_costs'] = exit_costs
                         net_profit = raw_profit - sum(exit_costs.values())

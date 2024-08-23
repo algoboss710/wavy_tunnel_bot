@@ -8,6 +8,7 @@ import time
 from config import Config
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 def get_current_data(symbol):
     tick = mt5.symbol_info_tick(symbol)
@@ -238,13 +239,22 @@ def calculate_tunnel_bounds(data, period, deviation_factor):
 
     return upper_bound, lower_bound
 
-def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip_value):
-    risk_amount = account_balance * risk_per_trade
+def calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value):
+    logger.debug(f"Calculating position size: balance={balance}, risk_percent={risk_percent}, stop_loss_pips={stop_loss_pips}, pip_value={pip_value}")
+    
+    risk_amount = balance * risk_percent
     if stop_loss_pips == 0 or pip_value == 0:
-        logging.error("Division by zero: stop_loss_pips or pip_value is zero in calculate_position_size")
+        logger.error("Division by zero: stop_loss_pips or pip_value is zero in calculate_position_size")
         raise ZeroDivisionError("stop_loss_pips or pip_value cannot be zero")
+    
     position_size = risk_amount / (stop_loss_pips * pip_value)
-    return position_size
+    
+    # Convert position size to standard lots (100,000 units)
+    position_size_lots = position_size / 100000
+    
+    logger.debug(f"Calculated position size: {position_size_lots} lots")
+    
+    return position_size_lots
 
 def generate_trade_signal(data, period, deviation_factor):
     if len(data) < period:

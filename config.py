@@ -86,6 +86,20 @@ class Config:
     except ValueError:
         raise ValueError(f"Invalid MAX_DRAWDOWN value: {os.getenv('MAX_DRAWDOWN')}. Expected a numeric value.")
 
+    try:
+        SLIPPAGE_PIPS = float(os.getenv("SLIPPAGE_PIPS", 1.0))
+    except ValueError:
+        raise ValueError(f"Invalid SLIPPAGE_PIPS value: {os.getenv('SLIPPAGE_PIPS')}. Expected a numeric value.")
+
+    try:
+        SPREAD_PIPS = float(os.getenv("SPREAD_PIPS", 2.0))
+    except ValueError:
+        raise ValueError(f"Invalid SPREAD_PIPS value: {os.getenv('SPREAD_PIPS')}. Expected a numeric value.")
+
+    try:
+        COMMISSION_PER_LOT = float(os.getenv("COMMISSION_PER_LOT", 7.0))
+    except ValueError:
+        raise ValueError(f"Invalid COMMISSION_PER_LOT value: {os.getenv('COMMISSION_PER_LOT')}. Expected a numeric value.")
     # Configuration for enabling pending order fallback
     ENABLE_PENDING_ORDER_FALLBACK = os.getenv("ENABLE_PENDING_ORDER_FALLBACK", "True").lower() in ("true", "1", "yes")
 
@@ -105,7 +119,7 @@ class Config:
                     raise ValueError(f"Missing required environment variable: {var}")
 
             # Ensure all numeric variables have valid numeric values
-            numeric_vars = ['MIN_TP_PROFIT', 'MAX_LOSS_PER_DAY', 'STARTING_EQUITY', 'RISK_PER_TRADE', 'PIP_VALUE', 'MAX_DRAWDOWN', 'SL_TP_ADJUSTMENT_PIPS']
+            numeric_vars = ['MIN_TP_PROFIT', 'MAX_LOSS_PER_DAY', 'STARTING_EQUITY', 'RISK_PER_TRADE', 'PIP_VALUE', 'MAX_DRAWDOWN', 'SL_TP_ADJUSTMENT_PIPS', 'SLIPPAGE_PIPS', 'SPREAD_PIPS', 'COMMISSION_PER_LOT']            
             for var in numeric_vars:
                 if not isinstance(getattr(cls, var, None), (int, float)):
                     raise ValueError(f"Invalid value for {var}. Expected a numeric value.")
