@@ -11,10 +11,22 @@ from backtesting.backtest import run_backtest
 from utils.logger import setup_logging
 from utils.error_handling import handle_error
 from utils.mt5_log_checker import start_log_checking, stop_log_checking
+from ui import run_ui
 import logging
 import argparse
 import os
 import time
+
+
+# Set up root logger
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# Ensure all loggers are set to DEBUG
+for name in logging.root.manager.loggerDict:
+    logging.getLogger(name).setLevel(logging.DEBUG)
+
+logger = logging.getLogger(__name__)
+logger.debug("This is a test DEBUG message from main.py")
 
 def clear_log_file():
     with open("app.log", "w"):
@@ -24,68 +36,67 @@ def check_auto_trading_enabled():
     """Check if global auto trading is enabled and log the status."""
     global_autotrading_enabled = mt5.terminal_info().trade_allowed
     if not global_autotrading_enabled:
-        logging.error("Global auto trading is disabled. Please enable it manually in the MetaTrader 5 terminal.")
+        logger.error("Global auto trading is disabled. Please enable it manually in the MetaTrader 5 terminal.")
     else:
-        logging.info("Global auto trading is enabled.")
+        logger.info("Global auto trading is enabled.")
 
-def run_backtest_func():
+def run_backtest_func(config):
     try:
-        logging.info("Initializing MetaTrader5...")
-        if not initialize_mt5(Config.MT5_PATH):
+        logger.info("Initializing MetaTrader5...")
+        if not initialize_mt5(config.MT5_PATH):
             raise Exception("Failed to initialize MetaTrader5")
-        logging.info("MetaTrader5 initialized successfully.")
+        logger.info("MetaTrader5 initialized successfully.")
 
         check_auto_trading_enabled()
 
-        for symbol in Config.SYMBOLS:
-            logging.info("Running backtest...")
+        for symbol in config.SYMBOLS:
+            logger.info(f"Running backtest for {symbol}...")
             start_date = datetime(2024, 6, 12)
             end_date = datetime.now()
-            initial_balance = 10000
-            risk_percent = Config.RISK_PER_TRADE
+            initial_balance = config.STARTING_EQUITY
+            risk_percent = config.RISK_PER_TRADE
             stop_loss_pips = 20
-            pip_value = Config.PIP_VALUE
+            pip_value = config.PIP_VALUE
 
             backtest_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, start_date, end_date)
             if backtest_data is not None and not backtest_data.empty:
-                logging.info(f"Backtest data shape: {backtest_data.shape}")
-                logging.info(f"Backtest data head:\n{backtest_data.head()}")
+                logger.info(f"Backtest data shape: {backtest_data.shape}")
+                logger.info(f"Backtest data head:\n{backtest_data.head()}")
             else:
-                logging.error(f"No historical data retrieved for {symbol} for backtesting")
+                logger.error(f"No historical data retrieved for {symbol} for backtesting")
                 continue
 
-            if len(backtest_data) < 20:
-                logging.error(f"Not enough data for symbol {symbol} to perform backtest")
-                continue
+            results = run_backtest(
+                symbol=symbol,
+                data=backtest_data,
+                initial_balance=initial_balance,
+                risk_percent=risk_percent,
+                min_take_profit=config.MIN_TP_PROFIT,
+                max_loss_per_day=config.MAX_LOSS_PER_DAY,
+                starting_equity=config.STARTING_EQUITY,
+                max_trades_per_day=config.LIMIT_NO_OF_TRADES,
+                stop_loss_pips=stop_loss_pips,
+                pip_value=pip_value,
+                slippage_pips=config.SLIPPAGE_PIPS,
+                commission_per_lot=config.COMMISSION_PER_LOT,
+                spread_pips=config.SPREAD_PIPS
+            )
 
-            backtest_data.loc[:, 'close'] = pd.to_numeric(backtest_data['close'], errors='coerce')
-
-            try:
-                run_backtest(
-                    symbol=symbol,
-                    data=backtest_data,
-                    initial_balance=initial_balance,
-                    risk_percent=risk_percent,
-                    min_take_profit=Config.MIN_TP_PROFIT,
-                    max_loss_per_day=Config.MAX_LOSS_PER_DAY,
-                    starting_equity=Config.STARTING_EQUITY,
-                    max_trades_per_day=Config.LIMIT_NO_OF_TRADES,
-                    stop_loss_pips=stop_loss_pips,
-                    pip_value=pip_value
-                )
-                logging.info("Backtest completed successfully.")
-            except Exception as e:
-                handle_error(e, f"An error occurred during backtesting for {symbol}")
+            if results:
+                logger.info(f"Backtest completed successfully for {symbol}. Results:")
+                for key, value in results.items():
+                    logger.info(f"{key}: {value}")
+            else:
+                logger.error(f"Backtest failed for {symbol}")
 
     except Exception as e:
-        error_code = mt5.last_error()
-        error_message = str(e)
-        handle_error(e, f"An error occurred in the run_backtest_func: {error_code} - {error_message}")
-
+        logger.error(f"An error occurred in the run_backtest_func: {str(e)}")
+        
     finally:
-        logging.info("Shutting down MetaTrader5...")
+        logger.info("Shutting down MetaTrader5...")
         shutdown_mt5()
-        logging.info("MetaTrader5 connection gracefully shut down.")
+        logger.info("MetaTrader5 connection gracefully shut down.")
+
 
 def run_live_trading_func():
     try:
@@ -280,10 +291,11 @@ def main():
 
     try:
         setup_logging()
-        logging.info("STARTING APPLICATION")
+        logger.info("STARTING APPLICATION")
 
-        logging.info("LOGGING ALL THE CONFIG SETTINGS")
-        Config.log_config()
+        logger.info("LOGGING ALL THE CONFIG SETTINGS")
+        config = Config()  # Initialize config
+        config.log_config()
 
         start_log_checking()
 
@@ -296,9 +308,9 @@ def main():
             choice = input("Enter your choice (1 or 2): ")
 
             if choice == "1":
-                run_backtest_func()
+                run_backtest_func(config)  # Pass the config here
             elif choice == "2":
-                run_live_trading_func()
+                run_live_trading_func(config)  # Pass the config here
             else:
                 print("Invalid choice. Exiting...")
 

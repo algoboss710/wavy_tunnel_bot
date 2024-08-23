@@ -6,48 +6,65 @@ from io import StringIO
 from strategy.tunnel_strategy import generate_trade_signal, calculate_position_size, detect_peaks_and_dips, manage_position, check_entry_conditions
 from metatrader.indicators import calculate_ema
 from metatrader.trade_management import execute_trade
+from utils.cost_calculation import calculate_trade_costs
 import cProfile
 
-# Initialize the logger
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
-def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, stop_loss_pips, pip_value, max_trades_per_day=None, slippage=0, transaction_cost=0, enable_profiling=False):
-    # Initialize the profiler if profiling is enabled
+def log_trade_details(trade, costs, balance, logger):
+    logger.debug(f"Trade Details:")
+    logger.debug(f"  Action: {trade['action']}")
+    logger.debug(f"  Entry Time: {trade['entry_time']}")
+    logger.debug(f"  Entry Price: {trade['entry_price']:.5f}")
+    logger.debug(f"  Volume: {trade['volume']:.2f}")
+    logger.debug(f"  Stop Loss: {trade['sl']:.5f}")
+    logger.debug(f"  Take Profit: {trade['tp']:.5f}")
+    logger.debug(f"  Costs:")
+    logger.debug(f"    Slippage: {costs['slippage']:.5f}")
+    logger.debug(f"    Spread: {costs['spread']:.5f}")
+    logger.debug(f"    Commission: {costs['commission']:.5f}")
+    logger.debug(f"  Total Cost: {sum(costs.values()):.5f}")
+    logger.debug(f"  Balance After Trade: {balance:.2f}")
+
+def log_trade_closure(trade, exit_price, raw_profit, costs, net_profit, balance, logger):
+    logger.debug(f"Trade Closure:")
+    logger.debug(f"  Exit Time: {trade['exit_time']}")
+    logger.debug(f"  Exit Price: {exit_price:.5f}")
+    logger.debug(f"  Raw Profit: {raw_profit:.5f}")
+    logger.debug(f"  Exit Costs:")
+    logger.debug(f"    Slippage: {costs['slippage']:.5f}")
+    logger.debug(f"    Spread: {costs['spread']:.5f}")
+    logger.debug(f"    Commission: {costs['commission']:.5f}")
+    logger.debug(f"  Total Exit Cost: {sum(costs.values()):.5f}")
+    logger.debug(f"  Net Profit: {net_profit:.5f}")
+    logger.debug(f"  Balance After Closure: {balance:.2f}")
+
+def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, 
+                 starting_equity, stop_loss_pips, pip_value, max_trades_per_day=None, 
+                 slippage_pips=1, spread_pips=2, commission_per_lot=7, enable_profiling=False):
+    logger.debug("Starting run_backtest function")
     pr = cProfile.Profile() if enable_profiling else None
     if enable_profiling:
         pr.enable()
-
-    # Check for zero or negative initial balance
-    if initial_balance <= 0:
-        raise ValueError("Initial balance must be greater than zero.")
-
-    # Check for zero risk percentage
-    if risk_percent == 0:
-        raise ValueError("Risk percentage cannot be zero.")
 
     try:
         balance = initial_balance
         trades = []
         trades_today = 0
         current_day = data.iloc[0]['time'].date()
-        peak_type = 21
+        peak_balance = initial_balance
+        max_drawdown = 0
 
-        data = data.copy()  # Make a copy to avoid modifying the original DataFrame
-
-        # Handle missing values by interpolation
+        data = data.copy()
         data['high'] = data['high'].interpolate(method='linear')
         data['close'] = data['close'].interpolate(method='linear')
         data['low'] = data['low'].interpolate(method='linear')
 
-        # Check if the DataFrame has enough rows for EMA calculation
         if len(data) < 200:
             raise ValueError("Not enough data to calculate required EMAs. Ensure data has at least 200 rows.")
 
-        # Log the data length before EMA calculation
         logger.debug(f"Data length for 'high': {len(data['high'])}, 'low': {len(data['low'])}, 'close': {len(data['close'])}")
 
-        # Calculate EMAs
         data.loc[:, 'wavy_h'] = calculate_ema(data['high'], 34)
         data.loc[:, 'wavy_c'] = calculate_ema(data['close'], 34)
         data.loc[:, 'wavy_l'] = calculate_ema(data['low'], 34)
@@ -55,16 +72,15 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
         data.loc[:, 'tunnel2'] = calculate_ema(data['close'], 169)
         data.loc[:, 'long_term_ema'] = calculate_ema(data['close'], 200)
 
-        # Peak and Dip detection
-        peaks, dips = detect_peaks_and_dips(data, peak_type)
+        peaks, dips = detect_peaks_and_dips(data, 21)
 
-        # Loop through the data
         for i in range(34, len(data)):
             row = data.iloc[i]
+            logger.debug(f"Processing data point {i}: {row['time']}")
+
             if row['time'].date() != current_day:
                 current_day = row['time'].date()
                 trades_today = 0
-                daily_loss = 0
                 logger.info(f"New trading day: {current_day}, resetting daily counters.")
 
             if max_trades_per_day is not None and trades_today >= max_trades_per_day:
@@ -72,83 +88,101 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                 continue
 
             buy_condition, sell_condition = check_entry_conditions(row, peaks, dips, symbol)
+            logger.debug(f"Entry conditions - Buy: {buy_condition}, Sell: {sell_condition}")
 
-            if buy_condition is None or sell_condition is None:
-                logger.debug(f"No trade signal generated for {row['time']}.")
-                continue
+            volatility = np.std(data['close'].iloc[i-20:i+1])
 
-            try:
-                position_size = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
-            except ZeroDivisionError as e:
-                logger.warning(f"Zero division error while calculating position size: {e}")
-                continue
+            if buy_condition or sell_condition:
+                logger.debug("Trade condition met, calculating position size and costs")
+                try:
+                    position_size = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
+                except Exception as e:
+                    logger.warning(f"Error calculating position size: {e}")
+                    continue
 
-            std_dev = data['close'].rolling(window=20).std().iloc[i]
+                entry_costs = calculate_trade_costs(symbol, position_size, pip_value, volatility, 
+                                                    slippage_pips, spread_pips, commission_per_lot)
 
-            if buy_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
+                if buy_condition:
+                    adjusted_entry_price = row['close'] + (entry_costs['slippage'] + entry_costs['spread']) / position_size
+                else:
+                    adjusted_entry_price = row['close'] - (entry_costs['slippage'] + entry_costs['spread']) / position_size
+
                 trade = {
                     'entry_time': row['time'],
-                    'entry_price': row['close'],
+                    'entry_price': adjusted_entry_price,
                     'volume': position_size,
                     'symbol': symbol,
-                    'action': 'BUY',
-                    'sl': row['close'] - (1.5 * std_dev),
-                    'tp': row['close'] + (2 * std_dev),
-                    'profit': 0  # Initialize profit to 0
+                    'action': 'BUY' if buy_condition else 'SELL',
+                    'sl': adjusted_entry_price - (stop_loss_pips * pip_value) if buy_condition else adjusted_entry_price + (stop_loss_pips * pip_value),
+                    'tp': adjusted_entry_price + (2 * stop_loss_pips * pip_value) if buy_condition else adjusted_entry_price - (2 * stop_loss_pips * pip_value),
+                    'entry_costs': entry_costs,
+                    'profit': -sum(entry_costs.values())
                 }
-                execute_trade(trade)
+                
                 trades.append(trade)
                 trades_today += 1
-                logger.info(f"Executed BUY trade at {trade['entry_time']}, price: {trade['entry_price']}, volume: {trade['volume']}.")
+                
+                balance -= sum(entry_costs.values())
 
-            elif sell_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
-                trade = {
-                    'entry_time': row['time'],
-                    'entry_price': row['close'],
-                    'volume': position_size,
-                    'symbol': symbol,
-                    'action': 'SELL',
-                    'sl': row['close'] + (1.5 * std_dev),
-                    'tp': row['close'] - (2 * std_dev),
-                    'profit': 0  # Initialize profit to 0
-                }
-                execute_trade(trade)
-                trades.append(trade)
-                trades_today += 1
-                logger.info(f"Executed SELL trade at {trade['entry_time']}, price: {trade['entry_price']}, volume: {trade['volume']}.")
+                log_trade_details(trade, entry_costs, balance, logger)
 
-            manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+            for trade in trades:
+                if trade.get('exit_time') is None:
+                    exit_price = None
+                    if trade['action'] == 'BUY':
+                        if row['low'] <= trade['sl']:
+                            exit_price = trade['sl']
+                        elif row['high'] >= trade['tp']:
+                            exit_price = trade['tp']
+                    else:  # SELL
+                        if row['high'] >= trade['sl']:
+                            exit_price = trade['sl']
+                        elif row['low'] <= trade['tp']:
+                            exit_price = trade['tp']
+                    
+                    if exit_price:
+                        trade['exit_time'] = row['time']
+                        trade['exit_price'] = exit_price
 
-        # Calculate profits/losses for each trade
-        for trade in trades:
-            exit_price = trade['tp'] if trade['action'] == 'BUY' else trade['sl']
-            if trade['action'] == 'BUY':
-                trade['profit'] = (exit_price - trade['entry_price']) * trade['volume'] - slippage - transaction_cost
-            else:
-                trade['profit'] = (trade['entry_price'] - exit_price) * trade['volume'] - slippage - transaction_cost
-            logger.info(f"Trade closed at {trade['entry_time']}, action: {trade['action']}, profit: {trade['profit']}.")
+                        exit_costs = calculate_trade_costs(symbol, trade['volume'], pip_value, volatility, 
+                                                           slippage_pips, spread_pips, commission_per_lot)
 
-        total_profit = sum(trade.get('profit', 0) for trade in trades)
+                        raw_profit = (exit_price - trade['entry_price']) * trade['volume'] if trade['action'] == 'BUY' else (trade['entry_price'] - exit_price) * trade['volume']
+
+                        trade['exit_costs'] = exit_costs
+                        net_profit = raw_profit - sum(exit_costs.values())
+                        trade['profit'] += net_profit
+                        
+                        balance += trade['profit']
+                        
+                        log_trade_closure(trade, exit_price, raw_profit, exit_costs, net_profit, balance, logger)
+
+                        peak_balance = max(peak_balance, balance)
+                        current_drawdown = peak_balance - balance
+                        max_drawdown = max(max_drawdown, current_drawdown)
+
+        total_profit = sum(trade['profit'] for trade in trades)
         num_trades = len(trades)
-        win_rate = sum(1 for trade in trades if trade.get('profit', 0) > 0) / num_trades if num_trades > 0 else 0
-        max_drawdown = calculate_max_drawdown(trades, initial_balance)
+        win_rate = sum(1 for trade in trades if trade['profit'] > 0) / num_trades if num_trades > 0 else 0
 
-        final_balance = balance + total_profit
-
-        logger.info(f"Backtest completed. Total Profit: {total_profit}, Final Balance: {final_balance}, Number of Trades: {num_trades}, Win Rate: {win_rate}, Max Drawdown: {max_drawdown}.")
+        logger.info(f"Backtest completed with {num_trades} trades, win rate: {win_rate:.2%}, total profit: {total_profit:.2f}")
 
         return {
             'total_profit': total_profit,
-            'final_balance': final_balance,
+            'final_balance': balance,
             'num_trades': num_trades,
             'win_rate': win_rate,
             'max_drawdown': max_drawdown,
-            'buy_condition': buy_condition,
-            'sell_condition': sell_condition,
-            'trades': trades,
-            'total_slippage_costs': len(trades) * slippage,
-            'total_transaction_costs': len(trades) * transaction_cost
+            'total_slippage_costs': sum(trade['entry_costs']['slippage'] + trade['exit_costs']['slippage'] for trade in trades),
+            'total_spread_costs': sum(trade['entry_costs']['spread'] + trade['exit_costs']['spread'] for trade in trades),
+            'total_commissions': sum(trade['entry_costs']['commission'] + trade['exit_costs']['commission'] for trade in trades),
+            'total_transaction_costs': sum(sum(trade['entry_costs'].values()) + sum(trade['exit_costs'].values()) for trade in trades)
         }
+
+    except Exception as e:
+        logger.error(f"An error occurred during backtesting: {str(e)}")
+        return None
 
     finally:
         if enable_profiling and pr:
@@ -173,4 +207,4 @@ def calculate_max_drawdown(trades, initial_balance):
     return max_drawdown
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
