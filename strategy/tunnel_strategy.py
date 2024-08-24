@@ -102,29 +102,30 @@ def check_entry_conditions(row, peaks, dips, symbol):
 
     return buy_condition, sell_condition
 
-def execute_trade(trade_request, retries=4, delay=6):
+def execute_trade(trade_request, is_backtest=False):
+    if is_backtest:
+        # For backtest, we just log the trade and return a success result
+        logging.info(f"Backtest: Executing trade - {trade_request}")
+        return True
+
     attempt = 0
+    retries = 4
+    delay = 6
     while attempt <= retries:
         try:
             logging.debug(f"Attempt {attempt + 1} to execute trade with request: {trade_request}")
-
             if not ensure_symbol_subscription(trade_request['symbol']):
                 logging.error(f"Failed to subscribe to symbol {trade_request['symbol']}")
                 return None
-
             if not check_broker_connection() or not check_market_open():
                 logging.error("Trade execution aborted due to connection issues or market being closed.")
                 return None
-
             logging.info(f"Placing order with price: {trade_request['price']}")
             result = mt5.order_send(trade_request)
-
             if result is None:
                 logging.error(f"Failed to place order: mt5.order_send returned None. Trade Request: {trade_request}")
                 raise ValueError("mt5.order_send returned None.")
-
             logging.info(f"Order response received at {datetime.now()}: {result}")
-
             if result.retcode == mt5.TRADE_RETCODE_DONE:
                 logging.debug(f"Trade executed successfully: {result}")
                 return result
@@ -139,7 +140,6 @@ def execute_trade(trade_request, retries=4, delay=6):
             else:
                 logging.error(f"Failed to execute trade: {result.retcode} - {result.comment}")
                 return None
-
         except Exception as e:
             handle_error(e, f"Exception occurred during trade execution attempt {attempt + 1}")
             attempt += 1
@@ -149,11 +149,9 @@ def execute_trade(trade_request, retries=4, delay=6):
             else:
                 logging.error(f"Failed to execute trade after {retries + 1} attempts due to an exception.")
                 return None
-
     if Config.ENABLE_PENDING_ORDER_FALLBACK:
         logging.info("Attempting to place a pending order as a fallback...")
         return place_pending_order(trade_request)
-
     return None
 
 def place_pending_order(trade_request):

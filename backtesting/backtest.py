@@ -3,9 +3,8 @@ import pandas as pd
 import numpy as np
 import pstats
 from io import StringIO
-from strategy.tunnel_strategy import generate_trade_signal, calculate_position_size, detect_peaks_and_dips, manage_position, check_entry_conditions, check_secondary_entry_conditions
+from strategy.tunnel_strategy import generate_trade_signal, execute_trade,calculate_position_size, detect_peaks_and_dips, manage_position, check_entry_conditions, check_secondary_entry_conditions
 from metatrader.indicators import calculate_ema
-from metatrader.trade_management import execute_trade
 from config import Config
 import cProfile
 
@@ -58,6 +57,9 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
         # Peak and Dip detection
         peaks, dips = detect_peaks_and_dips(data, peak_type)
 
+        logger.info(f"Starting backtest for {symbol} with initial balance: {initial_balance}")
+        logger.info(f"Secondary strategy enabled: {Config.ENABLE_SECONDARY_STRATEGY}")
+
         # Loop through the data
         for i in range(34, len(data)):
             row = data.iloc[i]
@@ -72,10 +74,18 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                 continue
 
             primary_buy, primary_sell = check_entry_conditions(row, peaks, dips, symbol)
-            secondary_buy, secondary_sell = check_secondary_entry_conditions(row, symbol) if Config.ENABLE_SECONDARY_STRATEGY else (False, False)
+            logger.debug(f"Primary conditions at {row['time']}: Buy={primary_buy}, Sell={primary_sell}")
+
+            if Config.ENABLE_SECONDARY_STRATEGY:
+                secondary_buy, secondary_sell = check_secondary_entry_conditions(row, symbol)
+                logger.debug(f"Secondary conditions at {row['time']}: Buy={secondary_buy}, Sell={secondary_sell}")
+            else:
+                secondary_buy, secondary_sell = False, False
 
             buy_condition = primary_buy or (Config.ENABLE_SECONDARY_STRATEGY and secondary_buy)
             sell_condition = primary_sell or (Config.ENABLE_SECONDARY_STRATEGY and secondary_sell)
+
+            logger.debug(f"Final conditions at {row['time']}: Buy={buy_condition}, Sell={sell_condition}")
 
             if not (buy_condition or sell_condition):
                 logger.debug(f"No trade signal generated for {row['time']}.")
@@ -101,10 +111,12 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                     'profit': 0,  # Initialize profit to 0
                     'type': 'primary' if primary_buy else 'secondary'
                 }
-                execute_trade(trade)
-                trades.append(trade)
-                trades_today += 1
-                logger.info(f"Executed {trade['type'].upper()} BUY trade at {trade['entry_time']}, price: {trade['entry_price']}, volume: {trade['volume']}.")
+                if execute_trade(trade, is_backtest=True):
+                    trades.append(trade)
+                    trades_today += 1
+                    logger.info(f"Executed {trade['type'].upper()} BUY trade at {trade['entry_time']}, price: {trade['entry_price']}, volume: {trade['volume']}.")
+                else:
+                    logger.warning(f"Failed to execute {trade['type'].upper()} BUY trade at {trade['entry_time']}")
 
             elif sell_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
                 trade = {
@@ -118,10 +130,12 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                     'profit': 0,  # Initialize profit to 0
                     'type': 'primary' if primary_sell else 'secondary'
                 }
-                execute_trade(trade)
-                trades.append(trade)
-                trades_today += 1
-                logger.info(f"Executed {trade['type'].upper()} SELL trade at {trade['entry_time']}, price: {trade['entry_price']}, volume: {trade['volume']}.")
+                if execute_trade(trade, is_backtest=True):
+                    trades.append(trade)
+                    trades_today += 1
+                    logger.info(f"Executed {trade['type'].upper()} SELL trade at {trade['entry_time']}, price: {trade['entry_price']}, volume: {trade['volume']}.")
+                else:
+                    logger.warning(f"Failed to execute {trade['type'].upper()} SELL trade at {trade['entry_time']}")
 
             manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
 
@@ -141,7 +155,14 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
 
         final_balance = balance + total_profit
 
-        logger.info(f"Backtest completed. Total Profit: {total_profit}, Final Balance: {final_balance}, Number of Trades: {num_trades}, Win Rate: {win_rate}, Max Drawdown: {max_drawdown}.")
+        logger.info(f"Backtest completed for {symbol}.")
+        logger.info(f"Total Profit: {total_profit}")
+        logger.info(f"Final Balance: {final_balance}")
+        logger.info(f"Number of Trades: {num_trades}")
+        logger.info(f"Win Rate: {win_rate:.2%}")
+        logger.info(f"Max Drawdown: {max_drawdown:.2%}")
+        logger.info(f"Total primary trades: {sum(1 for trade in trades if trade['type'] == 'primary')}")
+        logger.info(f"Total secondary trades: {sum(1 for trade in trades if trade['type'] == 'secondary')}")
 
         return {
             'total_profit': total_profit,
