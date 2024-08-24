@@ -284,6 +284,39 @@ def ensure_symbol_subscription(symbol):
 
     logging.info(f"Symbol {symbol} is already subscribed and visible.")
     return True
+    
+def check_secondary_entry_conditions(row, symbol):
+    wavy_c, wavy_h, wavy_l = row['wavy_c'], row['wavy_h'], row['wavy_l']
+    tunnel1, tunnel2 = row['tunnel1'], row['tunnel2']
+    close_price = row['close']
+
+    secondary_long_condition = (
+        close_price > max(wavy_c, wavy_h, wavy_l) and
+        close_price < min(tunnel1, tunnel2)
+    )
+    secondary_short_condition = (
+        close_price < min(wavy_c, wavy_h, wavy_l) and
+        close_price > max(tunnel1, tunnel2)
+    )
+
+    # Implement minimum gap check
+    min_gap = Config.MIN_GAP_SECOND_VALUE * mt5.symbol_info(symbol).point
+    if secondary_long_condition:
+        price_diff = min(tunnel1, tunnel2) - close_price
+        secondary_long_condition &= price_diff >= min_gap
+    if secondary_short_condition:
+        price_diff = close_price - max(tunnel1, tunnel2)
+        secondary_short_condition &= price_diff >= min_gap
+
+    # Implement zone limitation check
+    if secondary_long_condition:
+        zone_percentage = (close_price - max(wavy_c, wavy_h, wavy_l)) / (min(tunnel1, tunnel2) - max(wavy_c, wavy_h, wavy_l))
+        secondary_long_condition &= zone_percentage <= Config.MAX_ALLOW_INTO_ZONE
+    if secondary_short_condition:
+        zone_percentage = (min(wavy_c, wavy_h, wavy_l) - close_price) / (min(wavy_c, wavy_h, wavy_l) - max(tunnel1, tunnel2))
+        secondary_short_condition &= zone_percentage <= Config.MAX_ALLOW_INTO_ZONE
+
+    return secondary_long_condition, secondary_short_condition
 
 def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, run_backtest, data=None, std_dev=None):
     try:
@@ -328,44 +361,48 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
             logging.info(f"Dips: {dips[:5]}")
 
             logging.info("Generating entry signals...")
-            data['buy_signal'], data['sell_signal'] = zip(*data.apply(lambda x: check_entry_conditions(x, peaks, dips, symbol), axis=1))
+            data['primary_buy'], data['primary_sell'] = zip(*data.apply(lambda x: check_entry_conditions(x, peaks, dips, symbol), axis=1))
 
-            buy_condition, sell_condition = generate_trade_signal(data, period, deviation_factor)
+            if Config.ENABLE_SECONDARY_STRATEGY:
+                data['secondary_buy'], data['secondary_sell'] = zip(*data.apply(lambda x: check_secondary_entry_conditions(x, symbol), axis=1))
 
-            logging.info(f"Buy Condition: {buy_condition}")
-            logging.info(f"Sell Condition: {sell_condition}")
+            for i in range(len(data)):
+                row = data.iloc[i]
+                buy_condition = row['primary_buy'] or (Config.ENABLE_SECONDARY_STRATEGY and row['secondary_buy'])
+                sell_condition = row['primary_sell'] or (Config.ENABLE_SECONDARY_STRATEGY and row['secondary_sell'])
 
-            if buy_condition or sell_condition:
-                current_tick = get_current_data(symbol)
-                logging.info(f"Latest price data for {symbol}: {current_tick}")
+                if buy_condition or sell_condition:
+                    current_tick = get_current_data(symbol) if data is None else row
 
-                trade_request = {
-                    'action': 'BUY' if buy_condition else 'SELL',
-                    'symbol': symbol,
-                    'volume': lot_size,
-                    'price': current_tick['bid'] if buy_condition else current_tick['ask'],
-                    'sl': current_tick['bid'] - (1.5 * std_dev) if buy_condition else current_tick['ask'] + (1.5 * std_dev),
-                    'tp': current_tick['bid'] + (2 * std_dev) if buy_condition else current_tick['ask'] - (2 * std_dev),
-                    'deviation': 10,
-                    'magic': 12345,
-                    'comment': 'Tunnel Strategy',
-                    'type': 'ORDER_TYPE_BUY' if buy_condition else 'ORDER_TYPE_SELL',
-                    'type_filling': 'ORDER_FILLING_FOK',
-                    'type_time': 'ORDER_TIME_GTC'
-                }
+                    std_dev = data['close'].rolling(window=20).std().iloc[i] if std_dev is None else std_dev
 
-                result = execute_trade(trade_request)
-                if result:
-                    profit = trade_request['tp'] - trade_request['price'] if buy_condition else trade_request['price'] - trade_request['tp']
-                    total_profit += profit
-                    current_balance += profit
-                    peak_balance = max(peak_balance, current_balance)
-                    drawdown = peak_balance - current_balance
-                    max_drawdown = max(max_drawdown, drawdown)
-                else:
-                    logging.error("Trade execution failed")
+                    trade_request = {
+                        'action': 'BUY' if buy_condition else 'SELL',
+                        'symbol': symbol,
+                        'volume': lot_size,
+                        'price': current_tick['bid'] if buy_condition else current_tick['ask'],
+                        'sl': current_tick['bid'] - (1.5 * std_dev) if buy_condition else current_tick['ask'] + (1.5 * std_dev),
+                        'tp': current_tick['bid'] + (2 * std_dev) if buy_condition else current_tick['ask'] - (2 * std_dev),
+                        'deviation': 10,
+                        'magic': 12345,
+                        'comment': 'Tunnel Strategy',
+                        'type': 'ORDER_TYPE_BUY' if buy_condition else 'ORDER_TYPE_SELL',
+                        'type_filling': 'ORDER_FILLING_FOK',
+                        'type_time': 'ORDER_TIME_GTC'
+                    }
 
-            manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+                    result = execute_trade(trade_request)
+                    if result:
+                        profit = trade_request['tp'] - trade_request['price'] if buy_condition else trade_request['price'] - trade_request['tp']
+                        total_profit += profit
+                        current_balance += profit
+                        peak_balance = max(peak_balance, current_balance)
+                        drawdown = peak_balance - current_balance
+                        max_drawdown = max(max_drawdown, drawdown)
+                    else:
+                        logging.error("Trade execution failed")
+
+                manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
 
         return {
             'total_profit': total_profit,

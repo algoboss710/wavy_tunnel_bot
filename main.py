@@ -11,10 +11,12 @@ from backtesting.backtest import run_backtest
 from utils.logger import setup_logging
 from utils.error_handling import handle_error
 from utils.mt5_log_checker import start_log_checking, stop_log_checking
+from ui import run_ui
 import logging
 import argparse
 import os
 import time
+
 
 def clear_log_file():
     with open("app.log", "w"):
@@ -38,7 +40,7 @@ def run_backtest_func():
         check_auto_trading_enabled()
 
         for symbol in Config.SYMBOLS:
-            logging.info("Running backtest...")
+            logging.info(f"Running backtest for {symbol}...")
             start_date = datetime(2024, 6, 12)
             end_date = datetime.now()
             initial_balance = 10000
@@ -61,7 +63,7 @@ def run_backtest_func():
             backtest_data.loc[:, 'close'] = pd.to_numeric(backtest_data['close'], errors='coerce')
 
             try:
-                run_backtest(
+                results = run_backtest(
                     symbol=symbol,
                     data=backtest_data,
                     initial_balance=initial_balance,
@@ -74,6 +76,12 @@ def run_backtest_func():
                     pip_value=pip_value
                 )
                 logging.info("Backtest completed successfully.")
+                logging.info(f"Backtest results for {symbol}:")
+                logging.info(f"Total Profit: {results['total_profit']}")
+                logging.info(f"Final Balance: {results['final_balance']}")
+                logging.info(f"Number of Trades: {results['num_trades']}")
+                logging.info(f"Win Rate: {results['win_rate']:.2%}")
+                logging.info(f"Max Drawdown: {results['max_drawdown']:.2%}")
             except Exception as e:
                 handle_error(e, f"An error occurred during backtesting for {symbol}")
 

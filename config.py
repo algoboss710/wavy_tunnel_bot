@@ -92,6 +92,20 @@ class Config:
     # Configuration for SL/TP adjustment pips
     SL_TP_ADJUSTMENT_PIPS = float(os.getenv("SL_TP_ADJUSTMENT_PIPS", 0.0001))
 
+    # Configuration for enabling secondary strategy
+    ENABLE_SECONDARY_STRATEGY = os.getenv("ENABLE_SECONDARY_STRATEGY", "False").lower() in ("true", "1", "yes")
+
+    # Configuration for secondary strategy parameters
+    try:
+        MIN_GAP_SECOND_VALUE = float(os.getenv("MIN_GAP_SECOND_VALUE", 15))
+    except ValueError:
+        raise ValueError(f"Invalid MIN_GAP_SECOND_VALUE value: {os.getenv('MIN_GAP_SECOND_VALUE')}. Expected a numeric value.")
+
+    try:
+        MAX_ALLOW_INTO_ZONE = float(os.getenv("MAX_ALLOW_INTO_ZONE", 0.25))
+    except ValueError:
+        raise ValueError(f"Invalid MAX_ALLOW_INTO_ZONE value: {os.getenv('MAX_ALLOW_INTO_ZONE')}. Expected a numeric value.")
+
     @classmethod
     def validate(cls):
         try:
@@ -105,7 +119,7 @@ class Config:
                     raise ValueError(f"Missing required environment variable: {var}")
 
             # Ensure all numeric variables have valid numeric values
-            numeric_vars = ['MIN_TP_PROFIT', 'MAX_LOSS_PER_DAY', 'STARTING_EQUITY', 'RISK_PER_TRADE', 'PIP_VALUE', 'MAX_DRAWDOWN', 'SL_TP_ADJUSTMENT_PIPS']
+            numeric_vars = ['MIN_TP_PROFIT', 'MAX_LOSS_PER_DAY', 'STARTING_EQUITY', 'RISK_PER_TRADE', 'PIP_VALUE', 'MAX_DRAWDOWN', 'SL_TP_ADJUSTMENT_PIPS', 'MIN_GAP_SECOND_VALUE', 'MAX_ALLOW_INTO_ZONE']
             for var in numeric_vars:
                 if not isinstance(getattr(cls, var, None), (int, float)):
                     raise ValueError(f"Invalid value for {var}. Expected a numeric value.")
@@ -113,6 +127,12 @@ class Config:
             # Validate integer-specific configuration
             if not isinstance(cls.LIMIT_NO_OF_TRADES, int):
                 raise ValueError(f"Invalid value for LIMIT_NO_OF_TRADES. Expected an integer value.")
+            
+            if not 0 < cls.MAX_ALLOW_INTO_ZONE <= 1:
+                raise ValueError(f"MAX_ALLOW_INTO_ZONE must be between 0 and 1. Current value: {cls.MAX_ALLOW_INTO_ZONE}")
+
+            if cls.MIN_GAP_SECOND_VALUE <= 0:
+                raise ValueError(f"MIN_GAP_SECOND_VALUE must be greater than 0. Current value: {cls.MIN_GAP_SECOND_VALUE}")
 
         except ValueError as e:
             handle_error(e, "Configuration validation failed")

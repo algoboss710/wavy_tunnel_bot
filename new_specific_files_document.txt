@@ -1,5 +1,143 @@
-Main.py:
+File: C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\config.py
+----------------------------------------
+import os
+from dotenv import load_dotenv
+from utils.error_handling import handle_error, critical_error
+import logging
 
+# Load environment variables from the .env file
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_dir = os.path.dirname(script_dir)
+dotenv_path = os.path.join(project_dir, '.env')
+
+def reload_env():
+    load_dotenv(dotenv_path, override=True)
+
+reload_env()
+
+class Config:
+    MT5_LOGIN = os.getenv("MT5_LOGIN")
+    if not MT5_LOGIN:
+        raise ValueError("MT5_LOGIN environment variable is not set.")
+
+    MT5_PASSWORD = os.getenv("MT5_PASSWORD")
+    if not MT5_PASSWORD:
+        raise ValueError("MT5_PASSWORD environment variable is not set.")
+
+    MT5_SERVER = os.getenv("MT5_SERVER")
+    if not MT5_SERVER:
+        raise ValueError("MT5_SERVER environment variable is not set.")
+
+    MT5_PATH = os.getenv("MT5_PATH")
+    if not MT5_PATH:
+        raise ValueError("MT5_PATH environment variable is not set.")
+
+    MT5_TIMEFRAME = os.getenv("MT5_TIMEFRAME")
+    if MT5_TIMEFRAME not in ["M1", "M5", "M15", "M30", "H1", "H4", "D1"]:
+        raise ValueError(f"Invalid MT5_TIMEFRAME value: {MT5_TIMEFRAME}. Expected values: M1, M5, M15, M30, H1, H4, D1.")
+
+    SYMBOLS = os.getenv("SYMBOLS")
+    if SYMBOLS:
+        SYMBOLS = SYMBOLS.split(",")
+    else:
+        raise ValueError("SYMBOLS environment variable is not set.")
+
+    TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+    TELEGRAM_IDS = os.getenv("TELEGRAM_IDS")
+    if TELEGRAM_TOKEN and TELEGRAM_IDS:
+        TELEGRAM_IDS = TELEGRAM_IDS.split(",")
+    else:
+        TELEGRAM_TOKEN = None
+        TELEGRAM_IDS = None
+
+    try:
+        MIN_TP_PROFIT = float(os.getenv("MIN_TP_PROFIT", 50.0))
+    except (ValueError, TypeError):
+        raise ValueError(f"Invalid MIN_TP_PROFIT value: {os.getenv('MIN_TP_PROFIT')}. Expected a numeric value.")
+
+    try:
+        MAX_LOSS_PER_DAY = float(os.getenv("MAX_LOSS_PER_DAY", 1000.0))
+    except (ValueError, TypeError):
+        raise ValueError(f"Invalid MAX_LOSS_PER_DAY value: {os.getenv('MAX_LOSS_PER_DAY')}. Expected a numeric value.")
+
+    try:
+        STARTING_EQUITY = float(os.getenv("STARTING_EQUITY", 10000.0))
+    except (ValueError, TypeError):
+        raise ValueError(f"Invalid STARTING_EQUITY value: {os.getenv('STARTING_EQUITY')}. Expected a numeric value.")
+
+    try:
+        LIMIT_NO_OF_TRADES = int(os.getenv("LIMIT_NO_OF_TRADES", 5))
+    except (ValueError, TypeError):
+        raise ValueError(f"Invalid LIMIT_NO_OF_TRADES value: {os.getenv('LIMIT_NO_OF_TRADES')}. Expected an integer value.")
+
+    try:
+        RISK_PER_TRADE = float(os.getenv("RISK_PER_TRADE", 0.01))
+    except ValueError:
+        raise ValueError(f"Invalid RISK_PER_TRADE value: {os.getenv('RISK_PER_TRADE')}. Expected a numeric value.")
+
+    if not 0 < RISK_PER_TRADE <= 1:
+        raise ValueError(f"RISK_PER_TRADE value must be between 0 and 1. Current value: {RISK_PER_TRADE}")
+
+    try:
+        PIP_VALUE = float(os.getenv("PIP_VALUE", 1))
+    except ValueError:
+        raise ValueError(f"Invalid PIP_VALUE value: {os.getenv('PIP_VALUE')}. Expected a numeric value.")
+
+    try:
+        MAX_DRAWDOWN = float(os.getenv("MAX_DRAWDOWN", 0.2))
+    except ValueError:
+        raise ValueError(f"Invalid MAX_DRAWDOWN value: {os.getenv('MAX_DRAWDOWN')}. Expected a numeric value.")
+
+    # Configuration for enabling pending order fallback
+    ENABLE_PENDING_ORDER_FALLBACK = os.getenv("ENABLE_PENDING_ORDER_FALLBACK", "True").lower() in ("true", "1", "yes")
+
+    # Configuration for SL/TP adjustment pips
+    SL_TP_ADJUSTMENT_PIPS = float(os.getenv("SL_TP_ADJUSTMENT_PIPS", 0.0001))
+
+    @classmethod
+    def validate(cls):
+        try:
+            # Ensure all required environment variables are set
+            required_vars = [
+                'MT5_LOGIN', 'MT5_PASSWORD', 'MT5_SERVER', 'MT5_PATH',
+                'MT5_TIMEFRAME', 'SYMBOLS'
+            ]
+            for var in required_vars:
+                if not getattr(cls, var, None):
+                    raise ValueError(f"Missing required environment variable: {var}")
+
+            # Ensure all numeric variables have valid numeric values
+            numeric_vars = ['MIN_TP_PROFIT', 'MAX_LOSS_PER_DAY', 'STARTING_EQUITY', 'RISK_PER_TRADE', 'PIP_VALUE', 'MAX_DRAWDOWN', 'SL_TP_ADJUSTMENT_PIPS']
+            for var in numeric_vars:
+                if not isinstance(getattr(cls, var, None), (int, float)):
+                    raise ValueError(f"Invalid value for {var}. Expected a numeric value.")
+
+            # Validate integer-specific configuration
+            if not isinstance(cls.LIMIT_NO_OF_TRADES, int):
+                raise ValueError(f"Invalid value for LIMIT_NO_OF_TRADES. Expected an integer value.")
+
+        except ValueError as e:
+            handle_error(e, "Configuration validation failed")
+            critical_error(e, "Invalid configuration settings")
+
+    @classmethod
+    def log_config(cls):
+        # Log all configuration settings for debugging purposes
+        for attr, value in cls.__dict__.items():
+            if not callable(value) and not attr.startswith("__") and not isinstance(value, classmethod):
+                logging.info(f"{attr}: {value}")
+
+# Validate configuration and log it
+try:
+    Config.validate()
+    Config.log_config()
+except Exception as e:
+    handle_error(e, "Error occurred during configuration validation")
+    raise
+
+
+File: C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\main.py
+----------------------------------------
 import MetaTrader5 as mt5
 import pandas as pd
 from datetime import datetime
@@ -316,176 +454,288 @@ if __name__ == '__main__':
     main()
 
 
-config.py:
+File: C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\backtesting\backtest.py
+----------------------------------------
+import logging
+import pandas as pd
+import numpy as np
+import pstats
+from io import StringIO
+from strategy.tunnel_strategy import generate_trade_signal, calculate_position_size, detect_peaks_and_dips, manage_position, check_entry_conditions
+from metatrader.indicators import calculate_ema
+from metatrader.trade_management import execute_trade
+import cProfile
 
-import os
-from dotenv import load_dotenv
-from utils.error_handling import handle_error, critical_error
+# Initialize the logger
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, stop_loss_pips, pip_value, max_trades_per_day=None, slippage=0, transaction_cost=0, enable_profiling=False):
+    # Initialize the profiler if profiling is enabled
+    pr = cProfile.Profile() if enable_profiling else None
+    if enable_profiling:
+        pr.enable()
+
+    # Check for zero or negative initial balance
+    if initial_balance <= 0:
+        raise ValueError("Initial balance must be greater than zero.")
+
+    # Check for zero risk percentage
+    if risk_percent == 0:
+        raise ValueError("Risk percentage cannot be zero.")
+
+    try:
+        balance = initial_balance
+        trades = []
+        trades_today = 0
+        current_day = data.iloc[0]['time'].date()
+        peak_type = 21
+
+        data = data.copy()  # Make a copy to avoid modifying the original DataFrame
+
+        # Handle missing values by interpolation
+        data['high'] = data['high'].interpolate(method='linear')
+        data['close'] = data['close'].interpolate(method='linear')
+        data['low'] = data['low'].interpolate(method='linear')
+
+        # Check if the DataFrame has enough rows for EMA calculation
+        if len(data) < 200:
+            raise ValueError("Not enough data to calculate required EMAs. Ensure data has at least 200 rows.")
+
+        # Log the data length before EMA calculation
+        logger.debug(f"Data length for 'high': {len(data['high'])}, 'low': {len(data['low'])}, 'close': {len(data['close'])}")
+
+        # Calculate EMAs
+        data.loc[:, 'wavy_h'] = calculate_ema(data['high'], 34)
+        data.loc[:, 'wavy_c'] = calculate_ema(data['close'], 34)
+        data.loc[:, 'wavy_l'] = calculate_ema(data['low'], 34)
+        data.loc[:, 'tunnel1'] = calculate_ema(data['close'], 144)
+        data.loc[:, 'tunnel2'] = calculate_ema(data['close'], 169)
+        data.loc[:, 'long_term_ema'] = calculate_ema(data['close'], 200)
+
+        # Peak and Dip detection
+        peaks, dips = detect_peaks_and_dips(data, peak_type)
+
+        # Loop through the data
+        for i in range(34, len(data)):
+            row = data.iloc[i]
+            if row['time'].date() != current_day:
+                current_day = row['time'].date()
+                trades_today = 0
+                daily_loss = 0
+                logger.info(f"New trading day: {current_day}, resetting daily counters.")
+
+            if max_trades_per_day is not None and trades_today >= max_trades_per_day:
+                logger.info(f"Reached max trades per day: {max_trades_per_day}, skipping further trades for {current_day}.")
+                continue
+
+            buy_condition, sell_condition = check_entry_conditions(row, peaks, dips, symbol)
+
+            if buy_condition is None or sell_condition is None:
+                logger.debug(f"No trade signal generated for {row['time']}.")
+                continue
+
+            try:
+                position_size = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
+            except ZeroDivisionError as e:
+                logger.warning(f"Zero division error while calculating position size: {e}")
+                continue
+
+            std_dev = data['close'].rolling(window=20).std().iloc[i]
+
+            if buy_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
+                trade = {
+                    'entry_time': row['time'],
+                    'entry_price': row['close'],
+                    'volume': position_size,
+                    'symbol': symbol,
+                    'action': 'BUY',
+                    'sl': row['close'] - (1.5 * std_dev),
+                    'tp': row['close'] + (2 * std_dev),
+                    'profit': 0  # Initialize profit to 0
+                }
+                execute_trade(trade)
+                trades.append(trade)
+                trades_today += 1
+                logger.info(f"Executed BUY trade at {trade['entry_time']}, price: {trade['entry_price']}, volume: {trade['volume']}.")
+
+            elif sell_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
+                trade = {
+                    'entry_time': row['time'],
+                    'entry_price': row['close'],
+                    'volume': position_size,
+                    'symbol': symbol,
+                    'action': 'SELL',
+                    'sl': row['close'] + (1.5 * std_dev),
+                    'tp': row['close'] - (2 * std_dev),
+                    'profit': 0  # Initialize profit to 0
+                }
+                execute_trade(trade)
+                trades.append(trade)
+                trades_today += 1
+                logger.info(f"Executed SELL trade at {trade['entry_time']}, price: {trade['entry_price']}, volume: {trade['volume']}.")
+
+            manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
+
+        # Calculate profits/losses for each trade
+        for trade in trades:
+            exit_price = trade['tp'] if trade['action'] == 'BUY' else trade['sl']
+            if trade['action'] == 'BUY':
+                trade['profit'] = (exit_price - trade['entry_price']) * trade['volume'] - slippage - transaction_cost
+            else:
+                trade['profit'] = (trade['entry_price'] - exit_price) * trade['volume'] - slippage - transaction_cost
+            logger.info(f"Trade closed at {trade['entry_time']}, action: {trade['action']}, profit: {trade['profit']}.")
+
+        total_profit = sum(trade.get('profit', 0) for trade in trades)
+        num_trades = len(trades)
+        win_rate = sum(1 for trade in trades if trade.get('profit', 0) > 0) / num_trades if num_trades > 0 else 0
+        max_drawdown = calculate_max_drawdown(trades, initial_balance)
+
+        final_balance = balance + total_profit
+
+        logger.info(f"Backtest completed. Total Profit: {total_profit}, Final Balance: {final_balance}, Number of Trades: {num_trades}, Win Rate: {win_rate}, Max Drawdown: {max_drawdown}.")
+
+        return {
+            'total_profit': total_profit,
+            'final_balance': final_balance,
+            'num_trades': num_trades,
+            'win_rate': win_rate,
+            'max_drawdown': max_drawdown,
+            'buy_condition': buy_condition,
+            'sell_condition': sell_condition,
+            'trades': trades,
+            'total_slippage_costs': len(trades) * slippage,
+            'total_transaction_costs': len(trades) * transaction_cost
+        }
+
+    finally:
+        if enable_profiling and pr:
+            pr.disable()
+            s = StringIO()
+            ps = pstats.Stats(pr, stream=s).sort_stats(pstats.SortKey.CUMULATIVE)
+            ps.print_stats()
+            print(s.getvalue())
+
+def calculate_max_drawdown(trades, initial_balance):
+    balance = initial_balance
+    max_balance = initial_balance
+    max_drawdown = 0
+
+    for trade in trades:
+        if 'profit' in trade:
+            balance += trade['profit']
+            max_balance = max(max_balance, balance)
+            drawdown = max_balance - balance
+            max_drawdown = max(max_drawdown, drawdown)
+
+    return max_drawdown
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
+
+
+File: C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\metatrader\indicators.py
+----------------------------------------
+import pandas as pd
+import numpy as np
 import logging
 
-# Load environment variables from the .env file
-script_dir = os.path.dirname(os.path.abspath(__file__))
-project_dir = os.path.dirname(script_dir)
-dotenv_path = os.path.join(project_dir, '.env')
+def calculate_ema(prices, period):
+    if not isinstance(prices, (list, np.ndarray, pd.Series)):
+        raise ValueError("Invalid input type for prices. Expected list, numpy array, or pandas Series.")
+    
+    logging.debug(f"Calculating EMA for period: {period}, prices: {prices}")
+    
+    # Convert input to a pandas Series to ensure consistency
+    prices = pd.Series(prices)
+    
+    # Ensure that the series is numeric
+    prices = pd.to_numeric(prices, errors='coerce')
+    logging.debug(f"Prices converted to numeric: {prices}")
 
-def reload_env():
-    load_dotenv(dotenv_path, override=True)
+    ema_values = np.full(len(prices), np.nan, dtype=np.float64)
+    if len(prices) < period:
+        return pd.Series(ema_values, index=prices.index)
+    
+    sma = np.mean(prices[:period])
+    ema_values[period - 1] = sma
+    logging.debug(f"Initial SMA: {sma}")
+    
+    multiplier = 2 / (period + 1)
+    for i in range(period, len(prices)):
+        ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
+        logging.debug(f"EMA value at index {i}: {ema_values[i]}")
+    
+    ema_series = pd.Series(ema_values, index=prices.index)
+    return ema_series
 
-reload_env()
 
-class Config:
-    MT5_LOGIN = os.getenv("MT5_LOGIN")
-    if not MT5_LOGIN:
-        raise ValueError("MT5_LOGIN environment variable is not set.")
+File: C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\trade_logic.py
+----------------------------------------
+from strategy.tunnel_strategy import execute_trade, manage_position
+from utils.error_handling import handle_error
+import logging
 
-    MT5_PASSWORD = os.getenv("MT5_PASSWORD")
-    if not MT5_PASSWORD:
-        raise ValueError("MT5_PASSWORD environment variable is not set.")
+def calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value):
+    risk_amount = balance * risk_percent
+    if stop_loss_pips == 0 or pip_value == 0:
+        logging.error("stop_loss_pips or pip_value cannot be zero.")
+        return 0  # Return 0 or handle the error appropriately
 
-    MT5_SERVER = os.getenv("MT5_SERVER")
-    if not MT5_SERVER:
-        raise ValueError("MT5_SERVER environment variable is not set.")
+    position_size = risk_amount / (stop_loss_pips * pip_value)
+    return position_size
 
-    MT5_PATH = os.getenv("MT5_PATH")
-    if not MT5_PATH:
-        raise ValueError("MT5_PATH environment variable is not set.")
+def entry_long(symbol, lot_size, price, sl, tp, deviation, magic, comment):
+    trade_request = {
+        'action': 'BUY',
+        'symbol': symbol,
+        'volume': lot_size,
+        'price': price,
+        'sl': sl,
+        'tp': tp,
+        'deviation': deviation,
+        'magic': magic,
+        'comment': comment,
+        'type': 'ORDER_TYPE_BUY',
+        'type_filling': 'ORDER_FILLING_FOK',
+        'type_time': 'ORDER_TIME_GTC'
+    }
+    return execute_trade(trade_request)
 
-    MT5_TIMEFRAME = os.getenv("MT5_TIMEFRAME")
-    if MT5_TIMEFRAME not in ["M1", "M5", "M15", "M30", "H1", "H4", "D1"]:
-        raise ValueError(f"Invalid MT5_TIMEFRAME value: {MT5_TIMEFRAME}. Expected values: M1, M5, M15, M30, H1, H4, D1.")
+def entry_short(symbol, lot_size, price, sl, tp, deviation, magic, comment):
+    trade_request = {
+        'action': 'SELL',
+        'symbol': symbol,
+        'volume': lot_size,
+        'price': price,
+        'sl': sl,
+        'tp': tp,
+        'deviation': deviation,
+        'magic': magic,
+        'comment': comment,
+        'type': 'ORDER_TYPE_SELL',
+        'type_filling': 'ORDER_FILLING_FOK',
+        'type_time': 'ORDER_TIME_GTC'
+    }
+    return execute_trade(trade_request)
 
-    SYMBOLS = os.getenv("SYMBOLS")
-    if SYMBOLS:
-        SYMBOLS = SYMBOLS.split(",")
-    else:
-        raise ValueError("SYMBOLS environment variable is not set.")
-
-    TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-    TELEGRAM_IDS = os.getenv("TELEGRAM_IDS")
-    if TELEGRAM_TOKEN and TELEGRAM_IDS:
-        TELEGRAM_IDS = TELEGRAM_IDS.split(",")
-    else:
-        TELEGRAM_TOKEN = None
-        TELEGRAM_IDS = None
-
+def exit_trade(position_ticket):
     try:
-        MIN_TP_PROFIT = float(os.getenv("MIN_TP_PROFIT", 50.0))
-    except (ValueError, TypeError):
-        raise ValueError(f"Invalid MIN_TP_PROFIT value: {os.getenv('MIN_TP_PROFIT')}. Expected a numeric value.")
-
-    try:
-        MAX_LOSS_PER_DAY = float(os.getenv("MAX_LOSS_PER_DAY", 1000.0))
-    except (ValueError, TypeError):
-        raise ValueError(f"Invalid MAX_LOSS_PER_DAY value: {os.getenv('MAX_LOSS_PER_DAY')}. Expected a numeric value.")
-
-    try:
-        STARTING_EQUITY = float(os.getenv("STARTING_EQUITY", 10000.0))
-    except (ValueError, TypeError):
-        raise ValueError(f"Invalid STARTING_EQUITY value: {os.getenv('STARTING_EQUITY')}. Expected a numeric value.")
-
-    try:
-        LIMIT_NO_OF_TRADES = int(os.getenv("LIMIT_NO_OF_TRADES", 5))
-    except (ValueError, TypeError):
-        raise ValueError(f"Invalid LIMIT_NO_OF_TRADES value: {os.getenv('LIMIT_NO_OF_TRADES')}. Expected an integer value.")
-
-    try:
-        RISK_PER_TRADE = float(os.getenv("RISK_PER_TRADE", 0.01))
-    except ValueError:
-        raise ValueError(f"Invalid RISK_PER_TRADE value: {os.getenv('RISK_PER_TRADE')}. Expected a numeric value.")
-
-    if not 0 < RISK_PER_TRADE <= 1:
-        raise ValueError(f"RISK_PER_TRADE value must be between 0 and 1. Current value: {RISK_PER_TRADE}")
-
-    try:
-        PIP_VALUE = float(os.getenv("PIP_VALUE", 1))
-    except ValueError:
-        raise ValueError(f"Invalid PIP_VALUE value: {os.getenv('PIP_VALUE')}. Expected a numeric value.")
-
-    try:
-        MAX_DRAWDOWN = float(os.getenv("MAX_DRAWDOWN", 0.2))
-    except ValueError:
-        raise ValueError(f"Invalid MAX_DRAWDOWN value: {os.getenv('MAX_DRAWDOWN')}. Expected a numeric value.")
-
-    # Configuration for enabling pending order fallback
-    ENABLE_PENDING_ORDER_FALLBACK = os.getenv("ENABLE_PENDING_ORDER_FALLBACK", "True").lower() in ("true", "1", "yes")
-
-    # Configuration for SL/TP adjustment pips
-    SL_TP_ADJUSTMENT_PIPS = float(os.getenv("SL_TP_ADJUSTMENT_PIPS", 0.0001))
-
-    @classmethod
-    def validate(cls):
-        try:
-            # Ensure all required environment variables are set
-            required_vars = [
-                'MT5_LOGIN', 'MT5_PASSWORD', 'MT5_SERVER', 'MT5_PATH',
-                'MT5_TIMEFRAME', 'SYMBOLS'
-            ]
-            for var in required_vars:
-                if not getattr(cls, var, None):
-                    raise ValueError(f"Missing required environment variable: {var}")
-
-            # Ensure all numeric variables have valid numeric values
-            numeric_vars = ['MIN_TP_PROFIT', 'MAX_LOSS_PER_DAY', 'STARTING_EQUITY', 'RISK_PER_TRADE', 'PIP_VALUE', 'MAX_DRAWDOWN', 'SL_TP_ADJUSTMENT_PIPS']
-            for var in numeric_vars:
-                if not isinstance(getattr(cls, var, None), (int, float)):
-                    raise ValueError(f"Invalid value for {var}. Expected a numeric value.")
-
-            # Validate integer-specific configuration
-            if not isinstance(cls.LIMIT_NO_OF_TRADES, int):
-                raise ValueError(f"Invalid value for LIMIT_NO_OF_TRADES. Expected an integer value.")
-
-        except ValueError as e:
-            handle_error(e, "Configuration validation failed")
-            critical_error(e, "Invalid configuration settings")
-
-    @classmethod
-    def log_config(cls):
-        # Log all configuration settings for debugging purposes
-        for attr, value in cls.__dict__.items():
-            if not callable(value) and not attr.startswith("__") and not isinstance(value, classmethod):
-                logging.info(f"{attr}: {value}")
-
-# Validate configuration and log it
-try:
-    Config.validate()
-    Config.log_config()
-except Exception as e:
-    handle_error(e, "Error occurred during configuration validation")
-    raise
+        close_request = {
+            'action': 'CLOSE',
+            'position': position_ticket,
+            'type': 'ORDER_TYPE_CLOSE',
+            'type_filling': 'ORDER_FILLING_FOK',
+            'type_time': 'ORDER_TIME_GTC'
+        }
+        return execute_trade(close_request)
+    except Exception as e:
+        handle_error(e, "Failed to close the trade")
+        return False
 
 
-.env:
-
-# MetaTrader 5 Configuration
-MT5_LOGIN=your_mt5_login
-MT5_PASSWORD=your_mt5_password
-MT5_SERVER=your_mt5_server
-MT5_PATH=C:\Program Files\MetaTrader 5\terminal64.exe
-MT5_TIMEFRAME=H1
-
-# Trading Symbols
-SYMBOLS=EURUSD
-
-# Telegram Bot Configuration (Optional)
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-TELEGRAM_IDS=telegram_user_id_1,telegram_user_id_2
-
-# Trading Parameters
-MIN_TP_PROFIT=50.0
-MAX_LOSS_PER_DAY=1000.0
-STARTING_EQUITY=10000.0
-LIMIT_NO_OF_TRADES=12
-RISK_PER_TRADE=0.02
-PIP_VALUE=0.0001
-MAX_DRAWDOWN=0.2
-
-# Enable or disable pending order fallback
-ENABLE_PENDING_ORDER_FALLBACK=True
-
-# SL/TP Adjustment Pips
-SL_TP_ADJUSTMENT_PIPS=0.0001
-
-
+File: C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot\strategy\tunnel_strategy.py
+----------------------------------------
 import pandas as pd
 import numpy as np
 import logging
@@ -958,181 +1208,4 @@ def get_fresh_tick_data(symbol):
         raise ValueError(f"Failed to retrieve fresh tick data for {symbol}")
 
 
-backtesting.py:
 
-import logging
-import pandas as pd
-import numpy as np
-import pstats
-from io import StringIO
-from strategy.tunnel_strategy import generate_trade_signal, calculate_position_size, detect_peaks_and_dips, manage_position, check_entry_conditions
-from metatrader.indicators import calculate_ema
-from metatrader.trade_management import execute_trade
-import cProfile
-
-# Initialize the logger
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
-
-def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, stop_loss_pips, pip_value, max_trades_per_day=None, slippage=0, transaction_cost=0, enable_profiling=False):
-    # Initialize the profiler if profiling is enabled
-    pr = cProfile.Profile() if enable_profiling else None
-    if enable_profiling:
-        pr.enable()
-
-    # Check for zero or negative initial balance
-    if initial_balance <= 0:
-        raise ValueError("Initial balance must be greater than zero.")
-
-    # Check for zero risk percentage
-    if risk_percent == 0:
-        raise ValueError("Risk percentage cannot be zero.")
-
-    try:
-        balance = initial_balance
-        trades = []
-        trades_today = 0
-        current_day = data.iloc[0]['time'].date()
-        peak_type = 21
-
-        data = data.copy()  # Make a copy to avoid modifying the original DataFrame
-
-        # Handle missing values by interpolation
-        data['high'] = data['high'].interpolate(method='linear')
-        data['close'] = data['close'].interpolate(method='linear')
-        data['low'] = data['low'].interpolate(method='linear')
-
-        # Check if the DataFrame has enough rows for EMA calculation
-        if len(data) < 200:
-            raise ValueError("Not enough data to calculate required EMAs. Ensure data has at least 200 rows.")
-
-        # Log the data length before EMA calculation
-        logger.debug(f"Data length for 'high': {len(data['high'])}, 'low': {len(data['low'])}, 'close': {len(data['close'])}")
-
-        # Calculate EMAs
-        data.loc[:, 'wavy_h'] = calculate_ema(data['high'], 34)
-        data.loc[:, 'wavy_c'] = calculate_ema(data['close'], 34)
-        data.loc[:, 'wavy_l'] = calculate_ema(data['low'], 34)
-        data.loc[:, 'tunnel1'] = calculate_ema(data['close'], 144)
-        data.loc[:, 'tunnel2'] = calculate_ema(data['close'], 169)
-        data.loc[:, 'long_term_ema'] = calculate_ema(data['close'], 200)
-
-        # Peak and Dip detection
-        peaks, dips = detect_peaks_and_dips(data, peak_type)
-
-        # Loop through the data
-        for i in range(34, len(data)):
-            row = data.iloc[i]
-            if row['time'].date() != current_day:
-                current_day = row['time'].date()
-                trades_today = 0
-                daily_loss = 0
-                logger.info(f"New trading day: {current_day}, resetting daily counters.")
-
-            if max_trades_per_day is not None and trades_today >= max_trades_per_day:
-                logger.info(f"Reached max trades per day: {max_trades_per_day}, skipping further trades for {current_day}.")
-                continue
-
-            buy_condition, sell_condition = check_entry_conditions(row, peaks, dips, symbol)
-
-            if buy_condition is None or sell_condition is None:
-                logger.debug(f"No trade signal generated for {row['time']}.")
-                continue
-
-            try:
-                position_size = calculate_position_size(balance, risk_percent, stop_loss_pips, pip_value)
-            except ZeroDivisionError as e:
-                logger.warning(f"Zero division error while calculating position size: {e}")
-                continue
-
-            std_dev = data['close'].rolling(window=20).std().iloc[i]
-
-            if buy_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
-                trade = {
-                    'entry_time': row['time'],
-                    'entry_price': row['close'],
-                    'volume': position_size,
-                    'symbol': symbol,
-                    'action': 'BUY',
-                    'sl': row['close'] - (1.5 * std_dev),
-                    'tp': row['close'] + (2 * std_dev),
-                    'profit': 0  # Initialize profit to 0
-                }
-                execute_trade(trade)
-                trades.append(trade)
-                trades_today += 1
-                logger.info(f"Executed BUY trade at {trade['entry_time']}, price: {trade['entry_price']}, volume: {trade['volume']}.")
-
-            elif sell_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
-                trade = {
-                    'entry_time': row['time'],
-                    'entry_price': row['close'],
-                    'volume': position_size,
-                    'symbol': symbol,
-                    'action': 'SELL',
-                    'sl': row['close'] + (1.5 * std_dev),
-                    'tp': row['close'] - (2 * std_dev),
-                    'profit': 0  # Initialize profit to 0
-                }
-                execute_trade(trade)
-                trades.append(trade)
-                trades_today += 1
-                logger.info(f"Executed SELL trade at {trade['entry_time']}, price: {trade['entry_price']}, volume: {trade['volume']}.")
-
-            manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
-
-        # Calculate profits/losses for each trade
-        for trade in trades:
-            exit_price = trade['tp'] if trade['action'] == 'BUY' else trade['sl']
-            if trade['action'] == 'BUY':
-                trade['profit'] = (exit_price - trade['entry_price']) * trade['volume'] - slippage - transaction_cost
-            else:
-                trade['profit'] = (trade['entry_price'] - exit_price) * trade['volume'] - slippage - transaction_cost
-            logger.info(f"Trade closed at {trade['entry_time']}, action: {trade['action']}, profit: {trade['profit']}.")
-
-        total_profit = sum(trade.get('profit', 0) for trade in trades)
-        num_trades = len(trades)
-        win_rate = sum(1 for trade in trades if trade.get('profit', 0) > 0) / num_trades if num_trades > 0 else 0
-        max_drawdown = calculate_max_drawdown(trades, initial_balance)
-
-        final_balance = balance + total_profit
-
-        logger.info(f"Backtest completed. Total Profit: {total_profit}, Final Balance: {final_balance}, Number of Trades: {num_trades}, Win Rate: {win_rate}, Max Drawdown: {max_drawdown}.")
-
-        return {
-            'total_profit': total_profit,
-            'final_balance': final_balance,
-            'num_trades': num_trades,
-            'win_rate': win_rate,
-            'max_drawdown': max_drawdown,
-            'buy_condition': buy_condition,
-            'sell_condition': sell_condition,
-            'trades': trades,
-            'total_slippage_costs': len(trades) * slippage,
-            'total_transaction_costs': len(trades) * transaction_cost
-        }
-
-    finally:
-        if enable_profiling and pr:
-            pr.disable()
-            s = StringIO()
-            ps = pstats.Stats(pr, stream=s).sort_stats(pstats.SortKey.CUMULATIVE)
-            ps.print_stats()
-            print(s.getvalue())
-
-def calculate_max_drawdown(trades, initial_balance):
-    balance = initial_balance
-    max_balance = initial_balance
-    max_drawdown = 0
-
-    for trade in trades:
-        if 'profit' in trade:
-            balance += trade['profit']
-            max_balance = max(max_balance, balance)
-            drawdown = max_balance - balance
-            max_drawdown = max(max_drawdown, drawdown)
-
-    return max_drawdown
-
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)

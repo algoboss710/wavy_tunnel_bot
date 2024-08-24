@@ -3,14 +3,14 @@ import pandas as pd
 import numpy as np
 import pstats
 from io import StringIO
-from strategy.tunnel_strategy import generate_trade_signal, calculate_position_size, detect_peaks_and_dips, manage_position, check_entry_conditions
+from strategy.tunnel_strategy import generate_trade_signal, calculate_position_size, detect_peaks_and_dips, manage_position, check_entry_conditions, check_secondary_entry_conditions
 from metatrader.indicators import calculate_ema
 from metatrader.trade_management import execute_trade
+from config import Config
 import cProfile
 
 # Initialize the logger
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, stop_loss_pips, pip_value, max_trades_per_day=None, slippage=0, transaction_cost=0, enable_profiling=False):
     # Initialize the profiler if profiling is enabled
@@ -71,9 +71,13 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                 logger.info(f"Reached max trades per day: {max_trades_per_day}, skipping further trades for {current_day}.")
                 continue
 
-            buy_condition, sell_condition = check_entry_conditions(row, peaks, dips, symbol)
+            primary_buy, primary_sell = check_entry_conditions(row, peaks, dips, symbol)
+            secondary_buy, secondary_sell = check_secondary_entry_conditions(row, symbol) if Config.ENABLE_SECONDARY_STRATEGY else (False, False)
 
-            if buy_condition is None or sell_condition is None:
+            buy_condition = primary_buy or (Config.ENABLE_SECONDARY_STRATEGY and secondary_buy)
+            sell_condition = primary_sell or (Config.ENABLE_SECONDARY_STRATEGY and secondary_sell)
+
+            if not (buy_condition or sell_condition):
                 logger.debug(f"No trade signal generated for {row['time']}.")
                 continue
 
@@ -94,12 +98,13 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                     'action': 'BUY',
                     'sl': row['close'] - (1.5 * std_dev),
                     'tp': row['close'] + (2 * std_dev),
-                    'profit': 0  # Initialize profit to 0
+                    'profit': 0,  # Initialize profit to 0
+                    'type': 'primary' if primary_buy else 'secondary'
                 }
                 execute_trade(trade)
                 trades.append(trade)
                 trades_today += 1
-                logger.info(f"Executed BUY trade at {trade['entry_time']}, price: {trade['entry_price']}, volume: {trade['volume']}.")
+                logger.info(f"Executed {trade['type'].upper()} BUY trade at {trade['entry_time']}, price: {trade['entry_price']}, volume: {trade['volume']}.")
 
             elif sell_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
                 trade = {
@@ -110,12 +115,13 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                     'action': 'SELL',
                     'sl': row['close'] + (1.5 * std_dev),
                     'tp': row['close'] - (2 * std_dev),
-                    'profit': 0  # Initialize profit to 0
+                    'profit': 0,  # Initialize profit to 0
+                    'type': 'primary' if primary_sell else 'secondary'
                 }
                 execute_trade(trade)
                 trades.append(trade)
                 trades_today += 1
-                logger.info(f"Executed SELL trade at {trade['entry_time']}, price: {trade['entry_price']}, volume: {trade['volume']}.")
+                logger.info(f"Executed {trade['type'].upper()} SELL trade at {trade['entry_time']}, price: {trade['entry_price']}, volume: {trade['volume']}.")
 
             manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
 
@@ -126,7 +132,7 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                 trade['profit'] = (exit_price - trade['entry_price']) * trade['volume'] - slippage - transaction_cost
             else:
                 trade['profit'] = (trade['entry_price'] - exit_price) * trade['volume'] - slippage - transaction_cost
-            logger.info(f"Trade closed at {trade['entry_time']}, action: {trade['action']}, profit: {trade['profit']}.")
+            logger.info(f"Trade closed at {trade['entry_time']}, action: {trade['action']}, type: {trade['type']}, profit: {trade['profit']}.")
 
         total_profit = sum(trade.get('profit', 0) for trade in trades)
         num_trades = len(trades)
