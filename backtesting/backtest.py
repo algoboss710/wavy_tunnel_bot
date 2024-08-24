@@ -16,6 +16,7 @@ def log_trade_details(trade, costs, balance, logger):
     logger.debug(f"  Action: {trade['action']}")
     logger.debug(f"  Entry Time: {trade['entry_time']}")
     logger.debug(f"  Entry Price: {trade['entry_price']:.5f}")
+    logger.debug(f"  Adjusted Entry Price: {trade['adjusted_entry_price']:.5f}")
     logger.debug(f"  Volume: {trade['volume']:.2f}")
     logger.debug(f"  Stop Loss: {trade['sl']:.5f}")
     logger.debug(f"  Take Profit: {trade['tp']:.5f}")
@@ -39,8 +40,8 @@ def log_trade_closure(trade, exit_price, raw_profit, costs, net_profit, balance,
     logger.debug(f"  Net Profit: {net_profit:.5f}")
     logger.debug(f"  Balance After Closure: {balance:.2f}")
 
-def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, 
-                 starting_equity, stop_loss_pips, pip_value, max_trades_per_day=None, 
+def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day,
+                 starting_equity, stop_loss_pips, pip_value, max_trades_per_day=None,
                  slippage_pips=1, spread_pips=2, commission_per_lot=7, enable_profiling=False):
     logger.debug("Starting run_backtest function")
     pr = cProfile.Profile() if enable_profiling else None
@@ -101,10 +102,19 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                     logger.warning(f"Error calculating position size: {e}")
                     continue
 
-                entry_costs = calculate_trade_costs(symbol, position_size_units, pip_value, volatility, 
+                entry_costs = calculate_trade_costs(symbol, position_size_units, pip_value, volatility,
                                                     slippage_pips, spread_pips, commission_per_lot)
 
                 adjusted_entry_price = row['close'] + (entry_costs['slippage'] + entry_costs['spread']) / position_size_units if buy_condition else row['close'] - (entry_costs['slippage'] + entry_costs['spread']) / position_size_units
+
+                # Calculate stop loss and take profit based on adjusted entry price
+                min_sl_distance = 5 * pip_value  # Minimum 5 pips distance for stop loss
+                if buy_condition:
+                    sl = min(adjusted_entry_price - (stop_loss_pips * pip_value), adjusted_entry_price - min_sl_distance)
+                    tp = adjusted_entry_price + (2 * stop_loss_pips * pip_value)
+                else:
+                    sl = max(adjusted_entry_price + (stop_loss_pips * pip_value), adjusted_entry_price + min_sl_distance)
+                    tp = adjusted_entry_price - (2 * stop_loss_pips * pip_value)
 
                 trade = {
                     'entry_time': row['time'],
@@ -113,15 +123,15 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                     'volume': position_size,  # This is now in lots
                     'symbol': symbol,
                     'action': 'BUY' if buy_condition else 'SELL',
-                    'sl': row['close'] - (stop_loss_pips * pip_value) if buy_condition else row['close'] + (stop_loss_pips * pip_value),
-                    'tp': row['close'] + (2 * stop_loss_pips * pip_value) if buy_condition else row['close'] - (2 * stop_loss_pips * pip_value),
+                    'sl': sl,
+                    'tp': tp,
                     'entry_costs': entry_costs,
                     'profit': -sum(entry_costs.values())
                 }
-                
+
                 trades.append(trade)
                 trades_today += 1
-                
+
                 balance -= sum(entry_costs.values())
 
                 logger.debug(f"Trade executed - Entry: {row['close']}, Adjusted Entry: {adjusted_entry_price}, SL: {trade['sl']}, TP: {trade['tp']}")
@@ -140,23 +150,23 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
                             exit_price = trade['sl']
                         elif row['low'] <= trade['tp']:
                             exit_price = trade['tp']
-                    
+
                     if exit_price:
                         trade['exit_time'] = row['time']
                         trade['exit_price'] = exit_price
 
-                        exit_costs = calculate_trade_costs(symbol, trade['volume'] * 100000, pip_value, volatility, 
+                        exit_costs = calculate_trade_costs(symbol, trade['volume'] * 100000, pip_value, volatility,
                                                            slippage_pips, spread_pips, commission_per_lot)
 
-                        raw_profit = (exit_price - trade['entry_price']) * trade['volume'] * 100000 if trade['action'] == 'BUY' else (trade['entry_price'] - exit_price) * trade['volume'] * 100000
+                        raw_profit = (exit_price - trade['adjusted_entry_price']) * trade['volume'] * 100000 if trade['action'] == 'BUY' else (trade['adjusted_entry_price'] - exit_price) * trade['volume'] * 100000
                         net_profit = raw_profit - sum(exit_costs.values())
 
                         trade['exit_costs'] = exit_costs
                         trade['profit'] = net_profit
-                        trade['is_win'] = raw_profit > 0
-                        
+                        trade['is_win'] = net_profit > 0
+
                         balance += net_profit
-                        
+
                         logger.debug(f"Trade closed - Exit: {exit_price}, Raw Profit: {raw_profit}, Net Profit: {net_profit}")
                         log_trade_closure(trade, exit_price, raw_profit, exit_costs, net_profit, balance, logger)
 
@@ -166,7 +176,7 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
 
         total_profit = sum(trade['profit'] for trade in trades)
         num_trades = len(trades)
-        win_rate = sum(1 for trade in trades if trade['is_win']) / num_trades if num_trades > 0 else 0
+        win_rate = sum(1 for trade in trades if trade.get('is_win', False)) / num_trades if num_trades > 0 else 0
 
         logger.info(f"Backtest completed with {num_trades} trades, win rate: {win_rate:.2%}, total profit: {total_profit:.2f}")
 
