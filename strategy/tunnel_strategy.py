@@ -100,17 +100,16 @@ def check_entry_conditions(row, peaks, dips, symbol):
         buy_condition &= close_price > max(wavy_c, wavy_h, wavy_l) + threshold
         sell_condition &= close_price < min(wavy_c, wavy_h, wavy_l) - threshold
 
+    logging.debug(f"Primary entry conditions for {symbol} at {row['time']}: buy={buy_condition}, sell={sell_condition}")
     return buy_condition, sell_condition
 
-def execute_trade(trade_request, is_backtest=False):
+def execute_trade(trade_request, retries=4, delay=6, is_backtest=False):
     if is_backtest:
-        # For backtest, we just log the trade and return a success result
+        # For backtesting, we'll just log the trade and return a success result
         logging.info(f"Backtest: Executing trade - {trade_request}")
         return True
 
     attempt = 0
-    retries = 4
-    delay = 6
     while attempt <= retries:
         try:
             logging.debug(f"Attempt {attempt + 1} to execute trade with request: {trade_request}")
@@ -127,7 +126,7 @@ def execute_trade(trade_request, is_backtest=False):
                 raise ValueError("mt5.order_send returned None.")
             logging.info(f"Order response received at {datetime.now()}: {result}")
             if result.retcode == mt5.TRADE_RETCODE_DONE:
-                logging.debug(f"Trade executed successfully: {result}")
+                logging.info(f"Trade executed successfully: {result}")
                 return result
             elif result.retcode == 10021:
                 logging.warning(f"Failed to execute trade due to 'No prices' error. Attempt {attempt + 1} of {retries + 1}")
@@ -141,7 +140,7 @@ def execute_trade(trade_request, is_backtest=False):
                 logging.error(f"Failed to execute trade: {result.retcode} - {result.comment}")
                 return None
         except Exception as e:
-            handle_error(e, f"Exception occurred during trade execution attempt {attempt + 1}")
+            logging.error(f"Exception occurred during trade execution attempt {attempt + 1}: {e}")
             attempt += 1
             if attempt <= retries:
                 logging.info(f"Retrying in {delay} seconds...")
@@ -149,9 +148,6 @@ def execute_trade(trade_request, is_backtest=False):
             else:
                 logging.error(f"Failed to execute trade after {retries + 1} attempts due to an exception.")
                 return None
-    if Config.ENABLE_PENDING_ORDER_FALLBACK:
-        logging.info("Attempting to place a pending order as a fallback...")
-        return place_pending_order(trade_request)
     return None
 
 def place_pending_order(trade_request):
@@ -242,6 +238,8 @@ def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip
         logging.error("Division by zero: stop_loss_pips or pip_value is zero in calculate_position_size")
         raise ZeroDivisionError("stop_loss_pips or pip_value cannot be zero")
     position_size = risk_amount / (stop_loss_pips * pip_value)
+
+    logging.debug(f"Calculated position size: {position_size}. Inputs: account_balance={account_balance}, risk_per_trade={risk_per_trade}, stop_loss_pips={stop_loss_pips}, pip_value={pip_value}")
     return position_size
 
 def generate_trade_signal(data, period, deviation_factor):
@@ -282,7 +280,7 @@ def ensure_symbol_subscription(symbol):
 
     logging.info(f"Symbol {symbol} is already subscribed and visible.")
     return True
-    
+
 def check_secondary_entry_conditions(row, symbol):
     wavy_c, wavy_h, wavy_l = row['wavy_c'], row['wavy_h'], row['wavy_l']
     tunnel1, tunnel2 = row['tunnel1'], row['tunnel2']
@@ -299,20 +297,26 @@ def check_secondary_entry_conditions(row, symbol):
 
     # Implement minimum gap check
     min_gap = Config.MIN_GAP_SECOND_VALUE * mt5.symbol_info(symbol).point
+    price_diff = 0  # Initialize price_diff to avoid the "referenced before assignment" error
+
     if secondary_long_condition:
         price_diff = min(tunnel1, tunnel2) - close_price
         secondary_long_condition &= price_diff >= min_gap
-    if secondary_short_condition:
+    elif secondary_short_condition:
         price_diff = close_price - max(tunnel1, tunnel2)
         secondary_short_condition &= price_diff >= min_gap
 
     # Implement zone limitation check
+    zone_percentage = 0  # Initialize zone_percentage
     if secondary_long_condition:
         zone_percentage = (close_price - max(wavy_c, wavy_h, wavy_l)) / (min(tunnel1, tunnel2) - max(wavy_c, wavy_h, wavy_l))
         secondary_long_condition &= zone_percentage <= Config.MAX_ALLOW_INTO_ZONE
-    if secondary_short_condition:
+    elif secondary_short_condition:
         zone_percentage = (min(wavy_c, wavy_h, wavy_l) - close_price) / (min(wavy_c, wavy_h, wavy_l) - max(tunnel1, tunnel2))
         secondary_short_condition &= zone_percentage <= Config.MAX_ALLOW_INTO_ZONE
+
+    logging.debug(f"Secondary entry conditions for {symbol} at {row['time']}: long={secondary_long_condition}, short={secondary_short_condition}")
+    logging.debug(f"Secondary conditions details: min_gap={min_gap}, price_diff={price_diff}, zone_percentage={zone_percentage}")
 
     return secondary_long_condition, secondary_short_condition
 
