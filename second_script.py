@@ -22,7 +22,7 @@ if __name__ == "__main__":
     root_directory = r"C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot"
 
     # List of specific files to include (with their exact filenames)
-    target_files = ['main.py', 'config.py', 'tunnel_strategy.py', 'backtest.py', 'trade_logic.py', 'indicators.py']
+    target_files = ['main.py', 'config.py', 'tunnel_strategy.py', 'backtest.py', 'trade_logic.py', 'indicators.py', '.env']
 
     # Generate the document for the specified files
     specific_files_document = generate_specific_files_document(root_directory, target_files)
