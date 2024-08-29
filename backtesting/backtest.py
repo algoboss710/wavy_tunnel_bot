@@ -4,7 +4,11 @@ import numpy as np
 import pstats
 from io import StringIO
 import cProfile
-from strategy.tunnel_strategy import check_entry_conditions, check_secondary_entry_conditions, manage_position, execute_trade, calculate_position_size, detect_peaks_and_dips
+from strategy.tunnel_strategy import (
+    check_entry_conditions, check_secondary_entry_conditions, 
+    manage_position, execute_trade, calculate_position_size, 
+    detect_peaks_and_dips, detect_cross
+)
 from metatrader.indicators import calculate_ema
 from config import Config
 
@@ -29,6 +33,7 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
     try:
         balance = initial_balance
         trades = []
+        open_trades = []
         trades_today = 0
         current_day = data.iloc[0]['time'].date()
         peak_type = 21
@@ -45,12 +50,12 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
 
         logger.debug(f"Data length for 'high': {len(data['high'])}, 'low': {len(data['low'])}, 'close': {len(data['close'])}")
 
-        data.loc[:, 'wavy_h'] = calculate_ema(data['high'], 34)
-        data.loc[:, 'wavy_c'] = calculate_ema(data['close'], 34)
-        data.loc[:, 'wavy_l'] = calculate_ema(data['low'], 34)
-        data.loc[:, 'tunnel1'] = calculate_ema(data['close'], 144)
-        data.loc[:, 'tunnel2'] = calculate_ema(data['close'], 169)
-        data.loc[:, 'long_term_ema'] = calculate_ema(data['close'], 200)
+        data['wavy_h'] = calculate_ema(data['high'], 34)
+        data['wavy_c'] = calculate_ema(data['close'], 34)
+        data['wavy_l'] = calculate_ema(data['low'], 34)
+        data['tunnel1'] = calculate_ema(data['close'], 144)
+        data['tunnel2'] = calculate_ema(data['close'], 169)
+        data['long_term_ema'] = calculate_ema(data['close'], 200)
 
         peaks, dips = detect_peaks_and_dips(data, peak_type)
         logger.debug(f"Detected {len(peaks)} peaks and {len(dips)} dips")
@@ -60,7 +65,6 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
             if row['time'].date() != current_day:
                 current_day = row['time'].date()
                 trades_today = 0
-                daily_loss = 0
                 logger.info(f"New trading day: {current_day}, resetting daily counters.")
 
             if max_trades_per_day is not None and trades_today >= max_trades_per_day:
@@ -83,6 +87,9 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
 
             logger.debug(f"Final conditions at {row['time']}: Buy={buy_condition}, Sell={sell_condition}")
 
+            # Manage existing positions
+            manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, row, is_backtest=True, open_trades=open_trades)
+
             if not (buy_condition or sell_condition):
                 logger.debug(f"No trade signal generated for {row['time']}.")
                 continue
@@ -95,60 +102,38 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
 
             std_dev = data['close'].rolling(window=20).std().iloc[i]
 
-            if buy_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
+            if (buy_condition or sell_condition) and (max_trades_per_day is None or trades_today < max_trades_per_day):
                 trade = {
                     'entry_time': row['time'],
                     'entry_price': row['close'],
                     'volume': position_size,
                     'symbol': symbol,
-                    'action': 'BUY',
-                    'sl': row['close'] - (1.5 * std_dev),
-                    'tp': row['close'] + (2 * std_dev),
+                    'action': 'BUY' if buy_condition else 'SELL',
+                    'sl': row['close'] - (1.5 * std_dev) if buy_condition else row['close'] + (1.5 * std_dev),
+                    'tp': row['close'] + (2 * std_dev) if buy_condition else row['close'] - (2 * std_dev),
                     'profit': 0,
-                    'type': 'primary' if primary_buy else 'secondary'
+                    'type': 'secondary' if (secondary_buy or secondary_sell) else 'primary'
                 }
-                if execute_trade(trade, is_backtest=True):
-                    trades.append(trade)
-                    trades_today += 1
-                    logger.info(f"Executed {trade['type'].upper()} BUY trade at {trade['entry_time']}, price: {trade['entry_price']}, volume: {trade['volume']}.")
-                else:
-                    logger.warning(f"Failed to execute {trade['type'].upper()} BUY trade at {trade['entry_time']}")
+                open_trades.append(trade)
+                trades_today += 1
+                logger.info(f"Opened {trade['type'].upper()} {trade['action']} trade at {trade['entry_time']}, price: {trade['entry_price']}, volume: {trade['volume']}.")
 
-            elif sell_condition and (max_trades_per_day is None or trades_today < max_trades_per_day):
-                trade = {
-                    'entry_time': row['time'],
-                    'entry_price': row['close'],
-                    'volume': position_size,
-                    'symbol': symbol,
-                    'action': 'SELL',
-                    'sl': row['close'] + (1.5 * std_dev),
-                    'tp': row['close'] - (2 * std_dev),
-                    'profit': 0,
-                    'type': 'primary' if primary_sell else 'secondary'
-                }
-                if execute_trade(trade, is_backtest=True):
-                    trades.append(trade)
-                    trades_today += 1
-                    logger.info(f"Executed {trade['type'].upper()} SELL trade at {trade['entry_time']}, price: {trade['entry_price']}, volume: {trade['volume']}.")
-                else:
-                    logger.warning(f"Failed to execute {trade['type'].upper()} SELL trade at {trade['entry_time']}")
+        # Close any remaining open trades at the end of the backtest
+        for trade in open_trades:
+            trade['exit_time'] = data.iloc[-1]['time']
+            trade['exit_price'] = data.iloc[-1]['close']
+            trade['profit'] = (trade['exit_price'] - trade['entry_price']) * trade['volume'] if trade['action'] == 'BUY' else (trade['entry_price'] - trade['exit_price']) * trade['volume']
+            trade['profit'] -= slippage + transaction_cost
+            trades.append(trade)
+            balance += trade['profit']
+            logger.info(f"Closed remaining {trade['type']} {trade['action']} trade at end of backtest. Profit: {trade['profit']}")
 
-            manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
-
-        for trade in trades:
-            exit_price = trade['tp'] if trade['action'] == 'BUY' else trade['sl']
-            if trade['action'] == 'BUY':
-                trade['profit'] = (exit_price - trade['entry_price']) * trade['volume'] - slippage - transaction_cost
-            else:
-                trade['profit'] = (trade['entry_price'] - exit_price) * trade['volume'] - slippage - transaction_cost
-            logger.info(f"Trade closed at {trade['entry_time']}, action: {trade['action']}, type: {trade['type']}, profit: {trade['profit']}.")
-
-        total_profit = sum(trade.get('profit', 0) for trade in trades)
+        total_profit = sum(trade['profit'] for trade in trades)
         num_trades = len(trades)
-        win_rate = sum(1 for trade in trades if trade.get('profit', 0) > 0) / num_trades if num_trades > 0 else 0
+        win_rate = sum(1 for trade in trades if trade['profit'] > 0) / num_trades if num_trades > 0 else 0
         max_drawdown = calculate_max_drawdown(trades, initial_balance)
 
-        final_balance = balance + total_profit
+        final_balance = balance
 
         logger.info(f"Backtest completed for {symbol}.")
         logger.info(f"Total Profit: {total_profit}")
@@ -186,7 +171,7 @@ def calculate_max_drawdown(trades, initial_balance):
     max_drawdown = 0
 
     for trade in trades:
-        balance += trade.get('profit', 0)
+        balance += trade['profit']
         peak_balance = max(peak_balance, balance)
         drawdown = (peak_balance - balance) / peak_balance
         max_drawdown = max(max_drawdown, drawdown)

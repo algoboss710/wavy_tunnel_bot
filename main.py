@@ -5,7 +5,9 @@ from config import Config
 from metatrader.connection import initialize_mt5, shutdown_mt5
 from metatrader.data_retrieval import get_historical_data
 from strategy.tunnel_strategy import (
-    check_broker_connection, check_market_open, execute_trade, place_pending_order, calculate_ema, detect_peaks_and_dips, check_entry_conditions
+    check_broker_connection, check_market_open, execute_trade, place_pending_order, 
+    calculate_ema, detect_peaks_and_dips, check_entry_conditions, check_secondary_entry_conditions,
+    manage_position
 )
 from backtesting.backtest import run_backtest
 from utils.logger import setup_logging
@@ -16,7 +18,6 @@ import logging
 import argparse
 import os
 import time
-
 
 def clear_log_file():
     with open("app.log", "w"):
@@ -82,6 +83,7 @@ def run_backtest_func():
                 logging.info(f"Number of Trades: {results['num_trades']}")
                 logging.info(f"Win Rate: {results['win_rate']:.2%}")
                 logging.info(f"Max Drawdown: {results['max_drawdown']:.2%}")
+                logging.info(f"Secondary Strategy Triggers: {results.get('secondary_strategy_triggers', 'N/A')}")
             except Exception as e:
                 handle_error(e, f"An error occurred during backtesting for {symbol}")
 
@@ -197,8 +199,17 @@ def run_live_trading_func():
                 # Detect peaks and dips
                 peaks, dips = detect_peaks_and_dips(df, 21)
 
-                # Check entry conditions
-                buy_condition, sell_condition = check_entry_conditions(df.iloc[-1], peaks, dips, symbol)
+                # Check entry conditions for primary strategy
+                primary_buy, primary_sell = check_entry_conditions(df.iloc[-1], peaks, dips, symbol)
+
+                # Check entry conditions for secondary strategy
+                if Config.ENABLE_SECONDARY_STRATEGY:
+                    secondary_buy, secondary_sell = check_secondary_entry_conditions(df.iloc[-2:], symbol)
+                else:
+                    secondary_buy, secondary_sell = False, False
+
+                buy_condition = primary_buy or (Config.ENABLE_SECONDARY_STRATEGY and secondary_buy)
+                sell_condition = primary_sell or (Config.ENABLE_SECONDARY_STRATEGY and secondary_sell)
 
                 std_dev = df['close'].rolling(window=20).std().iloc[-1]  # Calculate standard deviation
 
@@ -212,10 +223,11 @@ def run_live_trading_func():
                         'tp': df.iloc[-1]['bid'] + (2 * std_dev) if buy_condition else df.iloc[-1]['ask'] - (2 * std_dev),
                         'deviation': 10,
                         'magic': 12345,
-                        'comment': 'Tunnel Strategy',
+                        'comment': 'Tunnel Strategy - Secondary' if (secondary_buy or secondary_sell) else 'Tunnel Strategy - Primary',
                         'type': mt5.ORDER_TYPE_BUY if buy_condition else mt5.ORDER_TYPE_SELL,
                         'type_filling': mt5.ORDER_FILLING_FOK,
-                        'type_time': mt5.ORDER_TIME_GTC
+                        'type_time': mt5.ORDER_TIME_GTC,
+                        'is_secondary': secondary_buy or secondary_sell
                     }
 
                     logging.info(f"Placing order with the following details: {trade_request}")
@@ -249,6 +261,9 @@ def run_live_trading_func():
 
                     except Exception as e:
                         logging.error(f"An error occurred while running strategy for {symbol}: {e}")
+
+                # Manage open positions
+                manage_position(symbol, Config.MIN_TP_PROFIT, Config.MAX_LOSS_PER_DAY, Config.STARTING_EQUITY, Config.LIMIT_NO_OF_TRADES)
 
                 time.sleep(60)
 

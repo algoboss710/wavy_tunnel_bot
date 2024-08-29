@@ -24,6 +24,23 @@ def get_current_data(symbol):
         return tick_data
     else:
         raise ValueError(f"Failed to retrieve current tick data for {symbol}")
+import pandas as pd
+
+def detect_cross(series1, series2):
+    """
+    Detect if series1 has crossed series2.
+    Works with both pandas Series and numpy arrays.
+    """
+    if isinstance(series1, pd.Series) and isinstance(series2, pd.Series):
+        crossover = (series1.shift(1) <= series2.shift(1)) & (series1 > series2)
+        crossunder = (series1.shift(1) >= series2.shift(1)) & (series1 < series2)
+    else:
+        series1 = np.asarray(series1)
+        series2 = np.asarray(series2)
+        crossover = (series1[:-1] <= series2[:-1]) & (series1[1:] > series2[1:])
+        crossunder = (series1[:-1] >= series2[:-1]) & (series1[1:] < series2[1:])
+    
+    return crossover.any() or crossunder.any()
 
 def calculate_ema(prices, period):
     prices = pd.Series(prices)
@@ -105,7 +122,6 @@ def check_entry_conditions(row, peaks, dips, symbol):
 
 def execute_trade(trade_request, retries=4, delay=6, is_backtest=False):
     if is_backtest:
-        # For backtesting, we'll just log the trade and return a success result
         logging.info(f"Backtest: Executing trade - {trade_request}")
         return True
 
@@ -119,6 +135,11 @@ def execute_trade(trade_request, retries=4, delay=6, is_backtest=False):
             if not check_broker_connection() or not check_market_open():
                 logging.error("Trade execution aborted due to connection issues or market being closed.")
                 return None
+            
+            # Add 'Secondary' to the comment if it's a secondary strategy trade
+            if 'is_secondary' in trade_request and trade_request['is_secondary']:
+                trade_request['comment'] = f"Secondary {trade_request['comment']}"
+            
             logging.info(f"Placing order with price: {trade_request['price']}")
             result = mt5.order_send(trade_request)
             if result is None:
@@ -183,38 +204,126 @@ def place_pending_order(trade_request):
         handle_error(e, "Failed to place pending order")
         return None
 
-def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
+def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, current_data=None, is_backtest=False, open_trades=None):
     try:
-        positions = mt5.positions_get(symbol=symbol)
-        if positions:
-            for position in positions:
-                current_equity = mt5.account_info().equity
+        if is_backtest:
+            if open_trades is None:
+                logging.error("open_trades is None in backtesting mode")
+                return
+            current_price = current_data['close']
+            latest_data = {
+                'wavy_c': current_data['wavy_c'],
+                'wavy_h': current_data['wavy_h'],
+                'wavy_l': current_data['wavy_l'],
+                'tunnel1': current_data['tunnel1'],
+                'tunnel2': current_data['tunnel2']
+            }
 
-                if position.profit >= min_take_profit:
-                    close_position(position.ticket)
-                    position['exit_time'] = pd.Timestamp.now()
-                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
-                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+            for position in [p for p in open_trades if p['symbol'] == symbol]:
+                if "Secondary" in position['type']:
+                    if position['action'] == 'BUY':
+                        exit_condition = (
+                            current_price >= min(latest_data['tunnel1'], latest_data['tunnel2']) or
+                            current_price <= max(latest_data['wavy_c'], latest_data['wavy_h'], latest_data['wavy_l'])
+                        )
+                    else:  # SELL
+                        exit_condition = (
+                            current_price <= max(latest_data['tunnel1'], latest_data['tunnel2']) or
+                            current_price >= min(latest_data['wavy_c'], latest_data['wavy_h'], latest_data['wavy_l'])
+                        )
 
-                elif position.profit <= -max_loss_per_day:
-                    close_position(position.ticket)
-                    position['exit_time'] = pd.Timestamp.now()
-                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
-                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+                    if exit_condition:
+                        close_position(position['ticket'], symbol, current_data, is_backtest=True, open_trades=open_trades)
+                        logging.info(f"Closed secondary {position['action']} position {position['entry_time']} due to exit condition")
+                else:
+                    # Existing conditions for primary strategy
+                    profit = (current_price - position['entry_price']) * position['volume'] if position['action'] == 'BUY' else (position['entry_price'] - current_price) * position['volume']
+                    if profit >= min_take_profit:
+                        close_position(position['ticket'], symbol, current_data, is_backtest=True, open_trades=open_trades)
+                        logging.info(f"Closed position {position['entry_time']} due to take profit")
+                    elif profit <= -max_loss_per_day:
+                        close_position(position['ticket'], symbol, current_data, is_backtest=True, open_trades=open_trades)
+                        logging.info(f"Closed position {position['entry_time']} due to max daily loss")
+        else:
+            # Live trading position management (existing code)
+            positions = mt5.positions_get(symbol=symbol)
+            if positions:
+                for position in positions:
+                    current_equity = mt5.account_info().equity
+                    current_price = mt5.symbol_info_tick(symbol).last
+                    
+                    latest_data = get_latest_indicator_data(symbol)
+                    
+                    if "Secondary" in position.comment:
+                        if position.type == mt5.ORDER_TYPE_BUY:
+                            exit_condition = (
+                                current_price >= min(latest_data['tunnel1'], latest_data['tunnel2']) or
+                                current_price <= max(latest_data['wavy_c'], latest_data['wavy_h'], latest_data['wavy_l'])
+                            )
+                        else:  # SELL
+                            exit_condition = (
+                                current_price <= max(latest_data['tunnel1'], latest_data['tunnel2']) or
+                                current_price >= min(latest_data['wavy_c'], latest_data['wavy_h'], latest_data['wavy_l'])
+                            )
+                        
+                        if exit_condition:
+                            close_position(position.ticket, symbol)
+                            logging.info(f"Closed secondary {position.type} position {position.ticket} due to exit condition")
+                    else:
+                        # Existing conditions for primary strategy
+                        if position.profit >= min_take_profit:
+                            close_position(position.ticket, symbol)
+                            logging.info(f"Closed position {position.ticket} due to take profit")
+                        elif position.profit <= -max_loss_per_day:
+                            close_position(position.ticket, symbol)
+                            logging.info(f"Closed position {position.ticket} due to max daily loss")
+                    
+                    # Common exit conditions for both primary and secondary
+                    if current_equity <= starting_equity * 0.9:
+                        close_position(position.ticket, symbol)
+                        logging.info(f"Closed position {position.ticket} due to equity drawdown")
+                    
+                    if mt5.positions_total() >= max_trades_per_day:
+                        close_position(position.ticket, symbol)
+                        logging.info(f"Closed position {position.ticket} due to max trades per day")
 
-                elif current_equity <= starting_equity * 0.9:
-                    close_position(position.ticket)
-                    position['exit_time'] = pd.Timestamp.now()
-                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
-                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
-
-                elif mt5.positions_total() >= max_trades_per_day:
-                    close_position(position.ticket)
-                    position['exit_time'] = pd.Timestamp.now()
-                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
-                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
     except Exception as e:
-        handle_error(e, "Failed to manage position")
+        logging.error(f"Error in manage_position: {e}")
+
+def manage_primary_position(position, min_take_profit, max_loss_per_day, symbol):
+    if position.profit >= min_take_profit:
+        close_position(position.ticket, symbol)
+        logging.info(f"Closed position {position.ticket} due to take profit")
+    elif position.profit <= -max_loss_per_day:
+        close_position(position.ticket, symbol)
+        logging.info(f"Closed position {position.ticket} due to max daily loss")
+
+def get_latest_indicator_data(symbol, current_data=None, is_backtest=False):
+    if is_backtest and current_data is not None:
+        return {
+            'wavy_c': current_data['wavy_c'],
+            'wavy_h': current_data['wavy_h'],
+            'wavy_l': current_data['wavy_l'],
+            'tunnel1': current_data['tunnel1'],
+            'tunnel2': current_data['tunnel2']
+        }
+    else:
+        # Existing live trading code
+        data = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 2)
+        if data is None or len(data) < 2:
+            logging.error(f"Failed to get latest data for {symbol}")
+            return None
+
+        latest = data[-1]
+        previous = data[-2]
+        
+        return {
+            'wavy_c': calculate_ema(np.array([previous['close'], latest['close']]), 34)[-1],
+            'wavy_h': calculate_ema(np.array([previous['high'], latest['high']]), 34)[-1],
+            'wavy_l': calculate_ema(np.array([previous['low'], latest['low']]), 34)[-1],
+            'tunnel1': calculate_ema(np.array([previous['close'], latest['close']]), 144)[-1],
+            'tunnel2': calculate_ema(np.array([previous['close'], latest['close']]), 169)[-1]
+        }
 
 def calculate_tunnel_bounds(data, period, deviation_factor):
     if len(data) < period:
@@ -281,79 +390,40 @@ def ensure_symbol_subscription(symbol):
     logging.info(f"Symbol {symbol} is already subscribed and visible.")
     return True
 
-def detect_crossover(array1, array2):
-    """Detect if array1 has crossed over array2."""
-    if len(array1) < 2 or len(array2) < 2:
-        logging.warning("Not enough data points to detect crossover")
-        return False
-    return (array1[-2] <= array2[-2]) and (array1[-1] > array2[-1])
-
-def detect_crossunder(array1, array2):
-    """Detect if array1 has crossed under array2."""
-    if len(array1) < 2 or len(array2) < 2:
-        logging.warning("Not enough data points to detect crossunder")
-        return False
-    return (array1[-2] >= array2[-2]) and (array1[-1] < array2[-1])
-
 def check_secondary_entry_conditions(data, symbol):
-    logging.debug(f"Checking secondary entry conditions for {symbol}")
+    wavy_c, wavy_h, wavy_l = data['wavy_c'].values, data['wavy_h'].values, data['wavy_l'].values
+    tunnel1, tunnel2 = data['tunnel1'].values, data['tunnel2'].values
+    close = data['close'].values
+
+    max_wavy = np.maximum.reduce([wavy_c, wavy_h, wavy_l])
+    min_wavy = np.minimum.reduce([wavy_c, wavy_h, wavy_l])
+    min_tunnel = np.minimum(tunnel1, tunnel2)
+    max_tunnel = np.maximum(tunnel1, tunnel2)
+
+    secondary_long_condition = detect_cross(close[-2:], max_wavy[-2:]) and (close[-1] < min_tunnel[-1])
+    secondary_short_condition = detect_cross(min_wavy[-2:], close[-2:]) and (close[-1] > max_tunnel[-1])
+
+    # Implement minimum gap check
+    min_gap = Config.MIN_GAP_SECOND_VALUE * mt5.symbol_info(symbol).point
+    price_diff_long = min_tunnel[-1] - close[-1]
+    price_diff_short = close[-1] - max_tunnel[-1]
+
+    if secondary_long_condition:
+        secondary_long_condition &= price_diff_long >= min_gap
+    if secondary_short_condition:
+        secondary_short_condition &= price_diff_short >= min_gap
+
+    # Implement zone limitation check
+    if secondary_long_condition:
+        zone_percentage = (close[-1] - max_wavy[-1]) / (min_tunnel[-1] - max_wavy[-1])
+        secondary_long_condition &= zone_percentage <= Config.MAX_ALLOW_INTO_ZONE
+    if secondary_short_condition:
+        zone_percentage = (min_wavy[-1] - close[-1]) / (min_wavy[-1] - max_tunnel[-1])
+        secondary_short_condition &= zone_percentage <= Config.MAX_ALLOW_INTO_ZONE
+
+    logging.debug(f"Secondary entry conditions for {symbol}: long={secondary_long_condition}, short={secondary_short_condition}")
+    return secondary_long_condition, secondary_short_condition
     
-    try:
-        wavy_c, wavy_h, wavy_l = data['wavy_c'].values, data['wavy_h'].values, data['wavy_l'].values
-        tunnel1, tunnel2 = data['tunnel1'].values, data['tunnel2'].values
-        close = data['close'].values
-
-        max_wavy = np.maximum.reduce([wavy_c, wavy_h, wavy_l])
-        min_wavy = np.minimum.reduce([wavy_c, wavy_h, wavy_l])
-        min_tunnel = np.minimum(tunnel1, tunnel2)
-        max_tunnel = np.maximum(tunnel1, tunnel2)
-
-        logging.debug(f"Last close price: {close[-1]}")
-        logging.debug(f"Max wavy: {max_wavy[-1]}, Min wavy: {min_wavy[-1]}")
-        logging.debug(f"Min tunnel: {min_tunnel[-1]}, Max tunnel: {max_tunnel[-1]}")
-
-        secondary_long_condition = detect_crossover(close, max_wavy) and (close[-1] < min_tunnel[-1])
-        secondary_short_condition = detect_crossunder(close, min_wavy) and (close[-1] > max_tunnel[-1])
-
-        logging.debug(f"Initial conditions - Long: {secondary_long_condition}, Short: {secondary_short_condition}")
-
-        # Implement minimum gap check
-        symbol_info = mt5.symbol_info(symbol)
-        if symbol_info is None:
-            raise ValueError(f"Failed to get symbol info for {symbol}")
-        
-        min_gap = Config.MIN_GAP_SECOND_VALUE * symbol_info.point
-        price_diff_long = min_tunnel[-1] - close[-1]
-        price_diff_short = close[-1] - max_tunnel[-1]
-
-        logging.debug(f"Minimum gap: {min_gap}")
-        logging.debug(f"Price diff long: {price_diff_long}, Price diff short: {price_diff_short}")
-
-        if secondary_long_condition:
-            secondary_long_condition &= price_diff_long >= min_gap
-            logging.debug(f"Long condition after min gap check: {secondary_long_condition}")
-
-        if secondary_short_condition:
-            secondary_short_condition &= price_diff_short >= min_gap
-            logging.debug(f"Short condition after min gap check: {secondary_short_condition}")
-
-        # Implement zone limitation check
-        if secondary_long_condition:
-            zone_percentage = (close[-1] - max_wavy[-1]) / (min_tunnel[-1] - max_wavy[-1])
-            secondary_long_condition &= zone_percentage <= Config.MAX_ALLOW_INTO_ZONE
-            logging.debug(f"Long zone percentage: {zone_percentage}, Condition after check: {secondary_long_condition}")
-
-        if secondary_short_condition:
-            zone_percentage = (min_wavy[-1] - close[-1]) / (min_wavy[-1] - max_tunnel[-1])
-            secondary_short_condition &= zone_percentage <= Config.MAX_ALLOW_INTO_ZONE
-            logging.debug(f"Short zone percentage: {zone_percentage}, Condition after check: {secondary_short_condition}")
-
-        logging.info(f"Final secondary entry conditions for {symbol}: long={secondary_long_condition}, short={secondary_short_condition}")
-        return secondary_long_condition, secondary_short_condition
-
-    except Exception as e:
-        logging.error(f"Error in check_secondary_entry_conditions for {symbol}: {str(e)}")
-        return False, False
 def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, run_backtest, data=None, std_dev=None):
     try:
         total_profit = 0
@@ -361,6 +431,7 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
         max_drawdown = 0
         current_balance = starting_equity
         peak_balance = starting_equity
+        secondary_strategy_triggers = 0
 
         for symbol in symbols:
             if data is None:
@@ -378,10 +449,6 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
             else:
                 logging.info(f"Using provided data for {symbol}")
 
-            period = 20
-            market_conditions = 'volatile'
-            deviation_factor = adjust_deviation_factor(market_conditions)
-
             logging.info("Calculating Wavy Tunnel indicators...")
             data['wavy_h'] = calculate_ema(data['high'], 34)
             data['wavy_c'] = calculate_ema(data['close'], 34)
@@ -396,62 +463,57 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
             logging.info(f"Peaks: {peaks[:5]}")
             logging.info(f"Dips: {dips[:5]}")
 
-            logging.info("Generating entry signals...")
-            data['primary_buy'], data['primary_sell'] = zip(*data.apply(lambda x: check_entry_conditions(x, peaks, dips, symbol), axis=1))
-
-            if Config.ENABLE_SECONDARY_STRATEGY:
-                data['secondary_buy'], data['secondary_sell'] = zip(*data.apply(lambda x: check_secondary_entry_conditions(x, symbol), axis=1))
-
             for i in range(len(data)):
                 row = data.iloc[i]
                 if i >= 1:  # We need at least two rows for crossover/under detection
                     primary_buy, primary_sell = check_entry_conditions(row, peaks, dips, symbol)
-                
-                if Config.ENABLE_SECONDARY_STRATEGY:
-                    secondary_buy, secondary_sell = check_secondary_entry_conditions(data.iloc[i-1:i+1], symbol)
-                    if secondary_buy or secondary_sell:
-                        secondary_strategy_triggers += 1
-                        logging.info(f"Secondary strategy triggered for {symbol} at index {i}: Buy={secondary_buy}, Sell={secondary_sell}")
-                else:
-                    secondary_buy, secondary_sell = False, False
-
-                buy_condition = primary_buy or (Config.ENABLE_SECONDARY_STRATEGY and secondary_buy)
-                sell_condition = primary_sell or (Config.ENABLE_SECONDARY_STRATEGY and secondary_sell)
-
-                if buy_condition or sell_condition:
-                    logging.info(f"Trade signal for {symbol} at index {i}: Buy={buy_condition}, Sell={sell_condition}")
                     
-                    current_tick = get_current_data(symbol) if data is None else row
-                    std_dev = data['close'].rolling(window=20).std().iloc[i] if std_dev is None else std_dev
-
-                    trade_request = {
-                        'action': 'BUY' if buy_condition else 'SELL',
-                        'symbol': symbol,
-                        'volume': lot_size,
-                        'price': current_tick['bid'] if buy_condition else current_tick['ask'],
-                        'sl': current_tick['bid'] - (1.5 * std_dev) if buy_condition else current_tick['ask'] + (1.5 * std_dev),
-                        'tp': current_tick['bid'] + (2 * std_dev) if buy_condition else current_tick['ask'] - (2 * std_dev),
-                        'deviation': 10,
-                        'magic': 12345,
-                        'comment': 'Tunnel Strategy - Secondary' if (secondary_buy or secondary_sell) else 'Tunnel Strategy - Primary',
-                        'type': 'ORDER_TYPE_BUY' if buy_condition else 'ORDER_TYPE_SELL',
-                        'type_filling': 'ORDER_FILLING_FOK',
-                        'type_time': 'ORDER_TIME_GTC'
-                    }
-
-                    logging.info(f"Attempting to execute trade: {trade_request}")
-                    result = execute_trade(trade_request)
-
-                    if result:
-                        profit = trade_request['tp'] - trade_request['price'] if buy_condition else trade_request['price'] - trade_request['tp']
-                        total_profit += profit
-                        current_balance += profit
-                        peak_balance = max(peak_balance, current_balance)
-                        drawdown = peak_balance - current_balance
-                        max_drawdown = max(max_drawdown, drawdown)
-                        logging.info(f"Trade executed successfully. Profit: {profit}, Current Balance: {current_balance}")
+                    if Config.ENABLE_SECONDARY_STRATEGY:
+                        secondary_buy, secondary_sell = check_secondary_entry_conditions(data.iloc[i-1:i+1], symbol)
+                        if secondary_buy or secondary_sell:
+                            secondary_strategy_triggers += 1
+                            logging.info(f"Secondary strategy triggered for {symbol} at index {i}: Buy={secondary_buy}, Sell={secondary_sell}")
                     else:
-                        logging.error("Trade execution failed")
+                        secondary_buy, secondary_sell = False, False
+
+                    buy_condition = primary_buy or (Config.ENABLE_SECONDARY_STRATEGY and secondary_buy)
+                    sell_condition = primary_sell or (Config.ENABLE_SECONDARY_STRATEGY and secondary_sell)
+
+                    if buy_condition or sell_condition:
+                        logging.info(f"Trade signal for {symbol} at index {i}: Buy={buy_condition}, Sell={sell_condition}")
+
+                        current_tick = get_current_data(symbol) if data is None else row
+                        std_dev = data['close'].rolling(window=20).std().iloc[i] if std_dev is None else std_dev
+
+                        trade_request = {
+                            'action': 'BUY' if buy_condition else 'SELL',
+                            'symbol': symbol,
+                            'volume': lot_size,
+                            'price': current_tick['bid'] if buy_condition else current_tick['ask'],
+                            'sl': current_tick['bid'] - (1.5 * std_dev) if buy_condition else current_tick['ask'] + (1.5 * std_dev),
+                            'tp': current_tick['bid'] + (2 * std_dev) if buy_condition else current_tick['ask'] - (2 * std_dev),
+                            'deviation': 10,
+                            'magic': 12345,
+                            'comment': 'Tunnel Strategy - Secondary' if (secondary_buy or secondary_sell) else 'Tunnel Strategy - Primary',
+                            'type': 'ORDER_TYPE_BUY' if buy_condition else 'ORDER_TYPE_SELL',
+                            'type_filling': 'ORDER_FILLING_FOK',
+                            'type_time': 'ORDER_TIME_GTC',
+                            'is_secondary': secondary_buy or secondary_sell
+                        }
+
+                        logging.info(f"Attempting to execute trade: {trade_request}")
+                        result = execute_trade(trade_request)
+
+                        if result:
+                            profit = trade_request['tp'] - trade_request['price'] if buy_condition else trade_request['price'] - trade_request['tp']
+                            total_profit += profit
+                            current_balance += profit
+                            peak_balance = max(peak_balance, current_balance)
+                            drawdown = peak_balance - current_balance
+                            max_drawdown = max(max_drawdown, drawdown)
+                            logging.info(f"Trade executed successfully. Profit: {profit}, Current Balance: {current_balance}")
+                        else:
+                            logging.error("Trade execution failed")
 
                 manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
 
@@ -501,37 +563,49 @@ def place_order(symbol, action, volume, price, sl, tp):
         logging.error(f"Failed to place order: {str(e)}")
         return 'Order failed'
 
-def close_position(ticket):
-    try:
+def close_position(ticket, symbol, current_price=None, is_backtest=False, open_trades=None):
+    if is_backtest:
+        if open_trades is None:
+            logging.error("open_trades is None in backtesting mode")
+            return False
+        for trade in open_trades:
+            if trade['ticket'] == ticket:
+                trade['exit_time'] = current_price['time']
+                trade['exit_price'] = current_price['close']
+                trade['profit'] = (trade['exit_price'] - trade['entry_price']) * trade['volume'] if trade['action'] == 'BUY' else (trade['entry_price'] - trade['exit_price']) * trade['volume']
+                open_trades.remove(trade)
+                logging.info(f"Closed position {ticket} in backtest with profit: {trade['profit']}")
+                return True
+        logging.error(f"Position {ticket} not found in backtest")
+        return False
+    else:
+        # Existing live trading code
         position = mt5.positions_get(ticket=ticket)
-        if position:
-            close_request = {
-                'action': mt5.TRADE_ACTION_DEAL,
-                'symbol': position[0].symbol,
-                'volume': position[0].volume,
-                'type': mt5.ORDER_TYPE_SELL if position[0].type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY,
-                'position': ticket,
-                'price': mt5.symbol_info_tick(position[0].symbol).bid if position[0].type == mt5.ORDER_TYPE_BUY else mt5.symbol_info_tick(position[0].symbol).ask,
-                'deviation': 10,
-                'magic': 12345,
-                'comment': 'Tunnel Strategy Close',
-                'type_time': mt5.ORDER_TIME_GTC,
-                'type_filling': mt5.ORDER_FILLING_FOK,
-            }
-
-            logging.debug(f"Closing position with request: {close_request}")
-            result = mt5.order_send(close_request)
-            logging.info(f"Close position result: {result}")
-
-            if result.retcode != mt5.TRADE_RETCODE_DONE:
-                logging.error(f"Failed to close position: {result.comment}")
-                return 'Close failed'
-            return 'Position closed'
-        return 'Position not found'
-    except Exception as e:
-        logging.error(f"Failed to close position: {str(e)}")
-        return 'Close failed'
-
+        if not position:
+            logging.error(f"Position {ticket} not found")
+            return False
+        position = position[0]
+        request = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "position": ticket,
+            "symbol": symbol,
+            "volume": position.volume,
+            "type": mt5.ORDER_TYPE_SELL if position.type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY,
+            "price": mt5.symbol_info_tick(symbol).bid if position.type == mt5.ORDER_TYPE_BUY else mt5.symbol_info_tick(symbol).ask,
+            "deviation": 20,
+            "magic": 234000,
+            "comment": "Close position",
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_IOC,
+        }
+        result = mt5.order_send(request)
+        if result.retcode != mt5.TRADE_RETCODE_DONE:
+            logging.error(f"Failed to close position {ticket}. Error code: {result.retcode}")
+            return False
+       
+        logging.info(f"Position {ticket} closed successfully")
+        return True
+    
 def check_broker_connection():
     if not mt5.terminal_info().connected:
         logging.error("Broker is not connected.")
