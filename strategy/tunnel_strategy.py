@@ -64,41 +64,25 @@ def check_entry_conditions(row, peaks, dips, symbol):
     tunnel1, tunnel2 = row['tunnel1'], row['tunnel2']
     close_price = row['close']
 
+    logging.info(f"Checking entry conditions for {symbol}:")
+    logging.info(f"Close price: {close_price:.5f}")
+    logging.info(f"Wavy C: {wavy_c:.5f}, Wavy H: {wavy_h:.5f}, Wavy L: {wavy_l:.5f}")
+    logging.info(f"Tunnel1: {tunnel1:.5f}, Tunnel2: {tunnel2:.5f}")
+
     buy_condition = (
         close_price > max(wavy_c, wavy_h, wavy_l) and
         min(wavy_c, wavy_h, wavy_l) > max(tunnel1, tunnel2) and
         any(abs(close_price - peak) <= 0.001 for peak in peaks)
     )
+
     sell_condition = (
         close_price < min(wavy_c, wavy_h, wavy_l) and
         max(wavy_c, wavy_h, wavy_l) < min(tunnel1, tunnel2) and
         any(abs(close_price - dip) <= 0.001 for dip in dips)
     )
 
-    threshold_values = {
-        'USD': 2,
-        'EUR': 2,
-        'JPY': 300,
-        'GBP': 6,
-        'CHF': 2,
-        'AUD': 2,
-        'default': 100
-    }
-    apply_threshold = True
-    if apply_threshold:
-        symbol_info = mt5.symbol_info(symbol)
-        if not symbol_info:
-            logging.error(f"Failed to get symbol info for {symbol}")
-            return False, False
-
-        threshold = threshold_values.get(symbol[:3], threshold_values['default']) * symbol_info.trade_tick_size
-
-        if threshold == 0:
-            logging.error("Division by zero: threshold value is zero in check_entry_conditions")
-            return False, False
-
-        buy_condition &= close_price > max(wavy_c, wavy_h, wavy_l) + threshold
-        sell_condition &= close_price < min(wavy_c, wavy_h, wavy_l) - threshold
+    logging.info(f"Buy condition met: {buy_condition}")
+    logging.info(f"Sell condition met: {sell_condition}")
 
     return buy_condition, sell_condition
 
@@ -106,7 +90,7 @@ def execute_trade(trade_request, retries=4, delay=6):
     attempt = 0
     while attempt <= retries:
         try:
-            logging.debug(f"Attempt {attempt + 1} to execute trade with request: {trade_request}")
+            logging.info(f"Attempting to execute trade: {trade_request}")
 
             if not ensure_symbol_subscription(trade_request['symbol']):
                 logging.error(f"Failed to subscribe to symbol {trade_request['symbol']}")
@@ -126,29 +110,22 @@ def execute_trade(trade_request, retries=4, delay=6):
             logging.info(f"Order response received at {datetime.now()}: {result}")
 
             if result.retcode == mt5.TRADE_RETCODE_DONE:
-                logging.debug(f"Trade executed successfully: {result}")
+                logging.info(f"Trade executed successfully: {result}")
                 return result
             elif result.retcode == 10021:
                 logging.warning(f"Failed to execute trade due to 'No prices' error. Attempt {attempt + 1} of {retries + 1}")
                 attempt += 1
-                if attempt <= retries:
-                    logging.info(f"Retrying in {delay} seconds...")
-                    time.sleep(delay)
-                else:
-                    logging.error(f"Failed to execute trade after {retries + 1} attempts due to 'No prices' error.")
             else:
                 logging.error(f"Failed to execute trade: {result.retcode} - {result.comment}")
                 return None
 
         except Exception as e:
-            handle_error(e, f"Exception occurred during trade execution attempt {attempt + 1}")
+            logging.error(f"Exception occurred during trade execution attempt {attempt + 1}: {str(e)}")
             attempt += 1
-            if attempt <= retries:
-                logging.info(f"Retrying in {delay} seconds...")
-                time.sleep(delay)
-            else:
-                logging.error(f"Failed to execute trade after {retries + 1} attempts due to an exception.")
-                return None
+
+        if attempt <= retries:
+            logging.info(f"Retrying in {delay} seconds...")
+            time.sleep(delay)
 
     if Config.ENABLE_PENDING_ORDER_FALLBACK:
         logging.info("Attempting to place a pending order as a fallback...")

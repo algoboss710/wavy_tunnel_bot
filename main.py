@@ -134,7 +134,7 @@ def run_live_trading_func():
                 continue
 
             for symbol in Config.SYMBOLS:
-                logging.info(f"Running live trading for {symbol}...")
+                logging.info(f"Processing symbol: {symbol}")
 
                 symbol_info = mt5.symbol_info(symbol)
                 if symbol_info is None:
@@ -150,7 +150,7 @@ def run_live_trading_func():
                 tick_data = []
                 tick_start_time = time.time()
 
-                while len(tick_data) < 500:  # Adjusted to collect 500 ticks for better data consistency
+                while len(tick_data) < 500:
                     tick = mt5.symbol_info_tick(symbol)
                     if tick is None:
                         logging.warning(f"Failed to retrieve tick data for {symbol}.")
@@ -168,7 +168,7 @@ def run_live_trading_func():
 
                 tick_end_time = time.time()
                 elapsed_time = tick_end_time - tick_start_time
-                logging.info(f"Collected 500 ticks in {elapsed_time:.2f} seconds.")
+                logging.info(f"Collected {len(tick_data)} ticks in {elapsed_time:.2f} seconds.")
 
                 df = pd.DataFrame(tick_data)
                 logging.info(f"Dataframe created with tick data: {df.tail()}")
@@ -178,7 +178,6 @@ def run_live_trading_func():
                     df['low'] = df['ask']
                     df['close'] = df['last']
 
-                # Calculate EMAs and other indicators on collected tick data
                 df['wavy_h'] = calculate_ema(df['high'], 34)
                 df['wavy_c'] = calculate_ema(df['close'], 34)
                 df['wavy_l'] = calculate_ema(df['low'], 34)
@@ -186,13 +185,22 @@ def run_live_trading_func():
                 df['tunnel2'] = calculate_ema(df['close'], 169)
                 df['long_term_ema'] = calculate_ema(df['close'], 200)
 
-                # Detect peaks and dips
+                logging.info(f"Indicator values for {symbol}:")
+                logging.info(f"Wavy H: {df['wavy_h'].iloc[-1]:.5f}")
+                logging.info(f"Wavy C: {df['wavy_c'].iloc[-1]:.5f}")
+                logging.info(f"Wavy L: {df['wavy_l'].iloc[-1]:.5f}")
+                logging.info(f"Tunnel1: {df['tunnel1'].iloc[-1]:.5f}")
+                logging.info(f"Tunnel2: {df['tunnel2'].iloc[-1]:.5f}")
+                logging.info(f"Long-term EMA: {df['long_term_ema'].iloc[-1]:.5f}")
+
                 peaks, dips = detect_peaks_and_dips(df, 21)
+                logging.info(f"Number of peaks detected: {len(peaks)}")
+                logging.info(f"Number of dips detected: {len(dips)}")
 
-                # Check entry conditions
                 buy_condition, sell_condition = check_entry_conditions(df.iloc[-1], peaks, dips, symbol)
+                logging.info(f"Entry conditions for {symbol}: Buy = {buy_condition}, Sell = {sell_condition}")
 
-                std_dev = df['close'].rolling(window=20).std().iloc[-1]  # Calculate standard deviation
+                std_dev = df['close'].rolling(window=20).std().iloc[-1]
 
                 if buy_condition or sell_condition:
                     trade_request = {
@@ -241,6 +249,8 @@ def run_live_trading_func():
 
                     except Exception as e:
                         logging.error(f"An error occurred while running strategy for {symbol}: {e}")
+                else:
+                    logging.info(f"No trade conditions met for {symbol}")
 
                 time.sleep(60)
 
@@ -296,10 +306,13 @@ def main():
             choice = input("Enter your choice (1 or 2): ")
 
             if choice == "1":
+                logging.info("User selected Backtesting")
                 run_backtest_func()
             elif choice == "2":
+                logging.info("User selected Live Trading")
                 run_live_trading_func()
             else:
+                logging.warning(f"Invalid choice entered: {choice}")
                 print("Invalid choice. Exiting...")
 
     except Exception as e:
