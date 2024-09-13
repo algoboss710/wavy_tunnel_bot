@@ -77,18 +77,19 @@ def check_entry_conditions(row, peaks, dips, symbol):
     logging.info(f"Wavy C: {wavy_c:.5f}, Wavy H: {wavy_h:.5f}, Wavy L: {wavy_l:.5f}")
     logging.info(f"Tunnel1: {tunnel1:.5f}, Tunnel2: {tunnel2:.5f}")
 
-    buy_condition = (
-        close_price > max(wavy_c, wavy_h, wavy_l) and
-        min(wavy_c, wavy_h, wavy_l) > max(tunnel1, tunnel2) and
-        any(abs(close_price - peak) <= 0.001 for peak in peaks)
-    )
+    buy_condition1 = close_price > max(wavy_c, wavy_h, wavy_l)
+    buy_condition2 = min(wavy_c, wavy_h, wavy_l) > max(tunnel1, tunnel2)
+    buy_condition3 = any(abs(close_price - peak) <= 0.001 for peak in peaks)
 
-    sell_condition = (
-        close_price < min(wavy_c, wavy_h, wavy_l) and
-        max(wavy_c, wavy_h, wavy_l) < min(tunnel1, tunnel2) and
-        any(abs(close_price - dip) <= 0.001 for dip in dips)
-    )
+    sell_condition1 = close_price < min(wavy_c, wavy_h, wavy_l)
+    sell_condition2 = max(wavy_c, wavy_h, wavy_l) < min(tunnel1, tunnel2)
+    sell_condition3 = any(abs(close_price - dip) <= 0.001 for dip in dips)
 
+    buy_condition = buy_condition1 and buy_condition2 and buy_condition3
+    sell_condition = sell_condition1 and sell_condition2 and sell_condition3
+
+    logging.info(f"Buy conditions: {buy_condition1}, {buy_condition2}, {buy_condition3}")
+    logging.info(f"Sell conditions: {sell_condition1}, {sell_condition2}, {sell_condition3}")
     logging.info(f"Buy condition met: {buy_condition}")
     logging.info(f"Sell condition met: {sell_condition}")
 
@@ -320,7 +321,37 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
             logging.info(f"Buy Condition: {buy_condition}")
             logging.info(f"Sell Condition: {sell_condition}")
 
-            # ... (rest of the function remains the same)
+            if buy_condition or sell_condition:
+                current_tick = get_current_data(symbol)
+                logging.info(f"Latest price data for {symbol}: {current_tick}")
+
+                trade_request = {
+                    'action': mt5.TRADE_ACTION_DEAL,
+                    'symbol': symbol,
+                    'volume': lot_size,
+                    'type': mt5.ORDER_TYPE_BUY if buy_condition else mt5.ORDER_TYPE_SELL,
+                    'price': current_tick['bid'] if buy_condition else current_tick['ask'],
+                    'sl': current_tick['bid'] - (1.5 * std_dev) if buy_condition else current_tick['ask'] + (1.5 * std_dev),
+                    'tp': current_tick['bid'] + (2 * std_dev) if buy_condition else current_tick['ask'] - (2 * std_dev),
+                    'deviation': 10,
+                    'magic': 12345,
+                    'comment': 'Tunnel Strategy',
+                    'type_filling': mt5.ORDER_FILLING_FOK,
+                    'type_time': mt5.ORDER_TIME_GTC
+                }
+
+                result = execute_trade(trade_request)
+                if result:
+                    profit = trade_request['tp'] - trade_request['price'] if buy_condition else trade_request['price'] - trade_request['tp']
+                    total_profit += profit
+                    current_balance += profit
+                    peak_balance = max(peak_balance, current_balance)
+                    drawdown = peak_balance - current_balance
+                    max_drawdown = max(max_drawdown, drawdown)
+                else:
+                    logging.error("Trade execution failed")
+
+            manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
 
         logging.info("Strategy execution completed")
         return {
