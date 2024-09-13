@@ -119,7 +119,7 @@ def run_live_trading_func():
         current_balance = starting_balance
 
         start_time = time.time()
-        max_duration = 1 * 1800  # 10 hours
+        max_duration = 1 * 1800  # 30 minutes for testing, adjust as needed
 
         while time.time() - start_time < max_duration:
             if max_drawdown_reached:
@@ -161,7 +161,7 @@ def run_live_trading_func():
                         'time': datetime.fromtimestamp(tick.time),
                         'bid': tick.bid,
                         'ask': tick.ask,
-                        'last': tick.last
+                        'last': tick.last if tick.last != 0 else (tick.bid + tick.ask) / 2
                     })
 
                     time.sleep(1)
@@ -171,19 +171,31 @@ def run_live_trading_func():
                 logging.info(f"Collected {len(tick_data)} ticks in {elapsed_time:.2f} seconds.")
 
                 df = pd.DataFrame(tick_data)
+                logging.info(f"First few rows of DataFrame:\n{df.head()}")
                 logging.info(f"Dataframe created with tick data: {df.tail()}")
 
-                if 'high' not in df.columns or 'low' not in df.columns or 'close' not in df.columns:
-                    df['high'] = df['bid']
-                    df['low'] = df['ask']
-                    df['close'] = df['last']
+                df['close'] = df['last']
+                if df['close'].eq(0).any():
+                    df['close'] = (df['bid'] + df['ask']) / 2
+
+                logging.info(f"Close price values: {df['close'].tail()}")
+
+                if 'high' not in df.columns or 'low' not in df.columns:
+                    df['high'] = df['ask']
+                    df['low'] = df['bid']
 
                 df['wavy_h'] = calculate_ema(df['high'], 34)
+                logging.info(f"Wavy H values: {df['wavy_h'].tail()}")
                 df['wavy_c'] = calculate_ema(df['close'], 34)
+                logging.info(f"Wavy C values: {df['wavy_c'].tail()}")
                 df['wavy_l'] = calculate_ema(df['low'], 34)
+                logging.info(f"Wavy L values: {df['wavy_l'].tail()}")
                 df['tunnel1'] = calculate_ema(df['close'], 144)
+                logging.info(f"Tunnel1 values: {df['tunnel1'].tail()}")
                 df['tunnel2'] = calculate_ema(df['close'], 169)
+                logging.info(f"Tunnel2 values: {df['tunnel2'].tail()}")
                 df['long_term_ema'] = calculate_ema(df['close'], 200)
+                logging.info(f"Long-term EMA values: {df['long_term_ema'].tail()}")
 
                 logging.info(f"Indicator values for {symbol}:")
                 logging.info(f"Wavy H: {df['wavy_h'].iloc[-1]:.5f}")

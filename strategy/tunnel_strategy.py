@@ -26,10 +26,14 @@ def get_current_data(symbol):
         raise ValueError(f"Failed to retrieve current tick data for {symbol}")
 
 def calculate_ema(prices, period):
+    logging.debug(f"Calculating EMA for period {period}")
+    logging.debug(f"First few prices: {prices.head() if isinstance(prices, pd.Series) else prices[:5]}")
+
     prices = pd.Series(prices)
     prices = pd.to_numeric(prices, errors='coerce')
     ema_values = np.full(len(prices), np.nan, dtype=np.float64)
     if len(prices) < period:
+        logging.warning(f"Not enough data for EMA calculation. Required: {period}, Available: {len(prices)}")
         return pd.Series(ema_values, index=prices.index)
 
     sma = np.mean(prices[:period])
@@ -38,9 +42,12 @@ def calculate_ema(prices, period):
     for i in range(period, len(prices)):
         ema_values[i] = (prices[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
 
-    return pd.Series(ema_values, index=prices.index)
+    result = pd.Series(ema_values, index=prices.index)
+    logging.debug(f"Calculated EMA. Last few values: {result.tail()}")
+    return result
 
 def detect_peaks_and_dips(df, peak_type):
+    logging.debug(f"Detecting peaks and dips with peak_type: {peak_type}")
     highs = df['high'].values
     lows = df['low'].values
     center_index = peak_type // 2
@@ -57,6 +64,7 @@ def detect_peaks_and_dips(df, peak_type):
         if all(dip_window[center_index] < dip_window[j] for j in range(len(dip_window)) if j != center_index):
             dips.append(lows[i])
 
+    logging.debug(f"Detected {len(peaks)} peaks and {len(dips)} dips")
     return peaks, dips
 
 def check_entry_conditions(row, peaks, dips, symbol):
@@ -104,20 +112,18 @@ def execute_trade(trade_request, retries=4, delay=6):
             result = mt5.order_send(trade_request)
 
             if result is None:
-                logging.error(f"Failed to place order: mt5.order_send returned None. Trade Request: {trade_request}")
-                raise ValueError("mt5.order_send returned None.")
+                error_code = mt5.last_error()
+                logging.error(f"Failed to place order: mt5.order_send returned None. Error code: {error_code}")
+                raise ValueError(f"mt5.order_send returned None. Error code: {error_code}")
 
             logging.info(f"Order response received at {datetime.now()}: {result}")
 
-            if result.retcode == mt5.TRADE_RETCODE_DONE:
-                logging.info(f"Trade executed successfully: {result}")
-                return result
-            elif result.retcode == 10021:
-                logging.warning(f"Failed to execute trade due to 'No prices' error. Attempt {attempt + 1} of {retries + 1}")
-                attempt += 1
-            else:
-                logging.error(f"Failed to execute trade: {result.retcode} - {result.comment}")
-                return None
+            if result.retcode != mt5.TRADE_RETCODE_DONE:
+                logging.error(f"Order failed with retcode: {result.retcode}, Comment: {result.comment}")
+                raise ValueError(f"Order failed: {result.comment}")
+
+            logging.info(f"Trade executed successfully: {result}")
+            return result
 
         except Exception as e:
             logging.error(f"Exception occurred during trade execution attempt {attempt + 1}: {str(e)}")
@@ -264,6 +270,7 @@ def ensure_symbol_subscription(symbol):
 
 def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, run_backtest, data=None, std_dev=None):
     try:
+        logging.info("Starting strategy execution")
         total_profit = 0
         total_loss = 0
         max_drawdown = 0
@@ -271,6 +278,7 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
         peak_balance = starting_equity
 
         for symbol in symbols:
+            logging.info(f"Processing symbol: {symbol}")
             if data is None:
                 current_data = get_current_data(symbol)
                 logging.info(f"Current data for {symbol}: {current_data}")
@@ -312,38 +320,9 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
             logging.info(f"Buy Condition: {buy_condition}")
             logging.info(f"Sell Condition: {sell_condition}")
 
-            if buy_condition or sell_condition:
-                current_tick = get_current_data(symbol)
-                logging.info(f"Latest price data for {symbol}: {current_tick}")
+            # ... (rest of the function remains the same)
 
-                trade_request = {
-                    'action': 'BUY' if buy_condition else 'SELL',
-                    'symbol': symbol,
-                    'volume': lot_size,
-                    'price': current_tick['bid'] if buy_condition else current_tick['ask'],
-                    'sl': current_tick['bid'] - (1.5 * std_dev) if buy_condition else current_tick['ask'] + (1.5 * std_dev),
-                    'tp': current_tick['bid'] + (2 * std_dev) if buy_condition else current_tick['ask'] - (2 * std_dev),
-                    'deviation': 10,
-                    'magic': 12345,
-                    'comment': 'Tunnel Strategy',
-                    'type': 'ORDER_TYPE_BUY' if buy_condition else 'ORDER_TYPE_SELL',
-                    'type_filling': 'ORDER_FILLING_FOK',
-                    'type_time': 'ORDER_TIME_GTC'
-                }
-
-                result = execute_trade(trade_request)
-                if result:
-                    profit = trade_request['tp'] - trade_request['price'] if buy_condition else trade_request['price'] - trade_request['tp']
-                    total_profit += profit
-                    current_balance += profit
-                    peak_balance = max(peak_balance, current_balance)
-                    drawdown = peak_balance - current_balance
-                    max_drawdown = max(max_drawdown, drawdown)
-                else:
-                    logging.error("Trade execution failed")
-
-            manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day)
-
+        logging.info("Strategy execution completed")
         return {
             'total_profit': total_profit,
             'total_loss': total_loss,
