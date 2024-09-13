@@ -216,16 +216,15 @@ def run_live_trading_func():
 
                 if buy_condition or sell_condition:
                     trade_request = {
-                        'action': 'BUY' if buy_condition else 'SELL',
                         'symbol': symbol,
                         'volume': 0.01,
-                        'price': df.iloc[-1]['bid'] if buy_condition else df.iloc[-1]['ask'],
+                        'type': mt5.ORDER_TYPE_BUY if buy_condition else mt5.ORDER_TYPE_SELL,
+                        'price': df.iloc[-1]['ask'] if buy_condition else df.iloc[-1]['bid'],  # Use 'ask' for buy, 'bid' for sell
                         'sl': df.iloc[-1]['bid'] - (1.5 * std_dev) if buy_condition else df.iloc[-1]['ask'] + (1.5 * std_dev),
                         'tp': df.iloc[-1]['bid'] + (2 * std_dev) if buy_condition else df.iloc[-1]['ask'] - (2 * std_dev),
                         'deviation': 10,
                         'magic': 12345,
                         'comment': 'Tunnel Strategy',
-                        'type': mt5.ORDER_TYPE_BUY if buy_condition else mt5.ORDER_TYPE_SELL,
                         'type_filling': mt5.ORDER_FILLING_FOK,
                         'type_time': mt5.ORDER_TIME_GTC
                     }
@@ -286,7 +285,7 @@ def run_live_trading_func():
         logging.info(f"Ending balance: {current_balance:.2f}")
         logging.info(f"Total profit: {total_profit:.2f}")
         logging.info(f"Total loss: {total_loss:.2f}")
-
+        
 def open_log_file():
     import subprocess
     log_file_path = os.path.abspath("app.log")

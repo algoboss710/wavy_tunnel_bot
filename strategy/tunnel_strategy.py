@@ -72,28 +72,42 @@ def check_entry_conditions(row, peaks, dips, symbol):
     tunnel1, tunnel2 = row['tunnel1'], row['tunnel2']
     close_price = row['close']
 
+    # Enhanced logging for debugging
     logging.info(f"Checking entry conditions for {symbol}:")
     logging.info(f"Close price: {close_price:.5f}")
     logging.info(f"Wavy C: {wavy_c:.5f}, Wavy H: {wavy_h:.5f}, Wavy L: {wavy_l:.5f}")
     logging.info(f"Tunnel1: {tunnel1:.5f}, Tunnel2: {tunnel2:.5f}")
 
+    # Log peak and dip information for context
+    logging.debug(f"Number of peaks detected: {len(peaks)}, Peaks (first 5): {peaks[:5]}")
+    logging.debug(f"Number of dips detected: {len(dips)}, Dips (first 5): {dips[:5]}")
+
+    # Detailed condition evaluations
     buy_condition1 = close_price > max(wavy_c, wavy_h, wavy_l)
     buy_condition2 = min(wavy_c, wavy_h, wavy_l) > max(tunnel1, tunnel2)
     buy_condition3 = any(abs(close_price - peak) <= 0.001 for peak in peaks)
+    logging.debug(f"Buy Condition 1 (close > max(Wavy C, Wavy H, Wavy L)): {buy_condition1}")
+    logging.debug(f"Buy Condition 2 (min(Wavy C, Wavy H, Wavy L) > max(Tunnel1, Tunnel2)): {buy_condition2}")
+    logging.debug(f"Buy Condition 3 (close price near peak): {buy_condition3}")
 
     sell_condition1 = close_price < min(wavy_c, wavy_h, wavy_l)
     sell_condition2 = max(wavy_c, wavy_h, wavy_l) < min(tunnel1, tunnel2)
     sell_condition3 = any(abs(close_price - dip) <= 0.001 for dip in dips)
+    logging.debug(f"Sell Condition 1 (close < min(Wavy C, Wavy H, Wavy L)): {sell_condition1}")
+    logging.debug(f"Sell Condition 2 (max(Wavy C, Wavy H, Wavy L) < min(Tunnel1, Tunnel2)): {sell_condition2}")
+    logging.debug(f"Sell Condition 3 (close price near dip): {sell_condition3}")
 
     buy_condition = buy_condition1 and buy_condition2 and buy_condition3
     sell_condition = sell_condition1 and sell_condition2 and sell_condition3
 
+    # Log the final conditions
     logging.info(f"Buy conditions: {buy_condition1}, {buy_condition2}, {buy_condition3}")
     logging.info(f"Sell conditions: {sell_condition1}, {sell_condition2}, {sell_condition3}")
     logging.info(f"Buy condition met: {buy_condition}")
     logging.info(f"Sell condition met: {sell_condition}")
 
     return buy_condition, sell_condition
+
 
 def execute_trade(trade_request, retries=4, delay=6):
     attempt = 0
@@ -109,8 +123,13 @@ def execute_trade(trade_request, retries=4, delay=6):
                 logging.error("Trade execution aborted due to connection issues or market being closed.")
                 return None
 
-            logging.info(f"Placing order with price: {trade_request['price']}")
-            result = mt5.order_send(trade_request)
+            # Modify the trade request to use the correct action
+            modified_request = trade_request.copy()
+            modified_request['action'] = mt5.TRADE_ACTION_DEAL
+            modified_request['type'] = trade_request['type']  # Ensure 'type' is correctly set
+
+            logging.info(f"Placing order with price: {modified_request['price']}")
+            result = mt5.order_send(modified_request)
 
             if result is None:
                 error_code = mt5.last_error()
@@ -366,6 +385,7 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
 
 def place_order(symbol, action, volume, price, sl, tp):
     try:
+        logging.info(f"Preparing to place order for {symbol} - Action: {action}, Volume: {volume}, Price: {price}, SL: {sl}, TP: {tp}")
         order_type = mt5.ORDER_TYPE_BUY if action == 'buy' else mt5.ORDER_TYPE_SELL
         order = {
             "action": mt5.TRADE_ACTION_DEAL,
@@ -381,18 +401,19 @@ def place_order(symbol, action, volume, price, sl, tp):
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_FOK,
         }
-
         logging.debug(f"Placing order: {order}")
         result = mt5.order_send(order)
-        logging.info(f"Order send result: {result}")
+        logging.info(f"Order send result for {symbol}: {result}")
 
         if result.retcode != mt5.TRADE_RETCODE_DONE:
-            logging.error(f"Failed to place order: {result.comment}")
+            logging.error(f"Failed to place order for {symbol}: {result.comment}")
             return 'Order failed'
+        logging.info(f"Order placed successfully for {symbol}")
         return 'Order placed'
     except Exception as e:
-        logging.error(f"Failed to place order: {str(e)}")
+        logging.error(f"Exception occurred while placing order for {symbol}: {str(e)}")
         return 'Order failed'
+
 
 def close_position(ticket):
     try:
@@ -443,9 +464,10 @@ def check_market_open():
     return True
 
 def get_fresh_tick_data(symbol):
+    logging.info(f"Attempting to retrieve tick data for symbol: {symbol}")
     tick = mt5.symbol_info_tick(symbol)
     if tick:
-        return {
+        tick_data = {
             'symbol': symbol,
             'time': datetime.fromtimestamp(tick.time),
             'bid': tick.bid,
@@ -453,6 +475,10 @@ def get_fresh_tick_data(symbol):
             'last': tick.last,
             'volume': tick.volume
         }
+        logging.info(f"Retrieved tick data for {symbol}: {tick_data}")
+        return tick_data
     else:
+        logging.error(f"Failed to retrieve fresh tick data for {symbol}")
         raise ValueError(f"Failed to retrieve fresh tick data for {symbol}")
+
 
