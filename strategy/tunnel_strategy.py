@@ -128,7 +128,7 @@ def execute_trade(trade_request, retries=4, delay=6):
             modified_request['action'] = mt5.TRADE_ACTION_DEAL
             modified_request['type'] = trade_request['type']  # Ensure 'type' is correctly set
 
-            logging.info(f"Placing order with price: {modified_request['price']}")
+            logging.info(f"Placing order with price: {modified_request['price']} and volume: {modified_request['volume']}")
             result = mt5.order_send(modified_request)
 
             if result is None:
@@ -150,14 +150,16 @@ def execute_trade(trade_request, retries=4, delay=6):
             attempt += 1
 
         if attempt <= retries:
-            logging.info(f"Retrying in {delay} seconds...")
+            logging.info(f"Retrying in {delay} seconds... Current attempt: {attempt}/{retries}")
             time.sleep(delay)
 
     if Config.ENABLE_PENDING_ORDER_FALLBACK:
         logging.info("Attempting to place a pending order as a fallback...")
         return place_pending_order(trade_request)
 
+    logging.error("Trade execution failed after maximum retries.")
     return None
+
 
 def place_pending_order(trade_request):
     try:
@@ -185,12 +187,14 @@ def place_pending_order(trade_request):
         logging.info(f"Pending order result: {result}")
 
         if result.retcode != mt5.TRADE_RETCODE_DONE:
-            logging.error(f"Failed to place pending order: {result.comment}")
+            logging.error(f"Failed to place pending order for {trade_request['symbol']}: {result.comment}")
             return None
+        logging.info(f"Pending order placed successfully for {trade_request['symbol']}")
         return result
     except Exception as e:
         handle_error(e, "Failed to place pending order")
         return None
+
 
 def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
     try:
@@ -329,16 +333,14 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
             logging.info("Detecting peaks and dips...")
             peak_type = 21
             peaks, dips = detect_peaks_and_dips(data, peak_type)
-            logging.info(f"Peaks: {peaks[:5]}")
-            logging.info(f"Dips: {dips[:5]}")
+            logging.info(f"Detected peaks: {peaks[:5]} (total: {len(peaks)}), dips: {dips[:5]} (total: {len(dips)})")
 
             logging.info("Generating entry signals...")
             data['buy_signal'], data['sell_signal'] = zip(*data.apply(lambda x: check_entry_conditions(x, peaks, dips, symbol), axis=1))
 
             buy_condition, sell_condition = generate_trade_signal(data, period, deviation_factor)
 
-            logging.info(f"Buy Condition: {buy_condition}")
-            logging.info(f"Sell Condition: {sell_condition}")
+            logging.info(f"Buy Condition: {buy_condition}, Sell Condition: {sell_condition}")
 
             if buy_condition or sell_condition:
                 current_tick = get_current_data(symbol)
@@ -359,6 +361,7 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                     'type_time': mt5.ORDER_TIME_GTC
                 }
 
+                logging.info(f"Trade request: {trade_request}")
                 result = execute_trade(trade_request)
                 if result:
                     profit = trade_request['tp'] - trade_request['price'] if buy_condition else trade_request['price'] - trade_request['tp']
@@ -367,6 +370,7 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
                     peak_balance = max(peak_balance, current_balance)
                     drawdown = peak_balance - current_balance
                     max_drawdown = max(max_drawdown, drawdown)
+                    logging.info(f"Trade executed successfully. Profit: {profit:.2f}, Current Balance: {current_balance:.2f}, Drawdown: {drawdown:.2f}")
                 else:
                     logging.error("Trade execution failed")
 
@@ -382,6 +386,7 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
     except Exception as e:
         handle_error(e, "Failed to run the strategy")
         return None
+
 
 def place_order(symbol, action, volume, price, sl, tp):
     try:
