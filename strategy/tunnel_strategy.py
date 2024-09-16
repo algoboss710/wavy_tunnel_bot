@@ -46,7 +46,7 @@ def calculate_ema(prices, period):
     logging.debug(f"Calculated EMA. Last few values: {result.tail()}")
     return result
 
-def detect_peaks_and_dips(df, peak_type):
+def detect_peaks_and_dips(df, peak_type=5):  # Default to a smaller peak_type
     logging.debug(f"Detecting peaks and dips with peak_type: {peak_type}")
     highs = df['high'].values
     lows = df['low'].values
@@ -58,14 +58,23 @@ def detect_peaks_and_dips(df, peak_type):
         peak_window = highs[i - center_index:i + center_index + 1]
         dip_window = lows[i - center_index:i + center_index + 1]
 
+        # Add logging for the current window being analyzed
+        logging.debug(f"Analyzing peak window: {peak_window}")
+        logging.debug(f"Analyzing dip window: {dip_window}")
+
         if all(peak_window[center_index] > peak_window[j] for j in range(len(peak_window)) if j != center_index):
             peaks.append(highs[i])
+            logging.debug(f"Peak detected at index {i}: {highs[i]}")
 
         if all(dip_window[center_index] < dip_window[j] for j in range(len(dip_window)) if j != center_index):
             dips.append(lows[i])
+            logging.debug(f"Dip detected at index {i}: {lows[i]}")
 
-    logging.debug(f"Detected {len(peaks)} peaks and {len(dips)} dips")
+    logging.info(f"Total peaks detected: {len(peaks)}, Peaks: {peaks}")
+    logging.info(f"Total dips detected: {len(dips)}, Dips: {dips}")
     return peaks, dips
+
+
 
 def check_entry_conditions(row, peaks, dips, symbol):
     wavy_c, wavy_h, wavy_l = row['wavy_c'], row['wavy_h'], row['wavy_l']
@@ -202,32 +211,40 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
         if positions:
             for position in positions:
                 current_equity = mt5.account_info().equity
+                logging.info(f"Managing position for {symbol}. Current profit: {position.profit}, Equity: {current_equity}")
 
                 if position.profit >= min_take_profit:
+                    logging.info(f"Profit target reached for {symbol}. Closing position.")
                     close_position(position.ticket)
                     position['exit_time'] = pd.Timestamp.now()
                     position['exit_price'] = mt5.symbol_info_tick(symbol).bid
                     position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
 
                 elif position.profit <= -max_loss_per_day:
+                    logging.info(f"Loss limit reached for {symbol}. Closing position.")
                     close_position(position.ticket)
                     position['exit_time'] = pd.Timestamp.now()
                     position['exit_price'] = mt5.symbol_info_tick(symbol).bid
                     position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
 
                 elif current_equity <= starting_equity * 0.9:
+                    logging.info(f"Drawdown limit reached for {symbol}. Closing position.")
                     close_position(position.ticket)
                     position['exit_time'] = pd.Timestamp.now()
                     position['exit_price'] = mt5.symbol_info_tick(symbol).bid
                     position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
 
                 elif mt5.positions_total() >= max_trades_per_day:
+                    logging.info(f"Trade limit reached for the day. Closing position for {symbol}.")
                     close_position(position.ticket)
                     position['exit_time'] = pd.Timestamp.now()
                     position['exit_price'] = mt5.symbol_info_tick(symbol).bid
                     position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+        else:
+            logging.info(f"No open positions found for {symbol}.")
     except Exception as e:
         handle_error(e, "Failed to manage position")
+
 
 def calculate_tunnel_bounds(data, period, deviation_factor):
     if len(data) < period:
@@ -264,6 +281,7 @@ def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip
 
 def generate_trade_signal(data, period, deviation_factor):
     if len(data) < period:
+        logging.warning(f"Not enough data to generate trade signal. Required: {period}, Available: {len(data)}")
         return None, None
 
     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
@@ -272,12 +290,19 @@ def generate_trade_signal(data, period, deviation_factor):
     upper_bound_last_value = upper_bound.iloc[-1]
     lower_bound_last_value = lower_bound.iloc[-1]
 
+    # Log the values used for signal generation
+    logging.info(f"Generating trade signal with close price: {last_close}, upper bound: {upper_bound_last_value}, lower bound: {lower_bound_last_value}")
+
     if pd.isna(last_close) or pd.isna(upper_bound_last_value) or pd.isna(lower_bound_last_value):
+        logging.error("One or more values are NaN, cannot generate trade signal.")
         return None, None
 
     buy_condition = last_close >= upper_bound_last_value
     sell_condition = last_close <= lower_bound_last_value
 
+    # Log the results of the conditions
+    logging.info(f"Buy condition: {buy_condition}, Sell condition: {sell_condition}")
+    
     return buy_condition, sell_condition
 
 def adjust_deviation_factor(market_conditions):
