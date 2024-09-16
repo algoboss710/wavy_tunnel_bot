@@ -250,8 +250,17 @@ def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip
     if stop_loss_pips == 0 or pip_value == 0:
         logging.error("Division by zero: stop_loss_pips or pip_value is zero in calculate_position_size")
         raise ZeroDivisionError("stop_loss_pips or pip_value cannot be zero")
-    position_size = risk_amount / (stop_loss_pips * pip_value)
-    return position_size
+
+    # Calculate position size in the base currency
+    position_size_base = risk_amount / (stop_loss_pips * pip_value)
+
+    # Convert position size to lots (1 lot = 100,000 units)
+    position_size_lots = position_size_base / 100000
+
+    # Round to 2 decimal places to comply with broker requirements
+    position_size_lots = round(position_size_lots, 2)
+
+    return position_size_lots
 
 def generate_trade_signal(data, period, deviation_factor):
     if len(data) < period:

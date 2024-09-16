@@ -19,7 +19,7 @@ def generate_specific_files_document(root_dir, target_files):
 
 if __name__ == "__main__":
     # Specify the root directory of your repository
-    root_directory = r"C:\Users\16198\Desktop\automation\upwork\wavy\wavy_tunnel_bot"
+    root_directory = r"C:\Users\owner\Desktop\upwork_projects\trade_bot\wavy_tunnel_bot"
 
     # List of specific files to include (with their exact filenames)
     target_files = ['main.py', 'config.py', 'tunnel_strategy.py', 'backtest.py', 'trade_logic.py', 'indicators.py', '.env']

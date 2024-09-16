@@ -5,7 +5,7 @@ from config import Config
 from metatrader.connection import initialize_mt5, shutdown_mt5
 from metatrader.data_retrieval import get_historical_data
 from strategy.tunnel_strategy import (
-    check_broker_connection, check_market_open, execute_trade, place_pending_order, calculate_ema, detect_peaks_and_dips, check_entry_conditions
+    check_broker_connection, check_market_open, execute_trade, place_pending_order, calculate_ema, detect_peaks_and_dips, check_entry_conditions, calculate_position_size
 )
 from backtesting.backtest import run_backtest
 from utils.logger import setup_logging
@@ -185,17 +185,11 @@ def run_live_trading_func():
                     df['low'] = df['bid']
 
                 df['wavy_h'] = calculate_ema(df['high'], 34)
-                logging.info(f"Wavy H values: {df['wavy_h'].tail()}")
                 df['wavy_c'] = calculate_ema(df['close'], 34)
-                logging.info(f"Wavy C values: {df['wavy_c'].tail()}")
                 df['wavy_l'] = calculate_ema(df['low'], 34)
-                logging.info(f"Wavy L values: {df['wavy_l'].tail()}")
                 df['tunnel1'] = calculate_ema(df['close'], 144)
-                logging.info(f"Tunnel1 values: {df['tunnel1'].tail()}")
                 df['tunnel2'] = calculate_ema(df['close'], 169)
-                logging.info(f"Tunnel2 values: {df['tunnel2'].tail()}")
                 df['long_term_ema'] = calculate_ema(df['close'], 200)
-                logging.info(f"Long-term EMA values: {df['long_term_ema'].tail()}")
 
                 logging.info(f"Indicator values for {symbol}:")
                 logging.info(f"Wavy H: {df['wavy_h'].iloc[-1]:.5f}")
@@ -215,11 +209,28 @@ def run_live_trading_func():
                 std_dev = df['close'].rolling(window=20).std().iloc[-1]
 
                 if buy_condition or sell_condition:
+                    account_info = mt5.account_info()
+                    if account_info is None:
+                        raise Exception("Failed to get account info")
+
+                    current_balance = account_info.balance
+                    stop_loss_pips = (1.5 * std_dev) / Config.PIP_VALUE
+
+                    volume = calculate_position_size(
+                        account_balance=current_balance,
+                        risk_per_trade=Config.RISK_PER_TRADE,
+                        stop_loss_pips=stop_loss_pips,
+                        pip_value=Config.PIP_VALUE
+                    )
+
+                    # Limit the volume to a maximum of 1.0 (10 micro lots) for safety
+                    volume = min(volume, 1.0)
+
                     trade_request = {
                         'symbol': symbol,
-                        'volume': 0.01,
+                        'volume': volume,
                         'type': mt5.ORDER_TYPE_BUY if buy_condition else mt5.ORDER_TYPE_SELL,
-                        'price': df.iloc[-1]['ask'] if buy_condition else df.iloc[-1]['bid'],  # Use 'ask' for buy, 'bid' for sell
+                        'price': df.iloc[-1]['ask'] if buy_condition else df.iloc[-1]['bid'],
                         'sl': df.iloc[-1]['bid'] - (1.5 * std_dev) if buy_condition else df.iloc[-1]['ask'] + (1.5 * std_dev),
                         'tp': df.iloc[-1]['bid'] + (2 * std_dev) if buy_condition else df.iloc[-1]['ask'] - (2 * std_dev),
                         'deviation': 10,
@@ -285,7 +296,7 @@ def run_live_trading_func():
         logging.info(f"Ending balance: {current_balance:.2f}")
         logging.info(f"Total profit: {total_profit:.2f}")
         logging.info(f"Total loss: {total_loss:.2f}")
-        
+
 def open_log_file():
     import subprocess
     log_file_path = os.path.abspath("app.log")
