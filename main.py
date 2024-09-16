@@ -104,6 +104,10 @@ def run_live_trading_func():
         else:
             logging.info("Trading on a live account.")
 
+        starting_balance = account_info.balance
+        current_balance = starting_balance
+        logging.info(f"Starting balance: {starting_balance:.2f}")
+
         if not check_broker_connection():
             return
 
@@ -115,8 +119,6 @@ def run_live_trading_func():
         total_profit = 0.0
         total_loss = 0.0
         max_drawdown_reached = False
-        starting_balance = Config.STARTING_EQUITY
-        current_balance = starting_balance
 
         start_time = time.time()
         max_duration = 1 * 1800  # 30 minutes for testing, adjust as needed
@@ -207,32 +209,35 @@ def run_live_trading_func():
                 logging.info(f"Entry conditions for {symbol}: Buy = {buy_condition}, Sell = {sell_condition}")
 
                 std_dev = df['close'].rolling(window=20).std().iloc[-1]
+                min_sl_tp_distance = 20 * Config.PIP_VALUE  # 20 pips minimum distance
 
                 if buy_condition or sell_condition:
                     account_info = mt5.account_info()
                     if account_info is None:
                         raise Exception("Failed to get account info")
+                    
+                    balance_before = account_info.balance
+                    logging.info(f"Account balance before trade attempt: {balance_before}")
 
-                    current_balance = account_info.balance
-                    stop_loss_pips = (1.5 * std_dev) / Config.PIP_VALUE
+                    current_price = df.iloc[-1]['ask'] if buy_condition else df.iloc[-1]['bid']
+                    sl_distance = max(1.5 * std_dev, min_sl_tp_distance)
+                    tp_distance = max(2 * std_dev, min_sl_tp_distance)
 
+                    stop_loss_pips = sl_distance / Config.PIP_VALUE
                     volume = calculate_position_size(
-                        account_balance=current_balance,
+                        account_balance=balance_before,
                         risk_per_trade=Config.RISK_PER_TRADE,
                         stop_loss_pips=stop_loss_pips,
                         pip_value=Config.PIP_VALUE
                     )
 
-                    # Limit the volume to a maximum of 1.0 (10 micro lots) for safety
-                    volume = min(volume, 1.0)
-
                     trade_request = {
                         'symbol': symbol,
                         'volume': volume,
                         'type': mt5.ORDER_TYPE_BUY if buy_condition else mt5.ORDER_TYPE_SELL,
-                        'price': df.iloc[-1]['ask'] if buy_condition else df.iloc[-1]['bid'],
-                        'sl': df.iloc[-1]['bid'] - (1.5 * std_dev) if buy_condition else df.iloc[-1]['ask'] + (1.5 * std_dev),
-                        'tp': df.iloc[-1]['bid'] + (2 * std_dev) if buy_condition else df.iloc[-1]['ask'] - (2 * std_dev),
+                        'price': current_price,
+                        'sl': current_price - sl_distance if buy_condition else current_price + sl_distance,
+                        'tp': current_price + tp_distance if buy_condition else current_price - tp_distance,
                         'deviation': 10,
                         'magic': 12345,
                         'comment': 'Tunnel Strategy',
@@ -271,6 +276,15 @@ def run_live_trading_func():
 
                     except Exception as e:
                         logging.error(f"An error occurred while running strategy for {symbol}: {e}")
+
+                    account_info = mt5.account_info()
+                    if account_info is None:
+                        raise Exception("Failed to get account info")
+                    
+                    balance_after = account_info.balance
+                    logging.info(f"Account balance after trade attempt: {balance_after}")
+                    logging.info(f"Balance change: {balance_after - balance_before}")
+
                 else:
                     logging.info(f"No trade conditions met for {symbol}")
 
@@ -290,13 +304,19 @@ def run_live_trading_func():
         shutdown_mt5()
         logging.info("MetaTrader5 connection gracefully shut down.")
 
+        account_info = mt5.account_info()
+        if account_info is None:
+            logging.error("Failed to get final account info")
+            ending_balance = current_balance
+        else:
+            ending_balance = account_info.balance
+
         logging.info("Summary of Trading Session:")
         logging.info(f"Total trades: {total_trades}")
         logging.info(f"Starting balance: {starting_balance:.2f}")
-        logging.info(f"Ending balance: {current_balance:.2f}")
-        logging.info(f"Total profit: {total_profit:.2f}")
-        logging.info(f"Total loss: {total_loss:.2f}")
-
+        logging.info(f"Ending balance: {ending_balance:.2f}")
+        logging.info(f"Total profit/loss: {ending_balance - starting_balance:.2f}")
+        yth
 def open_log_file():
     import subprocess
     log_file_path = os.path.abspath("app.log")

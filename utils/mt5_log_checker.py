@@ -36,7 +36,9 @@ def monitor_logs(log_directory, check_interval=1):  # Reduced interval to 1 seco
             elif re.search(r'\bTRADE_RETCODE\b', line):
                 logging.warning(f"MT5 Trade Warning: {line.strip()}")
 
-def start_log_checking(log_directory="C:\\Users\Owner\\AppData\\Roaming\\MetaQuotes\Terminal\\D0E8209F77C8CF37AD8BF550E51FF075\\logs"):
+def start_log_checking(log_directory="C:\\Users\\16198\\AppData\\Roaming\\MetaQuotes\\Terminal\\D0E8209F77C8CF37AD8BF550E51FF075\\logs"):
+    #C:\\Users\16198\\AppData\\Roaming\\MetaQuotes\\Terminal\\D0E8209F77C8CF37AD8BF550E51FF075\\logs
+    #C:\\Users\Owner\\AppData\\Roaming\\MetaQuotes\Terminal\\D0E8209F77C8CF37AD8BF550E51FF075\\logs
     global log_monitoring_thread, log_monitoring_active
     log_monitoring_active = True
     log_monitoring_thread = threading.Thread(target=monitor_logs, args=(log_directory,))
