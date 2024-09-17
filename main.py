@@ -122,11 +122,16 @@ def run_live_trading_func():
 
         start_time = time.time()
         max_duration = 1 * 1800  # 30 minutes for testing, adjust as needed
+        last_log_time = time.time()
 
         while time.time() - start_time < max_duration:
             if max_drawdown_reached:
                 logging.info("Maximum drawdown reached. Stopping trading.")
                 break
+
+            if time.time() - last_log_time > 300:  # Log every 5 minutes
+                logging.info("Strategy still running...")
+                last_log_time = time.time() 
 
             current_day = datetime.now().date()
             if daily_trades >= Config.LIMIT_NO_OF_TRADES:
@@ -316,7 +321,7 @@ def run_live_trading_func():
         logging.info(f"Starting balance: {starting_balance:.2f}")
         logging.info(f"Ending balance: {ending_balance:.2f}")
         logging.info(f"Total profit/loss: {ending_balance - starting_balance:.2f}")
-        yth
+        
 def open_log_file():
     import subprocess
     log_file_path = os.path.abspath("app.log")
