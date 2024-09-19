@@ -133,7 +133,10 @@ def execute_trade(trade_request, retries=4, delay=6):
             modified_request = trade_request.copy()
             modified_request['action'] = mt5.TRADE_ACTION_DEAL
 
+            # Log the SL and TP values before sending the order
+            logging.info(f"Setting SL: {modified_request['sl']}, TP: {modified_request['tp']} before sending order.")
             logging.info(f"Placing order with price: {modified_request['price']} and volume: {modified_request['volume']}")
+
             result = mt5.order_send(modified_request)
 
             if result is None:
@@ -224,36 +227,35 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
 
                 if position.profit >= min_take_profit:
                     logging.info(f"Profit target reached for {symbol}. Closing position.")
-                    close_position(position.ticket)
-                    position['exit_time'] = pd.Timestamp.now()
-                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
-                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+                    close_result = close_position(position.ticket)
+                    logging.info(f"Close position result: {close_result}")
 
                 elif position.profit <= -max_loss_per_day:
                     logging.info(f"Loss limit reached for {symbol}. Closing position.")
-                    close_position(position.ticket)
-                    position['exit_time'] = pd.Timestamp.now()
-                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
-                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+                    close_result = close_position(position.ticket)
+                    logging.info(f"Close position result: {close_result}")
 
                 elif current_equity <= starting_equity * 0.9:
                     logging.info(f"Drawdown limit reached for {symbol}. Closing position.")
-                    close_position(position.ticket)
-                    position['exit_time'] = pd.Timestamp.now()
-                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
-                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+                    close_result = close_position(position.ticket)
+                    logging.info(f"Close position result: {close_result}")
 
                 elif mt5.positions_total() >= max_trades_per_day:
                     logging.info(f"Trade limit reached for the day. Closing position for {symbol}.")
-                    close_position(position.ticket)
-                    position['exit_time'] = pd.Timestamp.now()
-                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
-                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+                    close_result = close_position(position.ticket)
+                    logging.info(f"Close position result: {close_result}")
+                
+                # Log the profit and details of the closed position
+                position['exit_time'] = pd.Timestamp.now()
+                position['exit_price'] = mt5.symbol_info_tick(symbol).bid
+                position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+                logging.info(f"Position details - Exit Time: {position['exit_time']}, Exit Price: {position['exit_price']}, Profit: {position['profit']}")
 
         else:
             logging.info(f"No open positions found for {symbol}.")
     except Exception as e:
         handle_error(e, "Failed to manage position")
+
 
 def calculate_tunnel_bounds(data, period, deviation_factor):
     if len(data) < period:
@@ -425,6 +427,7 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
     except Exception as e:
         handle_error(e, "Failed to run the strategy")
         return None
+
 
 
 def place_order(symbol, action, volume, price, sl, tp):
