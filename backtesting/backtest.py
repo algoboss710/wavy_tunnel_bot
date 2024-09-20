@@ -3,16 +3,21 @@ import pandas as pd
 import numpy as np
 import pstats
 from io import StringIO
-from strategy.tunnel_strategy import generate_trade_signal, calculate_position_size, detect_peaks_and_dips, manage_position, check_entry_conditions
+from strategy.tunnel_strategy import generate_trade_signal, calculate_position_size, detect_peaks_and_dips, manage_position, check_entry_conditions, get_data
 from metatrader.indicators import calculate_ema
 from metatrader.trade_management import execute_trade
 import cProfile
+import MetaTrader5 as mt5
+
 
 # Initialize the logger
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, stop_loss_pips, pip_value, max_trades_per_day=None, slippage=0, transaction_cost=0, enable_profiling=False):
+def run_backtest(symbol, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, stop_loss_pips, pip_value, start_date, end_date, timeframe=mt5.TIMEFRAME_H1, max_trades_per_day=None, slippage=0, transaction_cost=0, enable_profiling=False):
+    """
+    Run a backtest for a given symbol with historical data.
+    """
     # Initialize the profiler if profiling is enabled
     pr = cProfile.Profile() if enable_profiling else None
     if enable_profiling:
@@ -30,8 +35,16 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
         balance = initial_balance
         trades = []
         trades_today = 0
-        current_day = data.iloc[0]['time'].date()
         peak_type = 21
+
+        # Fetch historical data using get_data method
+        data = get_data(symbol, mode='backtest', start_date=start_date, end_date=end_date, timeframe=timeframe)
+
+        if data is None or data.empty:
+            logger.error(f"No historical data available for {symbol}")
+            return None
+
+        current_day = data.iloc[0]['time'].date()
 
         data = data.copy()  # Make a copy to avoid modifying the original DataFrame
 
@@ -64,7 +77,6 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
             if row['time'].date() != current_day:
                 current_day = row['time'].date()
                 trades_today = 0
-                daily_loss = 0
                 logger.info(f"New trading day: {current_day}, resetting daily counters.")
 
             if max_trades_per_day is not None and trades_today >= max_trades_per_day:

@@ -6,6 +6,8 @@ from datetime import datetime, time as dtime
 from utils.error_handling import handle_error
 import time
 from config import Config
+from metatrader.data_retrieval import get_historical_data
+
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -427,6 +429,39 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
     except Exception as e:
         handle_error(e, "Failed to run the strategy")
         return None
+
+def get_data(symbol, mode='live', start_date=None, end_date=None, timeframe=mt5.TIMEFRAME_H1):
+    """
+    Retrieve data based on the mode. Can be used for both live and historical data.
+    - mode: "live" or "backtest"
+    - If backtest mode, start_date and end_date must be provided.
+    """
+    if mode == 'backtest':
+        # Fetch historical data for backtesting
+        historical_data = get_historical_data(symbol, timeframe, start_date, end_date)
+        if historical_data is not None and not historical_data.empty:
+            logging.info(f"Fetched historical data for {symbol}. Data shape: {historical_data.shape}")
+            return historical_data
+        else:
+            logging.error(f"Failed to retrieve historical data for {symbol}")
+            return None
+    else:
+        # Fetch live tick data
+        current_tick = get_current_data(symbol)
+        if current_tick:
+            live_data = pd.DataFrame([{
+                'time': current_tick['time'],
+                'open': current_tick['last'],
+                'high': current_tick['last'],
+                'low': current_tick['last'],
+                'close': current_tick['last'],
+                'volume': 0  # Assuming tick data doesn't contain volume info
+            }])
+            logging.info(f"Fetched live data for {symbol}: {live_data.tail()}")
+            return live_data
+        else:
+            logging.error(f"Failed to retrieve live data for {symbol}")
+            return None
 
 
 

@@ -3,9 +3,8 @@ import pandas as pd
 from datetime import datetime
 from config import Config
 from metatrader.connection import initialize_mt5, shutdown_mt5
-from metatrader.data_retrieval import get_historical_data
 from strategy.tunnel_strategy import (
-    check_broker_connection, check_market_open, execute_trade, place_pending_order, calculate_ema, detect_peaks_and_dips, check_entry_conditions, calculate_position_size
+    check_broker_connection, check_market_open, execute_trade, place_pending_order, calculate_ema, detect_peaks_and_dips, check_entry_conditions, calculate_position_size, get_data
 )
 from backtesting.backtest import run_backtest
 from utils.logger import setup_logging
@@ -46,7 +45,8 @@ def run_backtest_func():
             stop_loss_pips = 20
             pip_value = Config.PIP_VALUE
 
-            backtest_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, start_date, end_date)
+            # Use the new get_data function for backtesting data
+            backtest_data = get_data(symbol, mode='backtest', start_date=start_date, end_date=end_date, timeframe=mt5.TIMEFRAME_H1)
             if backtest_data is not None and not backtest_data.empty:
                 logging.info(f"Backtest data shape: {backtest_data.shape}")
                 logging.info(f"Backtest data head:\n{backtest_data.head()}")
@@ -143,42 +143,14 @@ def run_live_trading_func():
             for symbol in Config.SYMBOLS:
                 logging.info(f"Processing symbol: {symbol}")
 
-                symbol_info = mt5.symbol_info(symbol)
-                if symbol_info is None:
-                    logging.error(f"Symbol {symbol} is not available.")
+                # Fetch live data using get_data function
+                live_data = get_data(symbol, mode='live')
+                if live_data is None or live_data.empty:
+                    logging.error(f"Failed to retrieve live data for {symbol}")
                     continue
 
-                if not symbol_info.visible:
-                    logging.info(f"Symbol {symbol} is not visible, attempting to make it visible.")
-                    if not mt5.symbol_select(symbol, True):
-                        logging.error(f"Failed to select symbol {symbol}")
-                        continue
+                df = live_data
 
-                tick_data = []
-                tick_start_time = time.time()
-
-                while len(tick_data) < 500:
-                    tick = mt5.symbol_info_tick(symbol)
-                    if tick is None:
-                        logging.warning(f"Failed to retrieve tick data for {symbol}.")
-                        time.sleep(1)
-                        continue
-
-                    tick_data.append({
-                        'time': datetime.fromtimestamp(tick.time),
-                        'bid': tick.bid,
-                        'ask': tick.ask,
-                        'last': tick.last if tick.last != 0 else (tick.bid + tick.ask) / 2
-                    })
-
-                    time.sleep(1)
-
-                tick_end_time = time.time()
-                elapsed_time = tick_end_time - tick_start_time
-                logging.info(f"Collected {len(tick_data)} ticks in {elapsed_time:.2f} seconds.")
-
-                df = pd.DataFrame(tick_data)
-                logging.info(f"First few rows of DataFrame:\n{df.head()}")
                 logging.info(f"Dataframe created with tick data: {df.tail()}")
 
                 df['close'] = df['last']
