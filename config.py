@@ -14,6 +14,7 @@ def reload_env():
 reload_env()
 
 class Config:
+    # MetaTrader 5 Settings
     MT5_LOGIN = os.getenv("MT5_LOGIN")
     if not MT5_LOGIN:
         raise ValueError("MT5_LOGIN environment variable is not set.")
@@ -40,6 +41,7 @@ class Config:
     else:
         raise ValueError("SYMBOLS environment variable is not set.")
 
+    # Telegram Bot Settings
     TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
     TELEGRAM_IDS = os.getenv("TELEGRAM_IDS")
     if TELEGRAM_TOKEN and TELEGRAM_IDS:
@@ -48,6 +50,7 @@ class Config:
         TELEGRAM_TOKEN = None
         TELEGRAM_IDS = None
 
+    # Trading Strategy Settings
     try:
         MIN_TP_PROFIT = float(os.getenv("MIN_TP_PROFIT", 50.0))
     except (ValueError, TypeError):
@@ -72,7 +75,6 @@ class Config:
         RISK_PER_TRADE = float(os.getenv("RISK_PER_TRADE", 0.01))
     except ValueError:
         raise ValueError(f"Invalid RISK_PER_TRADE value: {os.getenv('RISK_PER_TRADE')}. Expected a numeric value.")
-
     if not 0 < RISK_PER_TRADE <= 1:
         raise ValueError(f"RISK_PER_TRADE value must be between 0 and 1. Current value: {RISK_PER_TRADE}")
 
@@ -86,12 +88,16 @@ class Config:
     except ValueError:
         raise ValueError(f"Invalid MAX_DRAWDOWN value: {os.getenv('MAX_DRAWDOWN')}. Expected a numeric value.")
 
-    # Configuration for enabling pending order fallback
     ENABLE_PENDING_ORDER_FALLBACK = os.getenv("ENABLE_PENDING_ORDER_FALLBACK", "True").lower() in ("true", "1", "yes")
 
-    # Configuration for SL/TP adjustment pips
+    # SL/TP Adjustment
     SL_TP_ADJUSTMENT_PIPS = float(os.getenv("SL_TP_ADJUSTMENT_PIPS", 0.0001))
 
+    # Optional Backtest Start/End Dates for Backtesting
+    BACKTEST_START_DATE = os.getenv("BACKTEST_START_DATE")
+    BACKTEST_END_DATE = os.getenv("BACKTEST_END_DATE")
+
+    # Validation method
     @classmethod
     def validate(cls):
         try:
@@ -113,6 +119,12 @@ class Config:
             # Validate integer-specific configuration
             if not isinstance(cls.LIMIT_NO_OF_TRADES, int):
                 raise ValueError(f"Invalid value for LIMIT_NO_OF_TRADES. Expected an integer value.")
+
+            # Validate backtesting date configuration
+            if cls.BACKTEST_START_DATE and not cls.BACKTEST_END_DATE:
+                raise ValueError("BACKTEST_END_DATE is required if BACKTEST_START_DATE is set.")
+            if cls.BACKTEST_END_DATE and not cls.BACKTEST_START_DATE:
+                raise ValueError("BACKTEST_START_DATE is required if BACKTEST_END_DATE is set.")
 
         except ValueError as e:
             handle_error(e, "Configuration validation failed")

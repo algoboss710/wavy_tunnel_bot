@@ -14,7 +14,7 @@ import MetaTrader5 as mt5
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-def run_backtest(symbol, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, stop_loss_pips, pip_value, start_date, end_date, timeframe=mt5.TIMEFRAME_H1, max_trades_per_day=None, slippage=0, transaction_cost=0, enable_profiling=False):
+def run_backtest(symbol, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, stop_loss_pips, pip_value, start_date=None, end_date=None, timeframe=mt5.TIMEFRAME_H1, max_trades_per_day=None, slippage=0, transaction_cost=0, enable_profiling=False, data=None):
     """
     Run a backtest for a given symbol with historical data.
     """
@@ -37,8 +37,15 @@ def run_backtest(symbol, initial_balance, risk_percent, min_take_profit, max_los
         trades_today = 0
         peak_type = 21
 
-        # Fetch historical data using get_data method
-        data = get_data(symbol, mode='backtest', start_date=start_date, end_date=end_date, timeframe=timeframe)
+        # Use provided data if available, otherwise fetch it
+        if data is None:
+            if start_date is None or end_date is None:
+                raise ValueError("start_date and end_date must be provided if data is not supplied")
+            data = get_data(symbol, mode='backtest', start_date=start_date, end_date=end_date, timeframe=timeframe)
+        else:
+            # If data is provided, extract start_date and end_date from it
+            start_date = data['time'].min()
+            end_date = data['time'].max()
 
         if data is None or data.empty:
             logger.error(f"No historical data available for {symbol}")

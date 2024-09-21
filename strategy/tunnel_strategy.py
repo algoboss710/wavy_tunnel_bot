@@ -246,7 +246,7 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
                     logging.info(f"Trade limit reached for the day. Closing position for {symbol}.")
                     close_result = close_position(position.ticket)
                     logging.info(f"Close position result: {close_result}")
-                
+
                 # Log the profit and details of the closed position
                 position['exit_time'] = pd.Timestamp.now()
                 position['exit_price'] = mt5.symbol_info_tick(symbol).bid
@@ -280,15 +280,15 @@ def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip
     if stop_loss_pips == 0 or pip_value == 0:
         logging.error("Division by zero: stop_loss_pips or pip_value is zero in calculate_position_size")
         raise ZeroDivisionError("stop_loss_pips or pip_value cannot be zero")
-    
+
     position_size_base = risk_amount / (stop_loss_pips * pip_value)
     position_size_lots = position_size_base / 100000  # Convert to lots
-    
+
     position_size_lots = min(position_size_lots, 0.1)
     position_size_lots = max(position_size_lots, 0.01)
-    
+
     logging.info(f"Calculated position size: {position_size_lots} lots")
-    
+
     return round(position_size_lots, 2)
 
 def generate_trade_signal(data, period, deviation_factor):
@@ -312,7 +312,7 @@ def generate_trade_signal(data, period, deviation_factor):
     sell_condition = last_close <= lower_bound_last_value
 
     logging.info(f"Buy condition: {buy_condition}, Sell condition: {sell_condition}")
-    
+
     return buy_condition, sell_condition
 
 def adjust_deviation_factor(market_conditions):
@@ -438,31 +438,26 @@ def get_data(symbol, mode='live', start_date=None, end_date=None, timeframe=mt5.
     """
     if mode == 'backtest':
         # Fetch historical data for backtesting
-        historical_data = get_historical_data(symbol, timeframe, start_date, end_date)
-        if historical_data is not None and not historical_data.empty:
-            logging.info(f"Fetched historical data for {symbol}. Data shape: {historical_data.shape}")
-            return historical_data
-        else:
-            logging.error(f"Failed to retrieve historical data for {symbol}")
-            return None
+        return get_historical_data(symbol, timeframe, start_date, end_date)  # Directly call get_historical_data from metatrader
     else:
         # Fetch live tick data
         current_tick = get_current_data(symbol)
         if current_tick:
             live_data = pd.DataFrame([{
                 'time': current_tick['time'],
-                'open': current_tick['last'],
-                'high': current_tick['last'],
-                'low': current_tick['last'],
-                'close': current_tick['last'],
-                'volume': 0  # Assuming tick data doesn't contain volume info
+                'open': current_tick['last'] if current_tick['last'] != 0 else (current_tick['bid'] + current_tick['ask']) / 2,
+                'high': current_tick['ask'],
+                'low': current_tick['bid'],
+                'close': current_tick['last'] if current_tick['last'] != 0 else (current_tick['bid'] + current_tick['ask']) / 2,
+                'volume': current_tick['volume'],
+                'bid': current_tick['bid'],
+                'ask': current_tick['ask']
             }])
             logging.info(f"Fetched live data for {symbol}: {live_data.tail()}")
             return live_data
         else:
             logging.error(f"Failed to retrieve live data for {symbol}")
             return None
-
 
 
 def place_order(symbol, action, volume, price, sl, tp):
@@ -528,7 +523,7 @@ def close_position(ticket):
     except Exception as e:
         logging.error(f"Failed to close position: {str(e)}")
         return 'Close failed'
-    
+
 def check_broker_connection():
     if not mt5.terminal_info().connected:
         logging.error("Broker is not connected.")

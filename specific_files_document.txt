@@ -48,6 +48,7 @@ def reload_env():
 reload_env()
 
 class Config:
+    # MetaTrader 5 Settings
     MT5_LOGIN = os.getenv("MT5_LOGIN")
     if not MT5_LOGIN:
         raise ValueError("MT5_LOGIN environment variable is not set.")
@@ -74,6 +75,7 @@ class Config:
     else:
         raise ValueError("SYMBOLS environment variable is not set.")
 
+    # Telegram Bot Settings
     TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
     TELEGRAM_IDS = os.getenv("TELEGRAM_IDS")
     if TELEGRAM_TOKEN and TELEGRAM_IDS:
@@ -82,6 +84,7 @@ class Config:
         TELEGRAM_TOKEN = None
         TELEGRAM_IDS = None
 
+    # Trading Strategy Settings
     try:
         MIN_TP_PROFIT = float(os.getenv("MIN_TP_PROFIT", 50.0))
     except (ValueError, TypeError):
@@ -106,7 +109,6 @@ class Config:
         RISK_PER_TRADE = float(os.getenv("RISK_PER_TRADE", 0.01))
     except ValueError:
         raise ValueError(f"Invalid RISK_PER_TRADE value: {os.getenv('RISK_PER_TRADE')}. Expected a numeric value.")
-
     if not 0 < RISK_PER_TRADE <= 1:
         raise ValueError(f"RISK_PER_TRADE value must be between 0 and 1. Current value: {RISK_PER_TRADE}")
 
@@ -120,12 +122,16 @@ class Config:
     except ValueError:
         raise ValueError(f"Invalid MAX_DRAWDOWN value: {os.getenv('MAX_DRAWDOWN')}. Expected a numeric value.")
 
-    # Configuration for enabling pending order fallback
     ENABLE_PENDING_ORDER_FALLBACK = os.getenv("ENABLE_PENDING_ORDER_FALLBACK", "True").lower() in ("true", "1", "yes")
 
-    # Configuration for SL/TP adjustment pips
+    # SL/TP Adjustment
     SL_TP_ADJUSTMENT_PIPS = float(os.getenv("SL_TP_ADJUSTMENT_PIPS", 0.0001))
 
+    # Optional Backtest Start/End Dates for Backtesting
+    BACKTEST_START_DATE = os.getenv("BACKTEST_START_DATE")
+    BACKTEST_END_DATE = os.getenv("BACKTEST_END_DATE")
+
+    # Validation method
     @classmethod
     def validate(cls):
         try:
@@ -147,6 +153,12 @@ class Config:
             # Validate integer-specific configuration
             if not isinstance(cls.LIMIT_NO_OF_TRADES, int):
                 raise ValueError(f"Invalid value for LIMIT_NO_OF_TRADES. Expected an integer value.")
+
+            # Validate backtesting date configuration
+            if cls.BACKTEST_START_DATE and not cls.BACKTEST_END_DATE:
+                raise ValueError("BACKTEST_END_DATE is required if BACKTEST_START_DATE is set.")
+            if cls.BACKTEST_END_DATE and not cls.BACKTEST_START_DATE:
+                raise ValueError("BACKTEST_START_DATE is required if BACKTEST_END_DATE is set.")
 
         except ValueError as e:
             handle_error(e, "Configuration validation failed")
@@ -175,9 +187,8 @@ import pandas as pd
 from datetime import datetime
 from config import Config
 from metatrader.connection import initialize_mt5, shutdown_mt5
-from metatrader.data_retrieval import get_historical_data
 from strategy.tunnel_strategy import (
-    check_broker_connection, check_market_open, execute_trade, place_pending_order, calculate_ema, detect_peaks_and_dips, check_entry_conditions
+    check_broker_connection, check_market_open, execute_trade, place_pending_order, calculate_ema, detect_peaks_and_dips, check_entry_conditions, calculate_position_size, get_data
 )
 from backtesting.backtest import run_backtest
 from utils.logger import setup_logging
@@ -218,7 +229,8 @@ def run_backtest_func():
             stop_loss_pips = 20
             pip_value = Config.PIP_VALUE
 
-            backtest_data = get_historical_data(symbol, mt5.TIMEFRAME_H1, start_date, end_date)
+            # Use the new get_data function for backtesting data
+            backtest_data = get_data(symbol, mode='backtest', start_date=start_date, end_date=end_date, timeframe=mt5.TIMEFRAME_H1)
             if backtest_data is not None and not backtest_data.empty:
                 logging.info(f"Backtest data shape: {backtest_data.shape}")
                 logging.info(f"Backtest data head:\n{backtest_data.head()}")
@@ -276,6 +288,10 @@ def run_live_trading_func():
         else:
             logging.info("Trading on a live account.")
 
+        starting_balance = account_info.balance
+        current_balance = starting_balance
+        logging.info(f"Starting balance: {starting_balance:.2f}")
+
         if not check_broker_connection():
             return
 
@@ -287,16 +303,19 @@ def run_live_trading_func():
         total_profit = 0.0
         total_loss = 0.0
         max_drawdown_reached = False
-        starting_balance = Config.STARTING_EQUITY
-        current_balance = starting_balance
 
         start_time = time.time()
         max_duration = 1 * 1800  # 30 minutes for testing, adjust as needed
+        last_log_time = time.time()
 
         while time.time() - start_time < max_duration:
             if max_drawdown_reached:
                 logging.info("Maximum drawdown reached. Stopping trading.")
                 break
+
+            if time.time() - last_log_time > 300:  # Log every 5 minutes
+                logging.info("Strategy still running...")
+                last_log_time = time.time() 
 
             current_day = datetime.now().date()
             if daily_trades >= Config.LIMIT_NO_OF_TRADES:
@@ -308,42 +327,14 @@ def run_live_trading_func():
             for symbol in Config.SYMBOLS:
                 logging.info(f"Processing symbol: {symbol}")
 
-                symbol_info = mt5.symbol_info(symbol)
-                if symbol_info is None:
-                    logging.error(f"Symbol {symbol} is not available.")
+                # Fetch live data using get_data function
+                live_data = get_data(symbol, mode='live')
+                if live_data is None or live_data.empty:
+                    logging.error(f"Failed to retrieve live data for {symbol}")
                     continue
 
-                if not symbol_info.visible:
-                    logging.info(f"Symbol {symbol} is not visible, attempting to make it visible.")
-                    if not mt5.symbol_select(symbol, True):
-                        logging.error(f"Failed to select symbol {symbol}")
-                        continue
+                df = live_data
 
-                tick_data = []
-                tick_start_time = time.time()
-
-                while len(tick_data) < 500:
-                    tick = mt5.symbol_info_tick(symbol)
-                    if tick is None:
-                        logging.warning(f"Failed to retrieve tick data for {symbol}.")
-                        time.sleep(1)
-                        continue
-
-                    tick_data.append({
-                        'time': datetime.fromtimestamp(tick.time),
-                        'bid': tick.bid,
-                        'ask': tick.ask,
-                        'last': tick.last if tick.last != 0 else (tick.bid + tick.ask) / 2
-                    })
-
-                    time.sleep(1)
-
-                tick_end_time = time.time()
-                elapsed_time = tick_end_time - tick_start_time
-                logging.info(f"Collected {len(tick_data)} ticks in {elapsed_time:.2f} seconds.")
-
-                df = pd.DataFrame(tick_data)
-                logging.info(f"First few rows of DataFrame:\n{df.head()}")
                 logging.info(f"Dataframe created with tick data: {df.tail()}")
 
                 df['close'] = df['last']
@@ -357,17 +348,11 @@ def run_live_trading_func():
                     df['low'] = df['bid']
 
                 df['wavy_h'] = calculate_ema(df['high'], 34)
-                logging.info(f"Wavy H values: {df['wavy_h'].tail()}")
                 df['wavy_c'] = calculate_ema(df['close'], 34)
-                logging.info(f"Wavy C values: {df['wavy_c'].tail()}")
                 df['wavy_l'] = calculate_ema(df['low'], 34)
-                logging.info(f"Wavy L values: {df['wavy_l'].tail()}")
                 df['tunnel1'] = calculate_ema(df['close'], 144)
-                logging.info(f"Tunnel1 values: {df['tunnel1'].tail()}")
                 df['tunnel2'] = calculate_ema(df['close'], 169)
-                logging.info(f"Tunnel2 values: {df['tunnel2'].tail()}")
                 df['long_term_ema'] = calculate_ema(df['close'], 200)
-                logging.info(f"Long-term EMA values: {df['long_term_ema'].tail()}")
 
                 logging.info(f"Indicator values for {symbol}:")
                 logging.info(f"Wavy H: {df['wavy_h'].iloc[-1]:.5f}")
@@ -385,15 +370,35 @@ def run_live_trading_func():
                 logging.info(f"Entry conditions for {symbol}: Buy = {buy_condition}, Sell = {sell_condition}")
 
                 std_dev = df['close'].rolling(window=20).std().iloc[-1]
+                min_sl_tp_distance = 20 * Config.PIP_VALUE  # 20 pips minimum distance
 
                 if buy_condition or sell_condition:
+                    account_info = mt5.account_info()
+                    if account_info is None:
+                        raise Exception("Failed to get account info")
+                    
+                    balance_before = account_info.balance
+                    logging.info(f"Account balance before trade attempt: {balance_before}")
+
+                    current_price = df.iloc[-1]['ask'] if buy_condition else df.iloc[-1]['bid']
+                    sl_distance = max(1.5 * std_dev, min_sl_tp_distance)
+                    tp_distance = max(2 * std_dev, min_sl_tp_distance)
+
+                    stop_loss_pips = sl_distance / Config.PIP_VALUE
+                    volume = calculate_position_size(
+                        account_balance=balance_before,
+                        risk_per_trade=Config.RISK_PER_TRADE,
+                        stop_loss_pips=stop_loss_pips,
+                        pip_value=Config.PIP_VALUE
+                    )
+
                     trade_request = {
                         'symbol': symbol,
-                        'volume': 0.01,
+                        'volume': volume,
                         'type': mt5.ORDER_TYPE_BUY if buy_condition else mt5.ORDER_TYPE_SELL,
-                        'price': df.iloc[-1]['ask'] if buy_condition else df.iloc[-1]['bid'],  # Use 'ask' for buy, 'bid' for sell
-                        'sl': df.iloc[-1]['bid'] - (1.5 * std_dev) if buy_condition else df.iloc[-1]['ask'] + (1.5 * std_dev),
-                        'tp': df.iloc[-1]['bid'] + (2 * std_dev) if buy_condition else df.iloc[-1]['ask'] - (2 * std_dev),
+                        'price': current_price,
+                        'sl': current_price - sl_distance if buy_condition else current_price + sl_distance,
+                        'tp': current_price + tp_distance if buy_condition else current_price - tp_distance,
                         'deviation': 10,
                         'magic': 12345,
                         'comment': 'Tunnel Strategy',
@@ -432,6 +437,15 @@ def run_live_trading_func():
 
                     except Exception as e:
                         logging.error(f"An error occurred while running strategy for {symbol}: {e}")
+
+                    account_info = mt5.account_info()
+                    if account_info is None:
+                        raise Exception("Failed to get account info")
+                    
+                    balance_after = account_info.balance
+                    logging.info(f"Account balance after trade attempt: {balance_after}")
+                    logging.info(f"Balance change: {balance_after - balance_before}")
+
                 else:
                     logging.info(f"No trade conditions met for {symbol}")
 
@@ -451,12 +465,18 @@ def run_live_trading_func():
         shutdown_mt5()
         logging.info("MetaTrader5 connection gracefully shut down.")
 
+        account_info = mt5.account_info()
+        if account_info is None:
+            logging.error("Failed to get final account info")
+            ending_balance = current_balance
+        else:
+            ending_balance = account_info.balance
+
         logging.info("Summary of Trading Session:")
         logging.info(f"Total trades: {total_trades}")
         logging.info(f"Starting balance: {starting_balance:.2f}")
-        logging.info(f"Ending balance: {current_balance:.2f}")
-        logging.info(f"Total profit: {total_profit:.2f}")
-        logging.info(f"Total loss: {total_loss:.2f}")
+        logging.info(f"Ending balance: {ending_balance:.2f}")
+        logging.info(f"Total profit/loss: {ending_balance - starting_balance:.2f}")
         
 def open_log_file():
     import subprocess
@@ -517,16 +537,21 @@ import pandas as pd
 import numpy as np
 import pstats
 from io import StringIO
-from strategy.tunnel_strategy import generate_trade_signal, calculate_position_size, detect_peaks_and_dips, manage_position, check_entry_conditions
+from strategy.tunnel_strategy import generate_trade_signal, calculate_position_size, detect_peaks_and_dips, manage_position, check_entry_conditions, get_data
 from metatrader.indicators import calculate_ema
 from metatrader.trade_management import execute_trade
 import cProfile
+import MetaTrader5 as mt5
+
 
 # Initialize the logger
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, stop_loss_pips, pip_value, max_trades_per_day=None, slippage=0, transaction_cost=0, enable_profiling=False):
+def run_backtest(symbol, initial_balance, risk_percent, min_take_profit, max_loss_per_day, starting_equity, stop_loss_pips, pip_value, start_date, end_date, timeframe=mt5.TIMEFRAME_H1, max_trades_per_day=None, slippage=0, transaction_cost=0, enable_profiling=False):
+    """
+    Run a backtest for a given symbol with historical data.
+    """
     # Initialize the profiler if profiling is enabled
     pr = cProfile.Profile() if enable_profiling else None
     if enable_profiling:
@@ -544,8 +569,16 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
         balance = initial_balance
         trades = []
         trades_today = 0
-        current_day = data.iloc[0]['time'].date()
         peak_type = 21
+
+        # Fetch historical data using get_data method
+        data = get_data(symbol, mode='backtest', start_date=start_date, end_date=end_date, timeframe=timeframe)
+
+        if data is None or data.empty:
+            logger.error(f"No historical data available for {symbol}")
+            return None
+
+        current_day = data.iloc[0]['time'].date()
 
         data = data.copy()  # Make a copy to avoid modifying the original DataFrame
 
@@ -578,7 +611,6 @@ def run_backtest(symbol, data, initial_balance, risk_percent, min_take_profit, m
             if row['time'].date() != current_day:
                 current_day = row['time'].date()
                 trades_today = 0
-                daily_loss = 0
                 logger.info(f"New trading day: {current_day}, resetting daily counters.")
 
             if max_trades_per_day is not None and trades_today >= max_trades_per_day:
@@ -800,6 +832,8 @@ from datetime import datetime, time as dtime
 from utils.error_handling import handle_error
 import time
 from config import Config
+from metatrader.data_retrieval import get_historical_data
+
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -840,7 +874,7 @@ def calculate_ema(prices, period):
     logging.debug(f"Calculated EMA. Last few values: {result.tail()}")
     return result
 
-def detect_peaks_and_dips(df, peak_type):
+def detect_peaks_and_dips(df, peak_type=5):
     logging.debug(f"Detecting peaks and dips with peak_type: {peak_type}")
     highs = df['high'].values
     lows = df['low'].values
@@ -852,13 +886,19 @@ def detect_peaks_and_dips(df, peak_type):
         peak_window = highs[i - center_index:i + center_index + 1]
         dip_window = lows[i - center_index:i + center_index + 1]
 
+        logging.debug(f"Analyzing peak window: {peak_window}")
+        logging.debug(f"Analyzing dip window: {dip_window}")
+
         if all(peak_window[center_index] > peak_window[j] for j in range(len(peak_window)) if j != center_index):
             peaks.append(highs[i])
+            logging.debug(f"Peak detected at index {i}: {highs[i]}")
 
         if all(dip_window[center_index] < dip_window[j] for j in range(len(dip_window)) if j != center_index):
             dips.append(lows[i])
+            logging.debug(f"Dip detected at index {i}: {lows[i]}")
 
-    logging.debug(f"Detected {len(peaks)} peaks and {len(dips)} dips")
+    logging.info(f"Total peaks detected: {len(peaks)}, Peaks: {peaks}")
+    logging.info(f"Total dips detected: {len(dips)}, Dips: {dips}")
     return peaks, dips
 
 def check_entry_conditions(row, peaks, dips, symbol):
@@ -866,24 +906,20 @@ def check_entry_conditions(row, peaks, dips, symbol):
     tunnel1, tunnel2 = row['tunnel1'], row['tunnel2']
     close_price = row['close']
 
-    # Enhanced logging for debugging
     logging.info(f"Checking entry conditions for {symbol}:")
     logging.info(f"Close price: {close_price:.5f}")
     logging.info(f"Wavy C: {wavy_c:.5f}, Wavy H: {wavy_h:.5f}, Wavy L: {wavy_l:.5f}")
     logging.info(f"Tunnel1: {tunnel1:.5f}, Tunnel2: {tunnel2:.5f}")
 
-    # Log peak and dip information for context
     logging.debug(f"Number of peaks detected: {len(peaks)}, Peaks (first 5): {peaks[:5]}")
     logging.debug(f"Number of dips detected: {len(dips)}, Dips (first 5): {dips[:5]}")
 
-    # Detailed condition evaluations
     buy_condition1 = close_price > max(wavy_c, wavy_h, wavy_l)
     buy_condition2 = min(wavy_c, wavy_h, wavy_l) > max(tunnel1, tunnel2)
     buy_condition3 = any(abs(close_price - peak) <= 0.001 for peak in peaks)
     logging.debug(f"Buy Condition 1 (close > max(Wavy C, Wavy H, Wavy L)): {buy_condition1}")
     logging.debug(f"Buy Condition 2 (min(Wavy C, Wavy H, Wavy L) > max(Tunnel1, Tunnel2)): {buy_condition2}")
     logging.debug(f"Buy Condition 3 (close price near peak): {buy_condition3}")
-
     sell_condition1 = close_price < min(wavy_c, wavy_h, wavy_l)
     sell_condition2 = max(wavy_c, wavy_h, wavy_l) < min(tunnel1, tunnel2)
     sell_condition3 = any(abs(close_price - dip) <= 0.001 for dip in dips)
@@ -891,14 +927,19 @@ def check_entry_conditions(row, peaks, dips, symbol):
     logging.debug(f"Sell Condition 2 (max(Wavy C, Wavy H, Wavy L) < min(Tunnel1, Tunnel2)): {sell_condition2}")
     logging.debug(f"Sell Condition 3 (close price near dip): {sell_condition3}")
 
-    buy_condition = buy_condition1 and buy_condition2 and buy_condition3
-    sell_condition = sell_condition1 and sell_condition2 and sell_condition3
+    buy_condition = buy_condition1 or buy_condition2 or buy_condition3
+    sell_condition = sell_condition1 or sell_condition2 or sell_condition3
 
-    # Log the final conditions
+  # Log the final conditions
     logging.info(f"Buy conditions: {buy_condition1}, {buy_condition2}, {buy_condition3}")
     logging.info(f"Sell conditions: {sell_condition1}, {sell_condition2}, {sell_condition3}")
     logging.info(f"Buy condition met: {buy_condition}")
     logging.info(f"Sell condition met: {sell_condition}")
+
+    buy_reasons = [f"Condition {i+1}: {cond}" for i, cond in enumerate([buy_condition1, buy_condition2, buy_condition3]) if cond]
+    sell_reasons = [f"Condition {i+1}: {cond}" for i, cond in enumerate([sell_condition1, sell_condition2, sell_condition3]) if cond]
+
+    logging.info(f"Entry conditions for {symbol}: Buy = {buy_condition} (reasons: {', '.join(buy_reasons)}), Sell = {sell_condition} (reasons: {', '.join(sell_reasons)})")
 
     return buy_condition, sell_condition
 
@@ -917,12 +958,13 @@ def execute_trade(trade_request, retries=4, delay=6):
                 logging.error("Trade execution aborted due to connection issues or market being closed.")
                 return None
 
-            # Modify the trade request to use the correct action
             modified_request = trade_request.copy()
             modified_request['action'] = mt5.TRADE_ACTION_DEAL
-            modified_request['type'] = trade_request['type']  # Ensure 'type' is correctly set
 
+            # Log the SL and TP values before sending the order
+            logging.info(f"Setting SL: {modified_request['sl']}, TP: {modified_request['tp']} before sending order.")
             logging.info(f"Placing order with price: {modified_request['price']} and volume: {modified_request['volume']}")
+
             result = mt5.order_send(modified_request)
 
             if result is None:
@@ -932,12 +974,31 @@ def execute_trade(trade_request, retries=4, delay=6):
 
             logging.info(f"Order response received at {datetime.now()}: {result}")
 
-            if result.retcode != mt5.TRADE_RETCODE_DONE:
+            if result.retcode == mt5.TRADE_RETCODE_DONE:
+                logging.info(f"Trade executed successfully: {result}")
+                return result
+            elif result.retcode == 10009:
+                logging.warning("Order placed successfully, but not yet executed")
+                return result
+            elif result.retcode == 10004:  # Requote
+                logging.warning("Requote error. Retrying with updated price.")
+                current_price = mt5.symbol_info_tick(trade_request['symbol']).ask if trade_request['type'] == mt5.ORDER_TYPE_BUY else mt5.symbol_info_tick(trade_request['symbol']).bid
+                modified_request['price'] = current_price
+                continue
+            elif result.retcode == 10016:  # Invalid stops
+                logging.error("Invalid stops. Adjusting SL and TP.")
+                symbol_info = mt5.symbol_info(trade_request['symbol'])
+                min_stop_level = symbol_info.trade_stops_level * symbol_info.point
+                if trade_request['type'] == mt5.ORDER_TYPE_BUY:
+                    modified_request['sl'] = min(modified_request['sl'], modified_request['price'] - min_stop_level)
+                    modified_request['tp'] = max(modified_request['tp'], modified_request['price'] + min_stop_level)
+                else:
+                    modified_request['sl'] = max(modified_request['sl'], modified_request['price'] + min_stop_level)
+                    modified_request['tp'] = min(modified_request['tp'], modified_request['price'] - min_stop_level)
+                continue
+            else:
                 logging.error(f"Order failed with retcode: {result.retcode}, Comment: {result.comment}")
                 raise ValueError(f"Order failed: {result.comment}")
-
-            logging.info(f"Trade executed successfully: {result}")
-            return result
 
         except Exception as e:
             logging.error(f"Exception occurred during trade execution attempt {attempt + 1}: {str(e)}")
@@ -947,13 +1008,8 @@ def execute_trade(trade_request, retries=4, delay=6):
             logging.info(f"Retrying in {delay} seconds... Current attempt: {attempt}/{retries}")
             time.sleep(delay)
 
-    if Config.ENABLE_PENDING_ORDER_FALLBACK:
-        logging.info("Attempting to place a pending order as a fallback...")
-        return place_pending_order(trade_request)
-
     logging.error("Trade execution failed after maximum retries.")
     return None
-
 
 def place_pending_order(trade_request):
     try:
@@ -989,39 +1045,45 @@ def place_pending_order(trade_request):
         handle_error(e, "Failed to place pending order")
         return None
 
-
 def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day):
     try:
         positions = mt5.positions_get(symbol=symbol)
         if positions:
             for position in positions:
                 current_equity = mt5.account_info().equity
+                logging.info(f"Managing position for {symbol}. Current profit: {position.profit}, Equity: {current_equity}")
 
                 if position.profit >= min_take_profit:
-                    close_position(position.ticket)
-                    position['exit_time'] = pd.Timestamp.now()
-                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
-                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+                    logging.info(f"Profit target reached for {symbol}. Closing position.")
+                    close_result = close_position(position.ticket)
+                    logging.info(f"Close position result: {close_result}")
 
                 elif position.profit <= -max_loss_per_day:
-                    close_position(position.ticket)
-                    position['exit_time'] = pd.Timestamp.now()
-                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
-                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+                    logging.info(f"Loss limit reached for {symbol}. Closing position.")
+                    close_result = close_position(position.ticket)
+                    logging.info(f"Close position result: {close_result}")
 
                 elif current_equity <= starting_equity * 0.9:
-                    close_position(position.ticket)
-                    position['exit_time'] = pd.Timestamp.now()
-                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
-                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+                    logging.info(f"Drawdown limit reached for {symbol}. Closing position.")
+                    close_result = close_position(position.ticket)
+                    logging.info(f"Close position result: {close_result}")
 
                 elif mt5.positions_total() >= max_trades_per_day:
-                    close_position(position.ticket)
-                    position['exit_time'] = pd.Timestamp.now()
-                    position['exit_price'] = mt5.symbol_info_tick(symbol).bid
-                    position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+                    logging.info(f"Trade limit reached for the day. Closing position for {symbol}.")
+                    close_result = close_position(position.ticket)
+                    logging.info(f"Close position result: {close_result}")
+
+                # Log the profit and details of the closed position
+                position['exit_time'] = pd.Timestamp.now()
+                position['exit_price'] = mt5.symbol_info_tick(symbol).bid
+                position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
+                logging.info(f"Position details - Exit Time: {position['exit_time']}, Exit Price: {position['exit_price']}, Profit: {position['profit']}")
+
+        else:
+            logging.info(f"No open positions found for {symbol}.")
     except Exception as e:
         handle_error(e, "Failed to manage position")
+
 
 def calculate_tunnel_bounds(data, period, deviation_factor):
     if len(data) < period:
@@ -1044,11 +1106,20 @@ def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip
     if stop_loss_pips == 0 or pip_value == 0:
         logging.error("Division by zero: stop_loss_pips or pip_value is zero in calculate_position_size")
         raise ZeroDivisionError("stop_loss_pips or pip_value cannot be zero")
-    position_size = risk_amount / (stop_loss_pips * pip_value)
-    return position_size
+
+    position_size_base = risk_amount / (stop_loss_pips * pip_value)
+    position_size_lots = position_size_base / 100000  # Convert to lots
+
+    position_size_lots = min(position_size_lots, 0.1)
+    position_size_lots = max(position_size_lots, 0.01)
+
+    logging.info(f"Calculated position size: {position_size_lots} lots")
+
+    return round(position_size_lots, 2)
 
 def generate_trade_signal(data, period, deviation_factor):
     if len(data) < period:
+        logging.warning(f"Not enough data to generate trade signal. Required: {period}, Available: {len(data)}")
         return None, None
 
     upper_bound, lower_bound = calculate_tunnel_bounds(data, period, deviation_factor)
@@ -1057,11 +1128,16 @@ def generate_trade_signal(data, period, deviation_factor):
     upper_bound_last_value = upper_bound.iloc[-1]
     lower_bound_last_value = lower_bound.iloc[-1]
 
+    logging.info(f"Generating trade signal with close price: {last_close}, upper bound: {upper_bound_last_value}, lower bound: {lower_bound_last_value}")
+
     if pd.isna(last_close) or pd.isna(upper_bound_last_value) or pd.isna(lower_bound_last_value):
+        logging.error("One or more values are NaN, cannot generate trade signal.")
         return None, None
 
     buy_condition = last_close >= upper_bound_last_value
     sell_condition = last_close <= lower_bound_last_value
+
+    logging.info(f"Buy condition: {buy_condition}, Sell condition: {sell_condition}")
 
     return buy_condition, sell_condition
 
@@ -1085,7 +1161,6 @@ def ensure_symbol_subscription(symbol):
 
     logging.info(f"Symbol {symbol} is already subscribed and visible.")
     return True
-
 def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, run_backtest, data=None, std_dev=None):
     try:
         logging.info("Starting strategy execution")
@@ -1181,6 +1256,34 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
         handle_error(e, "Failed to run the strategy")
         return None
 
+def get_data(symbol, mode='live', start_date=None, end_date=None, timeframe=mt5.TIMEFRAME_H1):
+    """
+    Retrieve data based on the mode. Can be used for both live and historical data.
+    - mode: "live" or "backtest"
+    - If backtest mode, start_date and end_date must be provided.
+    """
+    if mode == 'backtest':
+        # Fetch historical data for backtesting
+        return get_historical_data(symbol, timeframe, start_date, end_date)  # Directly call get_historical_data from metatrader
+    else:
+        # Fetch live tick data
+        current_tick = get_current_data(symbol)
+        if current_tick:
+            live_data = pd.DataFrame([{
+                'time': current_tick['time'],
+                'open': current_tick['last'],
+                'high': current_tick['last'],
+                'low': current_tick['last'],
+                'close': current_tick['last'],
+                'volume': 0  # Assuming tick data doesn't contain volume info
+            }])
+            logging.info(f"Fetched live data for {symbol}: {live_data.tail()}")
+            return live_data
+        else:
+            logging.error(f"Failed to retrieve live data for {symbol}")
+            return None
+
+
 
 def place_order(symbol, action, volume, price, sl, tp):
     try:
@@ -1212,6 +1315,7 @@ def place_order(symbol, action, volume, price, sl, tp):
     except Exception as e:
         logging.error(f"Exception occurred while placing order for {symbol}: {str(e)}")
         return 'Order failed'
+
 
 
 def close_position(ticket):
@@ -1279,9 +1383,6 @@ def get_fresh_tick_data(symbol):
     else:
         logging.error(f"Failed to retrieve fresh tick data for {symbol}")
         raise ValueError(f"Failed to retrieve fresh tick data for {symbol}")
-
-
-
 
 File: C:\Users\owner\Desktop\upwork_projects\trade_bot\wavy_tunnel_bot\venv\Lib\site-packages\dotenv\main.py
 ----------------------------------------

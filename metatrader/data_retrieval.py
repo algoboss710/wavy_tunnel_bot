@@ -1,8 +1,9 @@
+# metatrader/data_retrieval.py
+
 import MetaTrader5 as mt5
 import pandas as pd
 from datetime import datetime, timedelta
 from utils.error_handling import handle_error
-from strategy.tunnel_strategy import get_data
 
 def initialize_mt5():
     if not mt5.initialize():
@@ -16,15 +17,34 @@ def shutdown_mt5():
 
 def get_historical_data(symbol, timeframe, start_time, end_time):
     """
-    This function is replaced by get_data in the strategy.tunnel_strategy module.
+    This function fetches historical data from MT5.
     """
-    return get_data(symbol, mode='backtest', start_date=start_time, end_date=end_time, timeframe=timeframe)
+    try:
+        rates = mt5.copy_rates_range(symbol, timeframe, start_time, end_time)
+        if rates is None or len(rates) == 0:
+            raise ValueError(f"Failed to retrieve historical data for {symbol} with timeframe {timeframe} from {start_time} to {end_time}")
+
+        data = pd.DataFrame(rates, columns=['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume'])
+        data['time'] = pd.to_datetime(data['time'], unit='s')
+        data = data.dropna()
+        data = data[(data['open'] > 0) & (data['high'] > 0) & (data['low'] > 0) & (data['close'] > 0)]
+        return data
+    except Exception as e:
+        handle_error(e, f"Failed to retrieve historical data for {symbol}")
+        return None
 
 def get_current_price(symbol):
     """
-    This function is replaced by get_data in the strategy.tunnel_strategy module.
+    This function gets the current price for a symbol.
     """
-    return get_data(symbol, mode='live')
+    try:
+        tick = mt5.symbol_info_tick(symbol)
+        if tick is None:
+            raise ValueError(f"Failed to retrieve current price for {symbol}")
+        return {'bid': tick.bid, 'ask': tick.ask, 'last': tick.last}
+    except Exception as e:
+        handle_error(e, f"Failed to retrieve current price for {symbol}")
+        return None
 
 def get_account_info():
     account_info = mt5.account_info()
@@ -74,6 +94,19 @@ def get_orders():
         print("No pending orders found")
         return None
 
+def get_data(symbol, mode='live', start_date=None, end_date=None, timeframe=None):
+    """
+    Unified function to get either historical or live data.
+    """
+    if mode == 'live':
+        return get_current_price(symbol)
+    elif mode == 'backtest':
+        if start_date is None or end_date is None or timeframe is None:
+            raise ValueError("start_date, end_date, and timeframe must be provided for backtest mode")
+        return get_historical_data(symbol, timeframe, start_date, end_date)
+    else:
+        raise ValueError("Invalid mode. Use 'live' or 'backtest'")
+
 if __name__ == '__main__':
     if initialize_mt5():
         symbol = "EURUSD"
@@ -81,13 +114,11 @@ if __name__ == '__main__':
         start_time = datetime(2023, 1, 1)
         end_time = datetime.now()
 
-        # Use the new get_data function
         historical_data = get_data(symbol, mode='backtest', start_date=start_time, end_date=end_time, timeframe=timeframe)
         if historical_data is not None:
             print(f"Historical data for {symbol}:")
             print(historical_data.head())
 
-        # Use the new get_data function for live price
         current_price = get_data(symbol, mode='live')
         if current_price is not None:
             print(f"Current price for {symbol}: {current_price}")
@@ -112,10 +143,9 @@ if __name__ == '__main__':
             print("Open positions:")
             print(positions)
 
-        orders = get_orders()  # Assign the result of the get_orders function to 'orders'
-        if orders is not None:  # Check if 'orders' is not None
+        orders = get_orders()
+        if orders is not None:
             print("Pending orders:")
             print(orders)
-
 
         shutdown_mt5()

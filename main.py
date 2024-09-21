@@ -21,11 +21,16 @@ def clear_log_file():
 
 def check_auto_trading_enabled():
     """Check if global auto trading is enabled and log the status."""
+    if not mt5.initialize():
+        logging.error("Failed to initialize MetaTrader5 for checking auto trading status.")
+        return False
     global_autotrading_enabled = mt5.terminal_info().trade_allowed
+    mt5.shutdown()
     if not global_autotrading_enabled:
         logging.error("Global auto trading is disabled. Please enable it manually in the MetaTrader 5 terminal.")
     else:
         logging.info("Global auto trading is enabled.")
+    return global_autotrading_enabled
 
 def run_backtest_func():
     try:
@@ -34,10 +39,11 @@ def run_backtest_func():
             raise Exception("Failed to initialize MetaTrader5")
         logging.info("MetaTrader5 initialized successfully.")
 
-        check_auto_trading_enabled()
+        if not check_auto_trading_enabled():
+            return
 
         for symbol in Config.SYMBOLS:
-            logging.info("Running backtest...")
+            logging.info(f"Running backtest for {symbol}...")
             start_date = datetime(2024, 6, 12)
             end_date = datetime.now()
             initial_balance = 10000
@@ -45,7 +51,6 @@ def run_backtest_func():
             stop_loss_pips = 20
             pip_value = Config.PIP_VALUE
 
-            # Use the new get_data function for backtesting data
             backtest_data = get_data(symbol, mode='backtest', start_date=start_date, end_date=end_date, timeframe=mt5.TIMEFRAME_H1)
             if backtest_data is not None and not backtest_data.empty:
                 logging.info(f"Backtest data shape: {backtest_data.shape}")
@@ -61,19 +66,25 @@ def run_backtest_func():
             backtest_data.loc[:, 'close'] = pd.to_numeric(backtest_data['close'], errors='coerce')
 
             try:
-                run_backtest(
+                result = run_backtest(
                     symbol=symbol,
-                    data=backtest_data,
                     initial_balance=initial_balance,
                     risk_percent=risk_percent,
                     min_take_profit=Config.MIN_TP_PROFIT,
                     max_loss_per_day=Config.MAX_LOSS_PER_DAY,
                     starting_equity=Config.STARTING_EQUITY,
-                    max_trades_per_day=Config.LIMIT_NO_OF_TRADES,
                     stop_loss_pips=stop_loss_pips,
-                    pip_value=pip_value
+                    pip_value=pip_value,
+                    max_trades_per_day=Config.LIMIT_NO_OF_TRADES,
+                    data=backtest_data,
+                    start_date=start_date,
+                    end_date=end_date
                 )
-                logging.info("Backtest completed successfully.")
+                if result:
+                    logging.info(f"Backtest results for {symbol}: {result}")
+                else:
+                    logging.warning(f"Backtest for {symbol} did not produce results.")
+                logging.info(f"Backtest completed successfully for {symbol}.")
             except Exception as e:
                 handle_error(e, f"An error occurred during backtesting for {symbol}")
 
@@ -94,7 +105,8 @@ def run_live_trading_func():
             raise Exception("Failed to initialize MetaTrader5")
         logging.info("MetaTrader5 initialized successfully.")
 
-        check_auto_trading_enabled()
+        if not check_auto_trading_enabled():
+            return
 
         account_info = mt5.account_info()
         if account_info is None:
@@ -131,7 +143,7 @@ def run_live_trading_func():
 
             if time.time() - last_log_time > 300:  # Log every 5 minutes
                 logging.info("Strategy still running...")
-                last_log_time = time.time() 
+                last_log_time = time.time()
 
             current_day = datetime.now().date()
             if daily_trades >= Config.LIMIT_NO_OF_TRADES:
@@ -143,7 +155,6 @@ def run_live_trading_func():
             for symbol in Config.SYMBOLS:
                 logging.info(f"Processing symbol: {symbol}")
 
-                # Fetch live data using get_data function
                 live_data = get_data(symbol, mode='live')
                 if live_data is None or live_data.empty:
                     logging.error(f"Failed to retrieve live data for {symbol}")
@@ -152,6 +163,10 @@ def run_live_trading_func():
                 df = live_data
 
                 logging.info(f"Dataframe created with tick data: {df.tail()}")
+
+                if 'last' not in df.columns:
+                    df['last'] = (df['bid'] + df['ask']) / 2
+                    logging.info("'last' price calculated from 'bid' and 'ask'")
 
                 df['close'] = df['last']
                 if df['close'].eq(0).any():
@@ -192,7 +207,7 @@ def run_live_trading_func():
                     account_info = mt5.account_info()
                     if account_info is None:
                         raise Exception("Failed to get account info")
-                    
+
                     balance_before = account_info.balance
                     logging.info(f"Account balance before trade attempt: {balance_before}")
 
@@ -257,7 +272,7 @@ def run_live_trading_func():
                     account_info = mt5.account_info()
                     if account_info is None:
                         raise Exception("Failed to get account info")
-                    
+
                     balance_after = account_info.balance
                     logging.info(f"Account balance after trade attempt: {balance_after}")
                     logging.info(f"Balance change: {balance_after - balance_before}")
@@ -281,19 +296,22 @@ def run_live_trading_func():
         shutdown_mt5()
         logging.info("MetaTrader5 connection gracefully shut down.")
 
-        account_info = mt5.account_info()
-        if account_info is None:
-            logging.error("Failed to get final account info")
-            ending_balance = current_balance
-        else:
-            ending_balance = account_info.balance
+        try:
+            account_info = mt5.account_info()
+            if account_info is None:
+                logging.error("Failed to get final account info")
+                ending_balance = current_balance
+            else:
+                ending_balance = account_info.balance
 
-        logging.info("Summary of Trading Session:")
-        logging.info(f"Total trades: {total_trades}")
-        logging.info(f"Starting balance: {starting_balance:.2f}")
-        logging.info(f"Ending balance: {ending_balance:.2f}")
-        logging.info(f"Total profit/loss: {ending_balance - starting_balance:.2f}")
-        
+            logging.info("Summary of Trading Session:")
+            logging.info(f"Total trades: {total_trades}")
+            logging.info(f"Starting balance: {starting_balance:.2f}")
+            logging.info(f"Ending balance: {ending_balance:.2f}")
+            logging.info(f"Total profit/loss: {ending_balance - starting_balance:.2f}")
+        except Exception as e:
+            logging.error(f"Error in finalizing trading session: {str(e)}")
+
 def open_log_file():
     import subprocess
     log_file_path = os.path.abspath("app.log")
