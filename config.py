@@ -2,6 +2,8 @@ import os
 from dotenv import load_dotenv
 from utils.error_handling import handle_error, critical_error
 import logging
+import MetaTrader5 as mt5
+from datetime import datetime
 
 # Load environment variables from the .env file
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -32,14 +34,28 @@ class Config:
         raise ValueError("MT5_PATH environment variable is not set.")
 
     MT5_TIMEFRAME = os.getenv("MT5_TIMEFRAME")
-    if MT5_TIMEFRAME not in ["M1", "M5", "M15", "M30", "H1", "H4", "D1"]:
+    TIMEFRAME_DICT = {
+        "M1": mt5.TIMEFRAME_M1,
+        "M5": mt5.TIMEFRAME_M5,
+        "M15": mt5.TIMEFRAME_M15,
+        "M30": mt5.TIMEFRAME_M30,
+        "H1": mt5.TIMEFRAME_H1,
+        "H4": mt5.TIMEFRAME_H4,
+        "D1": mt5.TIMEFRAME_D1
+    }
+    if MT5_TIMEFRAME not in TIMEFRAME_DICT:
         raise ValueError(f"Invalid MT5_TIMEFRAME value: {MT5_TIMEFRAME}. Expected values: M1, M5, M15, M30, H1, H4, D1.")
+    MT5_TIMEFRAME_VALUE = TIMEFRAME_DICT[MT5_TIMEFRAME]
 
     SYMBOLS = os.getenv("SYMBOLS")
     if SYMBOLS:
         SYMBOLS = SYMBOLS.split(",")
     else:
         raise ValueError("SYMBOLS environment variable is not set.")
+
+    # Data Retrieval Settings
+    DATA_SOURCE = os.getenv("DATA_SOURCE", "MT5")
+    HISTORICAL_DATA_CANDLES = int(os.getenv("HISTORICAL_DATA_CANDLES", 200))
 
     # Telegram Bot Settings
     TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -93,11 +109,17 @@ class Config:
     # SL/TP Adjustment
     SL_TP_ADJUSTMENT_PIPS = float(os.getenv("SL_TP_ADJUSTMENT_PIPS", 0.0001))
 
+    # New Strategy Parameters
+    PEAK_DETECTION_WINDOW = int(os.getenv("PEAK_DETECTION_WINDOW", 21))
+
+    # Backtesting Settings
+    BACKTEST_SLIPPAGE = float(os.getenv("BACKTEST_SLIPPAGE", 0.0))
+    BACKTEST_TRANSACTION_COST = float(os.getenv("BACKTEST_TRANSACTION_COST", 0.0))
+
     # Optional Backtest Start/End Dates for Backtesting
     BACKTEST_START_DATE = os.getenv("BACKTEST_START_DATE")
     BACKTEST_END_DATE = os.getenv("BACKTEST_END_DATE")
 
-    # Validation method
     @classmethod
     def validate(cls):
         try:
@@ -111,20 +133,34 @@ class Config:
                     raise ValueError(f"Missing required environment variable: {var}")
 
             # Ensure all numeric variables have valid numeric values
-            numeric_vars = ['MIN_TP_PROFIT', 'MAX_LOSS_PER_DAY', 'STARTING_EQUITY', 'RISK_PER_TRADE', 'PIP_VALUE', 'MAX_DRAWDOWN', 'SL_TP_ADJUSTMENT_PIPS']
+            numeric_vars = ['MIN_TP_PROFIT', 'MAX_LOSS_PER_DAY', 'STARTING_EQUITY', 'RISK_PER_TRADE', 'PIP_VALUE', 'MAX_DRAWDOWN', 'SL_TP_ADJUSTMENT_PIPS', 'BACKTEST_SLIPPAGE', 'BACKTEST_TRANSACTION_COST']
             for var in numeric_vars:
                 if not isinstance(getattr(cls, var, None), (int, float)):
                     raise ValueError(f"Invalid value for {var}. Expected a numeric value.")
 
             # Validate integer-specific configuration
-            if not isinstance(cls.LIMIT_NO_OF_TRADES, int):
-                raise ValueError(f"Invalid value for LIMIT_NO_OF_TRADES. Expected an integer value.")
+            integer_vars = ['LIMIT_NO_OF_TRADES', 'HISTORICAL_DATA_CANDLES', 'PEAK_DETECTION_WINDOW']
+            for var in integer_vars:
+                if not isinstance(getattr(cls, var), int) or getattr(cls, var) <= 0:
+                    raise ValueError(f"Invalid value for {var}. Expected a positive integer.")
 
             # Validate backtesting date configuration
-            if cls.BACKTEST_START_DATE and not cls.BACKTEST_END_DATE:
-                raise ValueError("BACKTEST_END_DATE is required if BACKTEST_START_DATE is set.")
-            if cls.BACKTEST_END_DATE and not cls.BACKTEST_START_DATE:
-                raise ValueError("BACKTEST_START_DATE is required if BACKTEST_END_DATE is set.")
+            if cls.BACKTEST_START_DATE and cls.BACKTEST_END_DATE:
+                try:
+                    start_date = datetime.strptime(cls.BACKTEST_START_DATE, "%Y-%m-%d")
+                    end_date = datetime.strptime(cls.BACKTEST_END_DATE, "%Y-%m-%d")
+                    if start_date > end_date:
+                        raise ValueError("BACKTEST_START_DATE must be earlier than BACKTEST_END_DATE.")
+                    if end_date > datetime.now():
+                        raise ValueError("BACKTEST_END_DATE cannot be in the future.")
+                except ValueError as e:
+                    raise ValueError(f"Invalid backtest date format: {str(e)}. Use YYYY-MM-DD format.")
+            elif cls.BACKTEST_START_DATE or cls.BACKTEST_END_DATE:
+                raise ValueError("Both BACKTEST_START_DATE and BACKTEST_END_DATE must be set for backtesting.")
+
+            # Validate data source
+            if cls.DATA_SOURCE not in ["MT5", "CSV", "API"]:
+                raise ValueError(f"Invalid DATA_SOURCE value: {cls.DATA_SOURCE}. Expected 'MT5', 'CSV', or 'API'.")
 
         except ValueError as e:
             handle_error(e, "Configuration validation failed")

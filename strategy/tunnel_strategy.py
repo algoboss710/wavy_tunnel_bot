@@ -6,26 +6,9 @@ from datetime import datetime, time as dtime
 from utils.error_handling import handle_error
 import time
 from config import Config
-from metatrader.data_retrieval import get_historical_data
-
+from metatrader.data_retrieval import get_data
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-
-def get_current_data(symbol):
-    tick = mt5.symbol_info_tick(symbol)
-    if tick:
-        tick_data = {
-            'time': datetime.fromtimestamp(tick.time),
-            'bid': tick.bid,
-            'ask': tick.ask,
-            'last': tick.last,
-            'spread': tick.ask - tick.bid,
-            'volume': tick.volume
-        }
-        logging.info(f"Retrieved tick data for {symbol}: {tick_data}")
-        return tick_data
-    else:
-        raise ValueError(f"Failed to retrieve current tick data for {symbol}")
 
 def calculate_ema(prices, period):
     logging.debug(f"Calculating EMA for period {period}")
@@ -104,7 +87,6 @@ def check_entry_conditions(row, peaks, dips, symbol):
     buy_condition = buy_condition1 or buy_condition2 or buy_condition3
     sell_condition = sell_condition1 or sell_condition2 or sell_condition3
 
-  # Log the final conditions
     logging.info(f"Buy conditions: {buy_condition1}, {buy_condition2}, {buy_condition3}")
     logging.info(f"Sell conditions: {sell_condition1}, {sell_condition2}, {sell_condition3}")
     logging.info(f"Buy condition met: {buy_condition}")
@@ -116,7 +98,6 @@ def check_entry_conditions(row, peaks, dips, symbol):
     logging.info(f"Entry conditions for {symbol}: Buy = {buy_condition} (reasons: {', '.join(buy_reasons)}), Sell = {sell_condition} (reasons: {', '.join(sell_reasons)})")
 
     return buy_condition, sell_condition
-
 
 def execute_trade(trade_request, retries=4, delay=6):
     attempt = 0
@@ -132,10 +113,17 @@ def execute_trade(trade_request, retries=4, delay=6):
                 logging.error("Trade execution aborted due to connection issues or market being closed.")
                 return None
 
+            current_data = get_data(trade_request['symbol'], mode='live', timeframe=mt5.TIMEFRAME_M1, num_candles=1)
+            if current_data is not None and not current_data.empty:
+                current_price = current_data['close'].iloc[-1]
+            else:
+                logging.error(f"Failed to get current price for {trade_request['symbol']}")
+                return None
+
             modified_request = trade_request.copy()
             modified_request['action'] = mt5.TRADE_ACTION_DEAL
+            modified_request['price'] = current_price
 
-            # Log the SL and TP values before sending the order
             logging.info(f"Setting SL: {modified_request['sl']}, TP: {modified_request['tp']} before sending order.")
             logging.info(f"Placing order with price: {modified_request['price']} and volume: {modified_request['volume']}")
 
@@ -156,8 +144,6 @@ def execute_trade(trade_request, retries=4, delay=6):
                 return result
             elif result.retcode == 10004:  # Requote
                 logging.warning("Requote error. Retrying with updated price.")
-                current_price = mt5.symbol_info_tick(trade_request['symbol']).ask if trade_request['type'] == mt5.ORDER_TYPE_BUY else mt5.symbol_info_tick(trade_request['symbol']).bid
-                modified_request['price'] = current_price
                 continue
             elif result.retcode == 10016:  # Invalid stops
                 logging.error("Invalid stops. Adjusting SL and TP.")
@@ -248,16 +234,17 @@ def manage_position(symbol, min_take_profit, max_loss_per_day, starting_equity, 
                     logging.info(f"Close position result: {close_result}")
 
                 # Log the profit and details of the closed position
-                position['exit_time'] = pd.Timestamp.now()
-                position['exit_price'] = mt5.symbol_info_tick(symbol).bid
-                position['profit'] = (position['exit_price'] - position['entry_price']) * position['volume']
-                logging.info(f"Position details - Exit Time: {position['exit_time']}, Exit Price: {position['exit_price']}, Profit: {position['profit']}")
+                position_info = {
+                    'exit_time': pd.Timestamp.now(),
+                    'exit_price': mt5.symbol_info_tick(symbol).bid,
+                    'profit': position.profit
+                }
+                logging.info(f"Position details - Exit Time: {position_info['exit_time']}, Exit Price: {position_info['exit_price']}, Profit: {position_info['profit']}")
 
         else:
             logging.info(f"No open positions found for {symbol}.")
     except Exception as e:
         handle_error(e, "Failed to manage position")
-
 
 def calculate_tunnel_bounds(data, period, deviation_factor):
     if len(data) < period:
@@ -290,6 +277,37 @@ def calculate_position_size(account_balance, risk_per_trade, stop_loss_pips, pip
     logging.info(f"Calculated position size: {position_size_lots} lots")
 
     return round(position_size_lots, 2)
+
+def place_order(symbol, action, volume, price, sl, tp):
+    try:
+        logging.info(f"Preparing to place order for {symbol} - Action: {action}, Volume: {volume}, Price: {price}, SL: {sl}, TP: {tp}")
+        order_type = mt5.ORDER_TYPE_BUY if action == 'buy' else mt5.ORDER_TYPE_SELL
+        order = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": symbol,
+            "volume": volume,
+            "type": order_type,
+            "price": price,
+            "sl": sl,
+            "tp": tp,
+            "deviation": 10,
+            "magic": 12345,
+            "comment": "Tunnel Strategy",
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_FOK,
+        }
+        logging.debug(f"Placing order: {order}")
+        result = mt5.order_send(order)
+        logging.info(f"Order send result for {symbol}: {result}")
+
+        if result.retcode != mt5.TRADE_RETCODE_DONE:
+            logging.error(f"Failed to place order for {symbol}: {result.comment}")
+            return 'Order failed'
+        logging.info(f"Order placed successfully for {symbol}")
+        return 'Order placed'
+    except Exception as e:
+        logging.error(f"Exception occurred while placing order for {symbol}: {str(e)}")
+        return 'Order failed'
 
 def generate_trade_signal(data, period, deviation_factor):
     if len(data) < period:
@@ -335,6 +353,7 @@ def ensure_symbol_subscription(symbol):
 
     logging.info(f"Symbol {symbol} is already subscribed and visible.")
     return True
+
 def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_loss_per_day, starting_equity, max_trades_per_day, run_backtest, data=None, std_dev=None):
     try:
         logging.info("Starting strategy execution")
@@ -347,17 +366,10 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
         for symbol in symbols:
             logging.info(f"Processing symbol: {symbol}")
             if data is None:
-                current_data = get_current_data(symbol)
-                logging.info(f"Current data for {symbol}: {current_data}")
-
-                data = pd.DataFrame([{
-                    'time': current_data['time'],
-                    'open': current_data['last'],
-                    'high': current_data['last'],
-                    'low': current_data['last'],
-                    'close': current_data['last'],
-                    'volume': 0
-                }])
+                data = get_data(symbol, mode='live', timeframe=timeframe, num_candles=Config.HISTORICAL_DATA_CANDLES)
+                if data is None or data.empty:
+                    logging.error(f"Failed to retrieve data for {symbol}")
+                    continue
             else:
                 logging.info(f"Using provided data for {symbol}")
 
@@ -386,17 +398,21 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
             logging.info(f"Buy Condition: {buy_condition}, Sell Condition: {sell_condition}")
 
             if buy_condition or sell_condition:
-                current_tick = get_current_data(symbol)
-                logging.info(f"Latest price data for {symbol}: {current_tick}")
+                current_data = get_data(symbol, mode='live', timeframe=mt5.TIMEFRAME_M1, num_candles=1)
+                if current_data is None or current_data.empty:
+                    logging.error(f"Failed to get current data for {symbol}")
+                    continue
+                current_price = current_data['close'].iloc[-1]
+                logging.info(f"Latest price data for {symbol}: {current_price}")
 
                 trade_request = {
                     'action': mt5.TRADE_ACTION_DEAL,
                     'symbol': symbol,
                     'volume': lot_size,
                     'type': mt5.ORDER_TYPE_BUY if buy_condition else mt5.ORDER_TYPE_SELL,
-                    'price': current_tick['bid'] if buy_condition else current_tick['ask'],
-                    'sl': current_tick['bid'] - (1.5 * std_dev) if buy_condition else current_tick['ask'] + (1.5 * std_dev),
-                    'tp': current_tick['bid'] + (2 * std_dev) if buy_condition else current_tick['ask'] - (2 * std_dev),
+                    'price': current_price,
+                    'sl': current_price - (1.5 * std_dev) if buy_condition else current_price + (1.5 * std_dev),
+                    'tp': current_price + (2 * std_dev) if buy_condition else current_price - (2 * std_dev),
                     'deviation': 10,
                     'magic': 12345,
                     'comment': 'Tunnel Strategy',
@@ -430,68 +446,22 @@ def run_strategy(symbols, mt5_init, timeframe, lot_size, min_take_profit, max_lo
         handle_error(e, "Failed to run the strategy")
         return None
 
-def get_data(symbol, mode='live', start_date=None, end_date=None, timeframe=mt5.TIMEFRAME_H1):
-    """
-    Retrieve data based on the mode. Can be used for both live and historical data.
-    - mode: "live" or "backtest"
-    - If backtest mode, start_date and end_date must be provided.
-    """
-    if mode == 'backtest':
-        # Fetch historical data for backtesting
-        return get_historical_data(symbol, timeframe, start_date, end_date)  # Directly call get_historical_data from metatrader
-    else:
-        # Fetch live tick data
-        current_tick = get_current_data(symbol)
-        if current_tick:
-            live_data = pd.DataFrame([{
-                'time': current_tick['time'],
-                'open': current_tick['last'] if current_tick['last'] != 0 else (current_tick['bid'] + current_tick['ask']) / 2,
-                'high': current_tick['ask'],
-                'low': current_tick['bid'],
-                'close': current_tick['last'] if current_tick['last'] != 0 else (current_tick['bid'] + current_tick['ask']) / 2,
-                'volume': current_tick['volume'],
-                'bid': current_tick['bid'],
-                'ask': current_tick['ask']
-            }])
-            logging.info(f"Fetched live data for {symbol}: {live_data.tail()}")
-            return live_data
-        else:
-            logging.error(f"Failed to retrieve live data for {symbol}")
-            return None
+def check_broker_connection():
+    if not mt5.terminal_info().connected:
+        logging.error("Broker is not connected.")
+        return False
+    logging.info("Broker is connected.")
+    return True
 
-
-def place_order(symbol, action, volume, price, sl, tp):
-    try:
-        logging.info(f"Preparing to place order for {symbol} - Action: {action}, Volume: {volume}, Price: {price}, SL: {sl}, TP: {tp}")
-        order_type = mt5.ORDER_TYPE_BUY if action == 'buy' else mt5.ORDER_TYPE_SELL
-        order = {
-            "action": mt5.TRADE_ACTION_DEAL,
-            "symbol": symbol,
-            "volume": volume,
-            "type": order_type,
-            "price": price,
-            "sl": sl,
-            "tp": tp,
-            "deviation": 10,
-            "magic": 12345,
-            "comment": "Tunnel Strategy",
-            "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_FOK,
-        }
-        logging.debug(f"Placing order: {order}")
-        result = mt5.order_send(order)
-        logging.info(f"Order send result for {symbol}: {result}")
-
-        if result.retcode != mt5.TRADE_RETCODE_DONE:
-            logging.error(f"Failed to place order for {symbol}: {result.comment}")
-            return 'Order failed'
-        logging.info(f"Order placed successfully for {symbol}")
-        return 'Order placed'
-    except Exception as e:
-        logging.error(f"Exception occurred while placing order for {symbol}: {str(e)}")
-        return 'Order failed'
-
-
+def check_market_open():
+    current_time = datetime.now().time()
+    market_open = dtime(0, 0)
+    market_close = dtime(23, 59)
+    if not (market_open <= current_time <= market_close):
+        logging.error("Market is closed.")
+        return False
+    logging.info("Market is open.")
+    return True
 
 def close_position(ticket):
     try:
@@ -523,38 +493,3 @@ def close_position(ticket):
     except Exception as e:
         logging.error(f"Failed to close position: {str(e)}")
         return 'Close failed'
-
-def check_broker_connection():
-    if not mt5.terminal_info().connected:
-        logging.error("Broker is not connected.")
-        return False
-    logging.info("Broker is connected.")
-    return True
-
-def check_market_open():
-    current_time = datetime.now().time()
-    market_open = dtime(0, 0)
-    market_close = dtime(23, 59)
-    if not (market_open <= current_time <= market_close):
-        logging.error("Market is closed.")
-        return False
-    logging.info("Market is open.")
-    return True
-
-def get_fresh_tick_data(symbol):
-    logging.info(f"Attempting to retrieve tick data for symbol: {symbol}")
-    tick = mt5.symbol_info_tick(symbol)
-    if tick:
-        tick_data = {
-            'symbol': symbol,
-            'time': datetime.fromtimestamp(tick.time),
-            'bid': tick.bid,
-            'ask': tick.ask,
-            'last': tick.last,
-            'volume': tick.volume
-        }
-        logging.info(f"Retrieved tick data for {symbol}: {tick_data}")
-        return tick_data
-    else:
-        logging.error(f"Failed to retrieve fresh tick data for {symbol}")
-        raise ValueError(f"Failed to retrieve fresh tick data for {symbol}")
