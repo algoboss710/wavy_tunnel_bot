@@ -6,24 +6,23 @@ from datetime import datetime, timedelta
 import logging
 from collections import defaultdict
 import json
-import ta
 import os
 import concurrent.futures
 
 # Create test_logs folder if it doesn't exist
-os.makedirs('test_logs', exist_ok=True)
+os.makedirs('test_logs_ntp_nt', exist_ok=True)
 
 # Set up logging for successful trades
 success_logger = logging.getLogger('successful_trades')
 success_logger.setLevel(logging.INFO)
-success_handler = logging.FileHandler('test_logs/successful_trades.log')
+success_handler = logging.FileHandler('test_logs_ntp_nt/successful_trades.log')
 success_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 success_logger.addHandler(success_handler)
 
 # Set up logging for failed trades
 failure_logger = logging.getLogger('failed_trades')
 failure_logger.setLevel(logging.ERROR)
-failure_handler = logging.FileHandler('test_logs/failed_trades.log')
+failure_handler = logging.FileHandler('test_logs_ntp_nt/failed_trades.log')
 failure_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 failure_logger.addHandler(failure_handler)
 
@@ -57,24 +56,6 @@ def get_historical_data(symbol, timeframe, num_bars):
     logging.info(f"Retrieved {len(df)} bars for {symbol} on {timeframe} timeframe")
     return df
 
-def detect_peaks_and_dips(data, window=21):
-    data['high_roll_max'] = data['high'].rolling(window=window, center=True).max()
-    data['low_roll_min'] = data['low'].rolling(window=window, center=True).min()
-    data['is_peak'] = (data['high'] == data['high_roll_max']) & (data['high'].shift(1) != data['high_roll_max'])
-    data['is_dip'] = (data['low'] == data['low_roll_min']) & (data['low'].shift(1) != data['low_roll_min'])
-    return data
-
-def get_recent_peak_or_dip(data, is_long, lookback=100):
-    if is_long:
-        peaks = data[data['is_peak']]['high'].tail(lookback)
-        if not peaks.empty:
-            return peaks.iloc[-1]
-    else:
-        dips = data[data['is_dip']]['low'].tail(lookback)
-        if not dips.empty:
-            return dips.iloc[-1]
-    return None
-
 def wavy_tunnel_strategy(symbol, timeframe):
     data = get_historical_data(symbol, timeframe, 200)
     if data is None or len(data) < 200:
@@ -87,8 +68,6 @@ def wavy_tunnel_strategy(symbol, timeframe):
     data['tunnel1'] = calculate_ema(data['close'], 144)
     data['tunnel2'] = calculate_ema(data['close'], 169)
     data['rsi'] = calculate_rsi(data)
-
-    data = detect_peaks_and_dips(data)
 
     max_wavy = data[['wavy_h', 'wavy_c', 'wavy_l']].max(axis=1)
     min_wavy = data[['wavy_h', 'wavy_c', 'wavy_l']].min(axis=1)
@@ -105,48 +84,31 @@ def wavy_tunnel_strategy(symbol, timeframe):
 
     return data
 
-def update_trailing_stop(symbol, position, atr_multiple=2):
-    data = get_historical_data(symbol, mt5.TIMEFRAME_M5, 20)  # Get recent data for ATR calculation
-    atr = ta.volatility.average_true_range(data['high'], data['low'], data['close'], window=14).iloc[-1]
-
-    trailing_distance = atr * atr_multiple
-
-    if position.type == mt5.POSITION_TYPE_BUY:
-        new_sl = position.price_current - trailing_distance
-        if new_sl > position.sl and new_sl > position.price_open:
-            return new_sl
-    else:  # Short position
-        new_sl = position.price_current + trailing_distance
-        if new_sl < position.sl or position.sl == 0:
-            return new_sl
-
-    return position.sl  # Return current stop loss if no update is needed
-
-def open_position(symbol, order_type, lot_size, tp_levels, logger):
+def open_position(symbol, order_type, lot_size, tp_distance, logger):
     price = mt5.symbol_info_tick(symbol).ask if order_type == mt5.ORDER_TYPE_BUY else mt5.symbol_info_tick(symbol).bid
+    point = mt5.symbol_info(symbol).point
 
-    for i, tp_level in enumerate(tp_levels):
-        request = {
-            "action": mt5.TRADE_ACTION_DEAL,
-            "symbol": symbol,
-            "volume": lot_size * (0.25 if i < 3 else 0.15),  # 25% for first 3 levels, 15% for the last
-            "type": order_type,
-            "price": price,
-            "deviation": 20,
-            "magic": 234000,
-            "comment": f"Wavy Tunnel Strategy TP{i+1}",
-            "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_IOC,
-        }
+    tp_price = price + tp_distance * point if order_type == mt5.ORDER_TYPE_BUY else price - tp_distance * point
 
-        if tp_level is not None:
-            request["tp"] = tp_level
+    request = {
+        "action": mt5.TRADE_ACTION_DEAL,
+        "symbol": symbol,
+        "volume": lot_size,
+        "type": order_type,
+        "price": price,
+        "tp": tp_price,
+        "deviation": 20,
+        "magic": 234000,
+        "comment": "Wavy Tunnel Strategy",
+        "type_time": mt5.ORDER_TIME_GTC,
+        "type_filling": mt5.ORDER_FILLING_IOC,
+    }
 
-        result = mt5.order_send(request)
-        if result.retcode != mt5.TRADE_RETCODE_DONE:
-            failure_logger.error(f"Order opening failed for {symbol} TP{i+1}: {result.comment}")
-            return False
-        logger.info(f"Order opened for {symbol} TP{i+1}: {result.order}, Price: {price}, Volume: {request['volume']}, TP: {tp_level}")
+    result = mt5.order_send(request)
+    if result.retcode != mt5.TRADE_RETCODE_DONE:
+        failure_logger.error(f"Order opening failed for {symbol}: {result.comment}")
+        return False
+    logger.info(f"Order opened for {symbol}: {result.order}, Price: {price}, Volume: {lot_size}, TP: {tp_price}")
 
     return True
 
@@ -232,26 +194,10 @@ def log_position(position, action, symbol, timeframe, logger):
 
     logger.info(json.dumps(log_entry))
 
-def calculate_tp_levels(data, is_long, entry_price):
-    recent_extreme = get_recent_peak_or_dip(data, is_long)
-    if recent_extreme is None:
-        # Use fixed levels if no recent peak/dip found
-        tp_distances = [50, 100, 150, 200]  # Example fixed distances in points
-        tp_levels = [entry_price + (d if is_long else -d) * mt5.symbol_info(data['symbol'].iloc[0]).point for d in tp_distances]
-    else:
-        price_range = abs(recent_extreme - entry_price)
-        tp_levels = [
-            entry_price + (0.236 * price_range * (1 if is_long else -1)),
-            entry_price + (0.382 * price_range * (1 if is_long else -1)),
-            entry_price + (0.618 * price_range * (1 if is_long else -1)),
-            recent_extreme
-        ]
-    return tp_levels
-
-def trade(symbol, timeframe, lot_size=0.01):
+def trade(symbol, timeframe, lot_size=0.01, tp_distance=100):
     logger = logging.getLogger(f'{symbol}_{timeframe}')
     logger.setLevel(logging.INFO)
-    file_handler = logging.FileHandler(f'test_logs/{symbol}_{timeframe}.log')
+    file_handler = logging.FileHandler(f'test_logs_ntp_nt/{symbol}_{timeframe}.log')
     file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
     logger.addHandler(file_handler)
 
@@ -272,21 +218,6 @@ def trade(symbol, timeframe, lot_size=0.01):
         for position in positions:
             position_type = 'Long' if position.type == mt5.POSITION_TYPE_BUY else 'Short'
             logger.info(f"Current position: Type: {position_type}, Volume: {position.volume}, Open Price: {position.price_open}, Current Price: {position.price_current}, Profit: {position.profit}")
-
-            # Update trailing stop
-            new_sl = update_trailing_stop(symbol, position)
-            if new_sl != position.sl:
-                request = {
-                    "action": mt5.TRADE_ACTION_SLTP,
-                    "symbol": symbol,
-                    "position": position.ticket,
-                    "sl": new_sl
-                }
-                result = mt5.order_send(request)
-                if result.retcode != mt5.TRADE_RETCODE_DONE:
-                    failure_logger.error(f"Failed to update stop loss for {symbol}: {result.comment}")
-                else:
-                    logger.info(f"Updated stop loss to {new_sl}")
 
             if (position.type == mt5.POSITION_TYPE_BUY and last_row['exit_long']) or \
                (position.type == mt5.POSITION_TYPE_SELL and last_row['exit_short']):
@@ -309,10 +240,8 @@ def trade(symbol, timeframe, lot_size=0.01):
             logger.info(f"Attempting to open long position for {symbol} on {timeframe} timeframe")
             logger.info(f"Entry reason: Price above wavy tunnel, wavy tunnel above main tunnel, RSI below overbought level")
             update_trade_summary("open_long", "attempt")
-            tp_levels = calculate_tp_levels(data, True, last_row['open'])
-            if open_position(symbol, mt5.ORDER_TYPE_BUY, lot_size, tp_levels, logger):
+            if open_position(symbol, mt5.ORDER_TYPE_BUY, lot_size, tp_distance, logger):
                 logger.info(f"Successfully opened long position for {symbol} on {timeframe} timeframe")
-                logger.info(f"Take Profit levels: {tp_levels}")
                 update_trade_summary("open_long", "success")
                 log_successful_trade(symbol, timeframe, "Open Long", last_row['open'], None, None)
                 new_position = mt5.positions_get(symbol=symbol)[-1]
@@ -324,10 +253,8 @@ def trade(symbol, timeframe, lot_size=0.01):
             logger.info(f"Attempting to open short position for {symbol} on {timeframe} timeframe")
             logger.info(f"Entry reason: Price below wavy tunnel, wavy tunnel below main tunnel, RSI above oversold level")
             update_trade_summary("open_short", "attempt")
-            tp_levels = calculate_tp_levels(data, False, last_row['open'])
-            if open_position(symbol, mt5.ORDER_TYPE_SELL, lot_size, tp_levels, logger):
+            if open_position(symbol, mt5.ORDER_TYPE_SELL, lot_size, tp_distance, logger):
                 logger.info(f"Successfully opened short position for {symbol} on {timeframe} timeframe")
-                logger.info(f"Take Profit levels: {tp_levels}")
                 update_trade_summary("open_short", "success")
                 log_successful_trade(symbol, timeframe, "Open Short", last_row['open'], None, None)
                 new_position = mt5.positions_get(symbol=symbol)[-1]

@@ -11,19 +11,19 @@ import os
 import concurrent.futures
 
 # Create test_logs folder if it doesn't exist
-os.makedirs('test_logs', exist_ok=True)
+os.makedirs('test_logs_2', exist_ok=True)
 
 # Set up logging for successful trades
 success_logger = logging.getLogger('successful_trades')
 success_logger.setLevel(logging.INFO)
-success_handler = logging.FileHandler('test_logs/successful_trades.log')
+success_handler = logging.FileHandler('test_logs_2/successful_trades.log')
 success_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 success_logger.addHandler(success_handler)
 
 # Set up logging for failed trades
 failure_logger = logging.getLogger('failed_trades')
 failure_logger.setLevel(logging.ERROR)
-failure_handler = logging.FileHandler('test_logs/failed_trades.log')
+failure_handler = logging.FileHandler('test_logs_2/failed_trades.log')
 failure_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 failure_logger.addHandler(failure_handler)
 
@@ -104,23 +104,6 @@ def wavy_tunnel_strategy(symbol, timeframe):
     data['exit_short'] = data['close'] > max_wavy
 
     return data
-
-def update_trailing_stop(symbol, position, atr_multiple=2):
-    data = get_historical_data(symbol, mt5.TIMEFRAME_M5, 20)  # Get recent data for ATR calculation
-    atr = ta.volatility.average_true_range(data['high'], data['low'], data['close'], window=14).iloc[-1]
-
-    trailing_distance = atr * atr_multiple
-
-    if position.type == mt5.POSITION_TYPE_BUY:
-        new_sl = position.price_current - trailing_distance
-        if new_sl > position.sl and new_sl > position.price_open:
-            return new_sl
-    else:  # Short position
-        new_sl = position.price_current + trailing_distance
-        if new_sl < position.sl or position.sl == 0:
-            return new_sl
-
-    return position.sl  # Return current stop loss if no update is needed
 
 def open_position(symbol, order_type, lot_size, tp_levels, logger):
     price = mt5.symbol_info_tick(symbol).ask if order_type == mt5.ORDER_TYPE_BUY else mt5.symbol_info_tick(symbol).bid
@@ -247,11 +230,10 @@ def calculate_tp_levels(data, is_long, entry_price):
             recent_extreme
         ]
     return tp_levels
-
 def trade(symbol, timeframe, lot_size=0.01):
     logger = logging.getLogger(f'{symbol}_{timeframe}')
     logger.setLevel(logging.INFO)
-    file_handler = logging.FileHandler(f'test_logs/{symbol}_{timeframe}.log')
+    file_handler = logging.FileHandler(f'test_logs_2/{symbol}_{timeframe}.log')
     file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
     logger.addHandler(file_handler)
 
@@ -272,21 +254,6 @@ def trade(symbol, timeframe, lot_size=0.01):
         for position in positions:
             position_type = 'Long' if position.type == mt5.POSITION_TYPE_BUY else 'Short'
             logger.info(f"Current position: Type: {position_type}, Volume: {position.volume}, Open Price: {position.price_open}, Current Price: {position.price_current}, Profit: {position.profit}")
-
-            # Update trailing stop
-            new_sl = update_trailing_stop(symbol, position)
-            if new_sl != position.sl:
-                request = {
-                    "action": mt5.TRADE_ACTION_SLTP,
-                    "symbol": symbol,
-                    "position": position.ticket,
-                    "sl": new_sl
-                }
-                result = mt5.order_send(request)
-                if result.retcode != mt5.TRADE_RETCODE_DONE:
-                    failure_logger.error(f"Failed to update stop loss for {symbol}: {result.comment}")
-                else:
-                    logger.info(f"Updated stop loss to {new_sl}")
 
             if (position.type == mt5.POSITION_TYPE_BUY and last_row['exit_long']) or \
                (position.type == mt5.POSITION_TYPE_SELL and last_row['exit_short']):

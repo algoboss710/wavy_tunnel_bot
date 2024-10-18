@@ -1,0 +1,154 @@
+{
+    "EURUSD": {
+        "M15": {
+            "Total Profit": -1064.7164033748777,
+            "Win Rate": 0.0,
+            "Average Win": 0,
+            "Average Loss": -1064.7164033748786,
+            "Profit Factor": 0.0,
+            "Number of Trades": 1,
+            "Max Drawdown": 0
+        },
+        "H1": {
+            "Total Profit": -1175.6978653530423,
+            "Win Rate": 0.0,
+            "Average Win": 0,
+            "Average Loss": -1175.6978653530414,
+            "Profit Factor": 0.0,
+            "Number of Trades": 1,
+            "Max Drawdown": 0
+        },
+        "H4": {
+            "Total Profit": -1598.9706035404452,
+            "Win Rate": 0.0,
+            "Average Win": 0,
+            "Average Loss": -1598.9706035404452,
+            "Profit Factor": 0.0,
+            "Number of Trades": 1,
+            "Max Drawdown": 0
+        },
+        "D1": {
+            "Total Profit": -0.9181977614407515,
+            "Win Rate": 0.0,
+            "Average Win": 0,
+            "Average Loss": -0.9181977614398726,
+            "Profit Factor": 0.0,
+            "Number of Trades": 1,
+            "Max Drawdown": 0
+        }
+    },
+    "GBPUSD": {
+        "M15": {
+            "Total Profit": -4180.017598326492,
+            "Win Rate": 0.0,
+            "Average Win": 0,
+            "Average Loss": -4180.017598326492,
+            "Profit Factor": 0.0,
+            "Number of Trades": 1,
+            "Max Drawdown": 0
+        },
+        "H1": {
+            "Total Profit": -4201.541118639562,
+            "Win Rate": 0.0,
+            "Average Win": 0,
+            "Average Loss": -4201.541118639562,
+            "Profit Factor": 0.0,
+            "Number of Trades": 1,
+            "Max Drawdown": 0
+        },
+        "H4": {
+            "Total Profit": -4512.683578104141,
+            "Win Rate": 0.0,
+            "Average Win": 0,
+            "Average Loss": -4512.683578104141,
+            "Profit Factor": 0.0,
+            "Number of Trades": 1,
+            "Max Drawdown": 0
+        },
+        "D1": {
+            "Total Profit": 2820.384348079071,
+            "Win Rate": 1.0,
+            "Average Win": 2820.384348079071,
+            "Average Loss": 0,
+            "Profit Factor": Infinity,
+            "Number of Trades": 1,
+            "Max Drawdown": 0
+        }
+    },
+    "USDJPY": {
+        "M15": {
+            "Total Profit": 70.23169375599718,
+            "Win Rate": 1.0,
+            "Average Win": 70.2316937559979,
+            "Average Loss": 0,
+            "Profit Factor": Infinity,
+            "Number of Trades": 1,
+            "Max Drawdown": 0
+        },
+        "H1": {
+            "Total Profit": -75.55377922616935,
+            "Win Rate": 0.0,
+            "Average Win": 0,
+            "Average Loss": -75.55377922616941,
+            "Profit Factor": 0.0,
+            "Number of Trades": 1,
+            "Max Drawdown": 0
+        },
+        "H4": {
+            "Total Profit": 64.20499124871822,
+            "Win Rate": 1.0,
+            "Average Win": 64.20499124871753,
+            "Average Loss": 0,
+            "Profit Factor": Infinity,
+            "Number of Trades": 1,
+            "Max Drawdown": 0
+        },
+        "D1": {
+            "Total Profit": -80.96361894525398,
+            "Win Rate": 0.0,
+            "Average Win": 0,
+            "Average Loss": -80.96361894525324,
+            "Profit Factor": 0.0,
+            "Number of Trades": 1,
+            "Max Drawdown": 0
+        }
+    },
+    "AUDUSD": {
+        "M15": {
+            "Total Profit": 535.8299475946587,
+            "Win Rate": 1.0,
+            "Average Win": 535.829947594658,
+            "Average Loss": 0,
+            "Profit Factor": Infinity,
+            "Number of Trades": 1,
+            "Max Drawdown": 0
+        },
+        "H1": {
+            "Total Profit": -674.1391704933922,
+            "Win Rate": 0.0,
+            "Average Win": 0,
+            "Average Loss": -674.139170493393,
+            "Profit Factor": 0.0,
+            "Number of Trades": 1,
+            "Max Drawdown": 0
+        },
+        "H4": {
+            "Total Profit": -815.213417754836,
+            "Win Rate": 0.0,
+            "Average Win": 0,
+            "Average Loss": -815.213417754836,
+            "Profit Factor": 0.0,
+            "Number of Trades": 1,
+            "Max Drawdown": 0
+        },
+        "D1": {
+            "Total Profit": -1709.8020001729274,
+            "Win Rate": 0.0,
+            "Average Win": 0,
+            "Average Loss": -1709.8020001729278,
+            "Profit Factor": 0.0,
+            "Number of Trades": 1,
+            "Max Drawdown": 0
+        }
+    }
+}
