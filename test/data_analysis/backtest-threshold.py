@@ -60,9 +60,25 @@ def get_historical_data(symbol, timeframe, start_date, end_date):
 
     return df
 
+def calculate_indicators(df):
+    # Calculate EMAs
+    df['ema_34'] = df['close'].ewm(span=34, adjust=False).mean()
+    df['ema_144'] = df['close'].ewm(span=144, adjust=False).mean()
+    df['ema_169'] = df['close'].ewm(span=169, adjust=False).mean()
 
-# Modify the function to accept a threshold dynamically
+    # Calculate RSI
+    delta = df['close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+    rs = gain / loss
+    df['rsi'] = 100 - (100 / (1 + rs))
+
+    return df
+
 def generate_signals(df, symbol, threshold):
+    # Ensure indicators are calculated
+    df = calculate_indicators(df)
+
     threshold_in_price_units = threshold * mt5.symbol_info(symbol).point  # Convert threshold to price units
 
     df['max_wavy'] = df[['ema_34', 'close']].max(axis=1)
@@ -83,6 +99,7 @@ def generate_signals(df, symbol, threshold):
     df['short_exit'] = df['close'] > df['max_wavy']
 
     return df
+
 
 # Backtest function with dynamic threshold for each currency pair and timeframe
 def run_backtest(df, symbol, timeframe, threshold, initial_balance=10000, risk_per_trade=0.01):
