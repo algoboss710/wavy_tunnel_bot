@@ -14,24 +14,24 @@ if exist "venv\" (
 
 echo Searching for Python installations...
 
-set "PYTHON3101_PATH="
+set "PYTHON310_PATH="
 
 for /f "delims=" %%I in ('where python') do (
     set "PYTHON_CMD=%%I"
     for /f "tokens=2 delims= " %%A in ('"!PYTHON_CMD!" -V 2^>^&1') do (
         set "PYTHON_VERSION=%%A"
         echo Found Python !PYTHON_VERSION! at: !PYTHON_CMD!
-        if "!PYTHON_VERSION!"=="3.10.1" (
-            set "PYTHON3101_PATH=!PYTHON_CMD!"
+        if "!PYTHON_VERSION:~0,4!"=="3.10" (
+            set "PYTHON310_PATH=!PYTHON_CMD!"
             goto :FOUND_PYTHON
         )
     )
 )
 
 :FOUND_PYTHON
-if "!PYTHON3101_PATH!"=="" (
-    echo Python 3.10.1 not found in the PATH.
-    echo Please ensure Python 3.10.1 is installed and added to your PATH.
+if "!PYTHON310_PATH!"=="" (
+    echo Python 3.10.x not found in the PATH.
+    echo Please ensure Python 3.10.x is installed and added to your PATH.
     echo.
     echo Available Python versions:
     where python
@@ -39,11 +39,11 @@ if "!PYTHON3101_PATH!"=="" (
 )
 
 echo.
-echo Python 3.10.1 found at: !PYTHON3101_PATH!
-echo Setup will proceed with Python 3.10.1.
+echo Python 3.10.x found at: !PYTHON310_PATH!
+echo Setup will proceed with Python 3.10.x.
 
-echo Creating virtual environment with Python 3.10.1...
-"!PYTHON3101_PATH!" -m venv venv
+echo Creating virtual environment with Python 3.10.x...
+"!PYTHON310_PATH!" -m venv venv
 if errorlevel 1 (
     echo Failed to create virtual environment.
     exit /b 1

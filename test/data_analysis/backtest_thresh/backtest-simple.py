@@ -9,6 +9,9 @@ import json
 import os
 import concurrent.futures
 
+# Flag to enable/disable RSI filter
+apply_rsi_filter = True  # Set to False to disable the RSI filter
+
 # Create test_logs folder if it doesn't exist
 os.makedirs('test_logs_backtest', exist_ok=True)
 
@@ -70,18 +73,25 @@ def wavy_tunnel_strategy(df):
     df['wavy_l'] = calculate_ema(df['low'], 34)
     df['tunnel1'] = calculate_ema(df['close'], 144)
     df['tunnel2'] = calculate_ema(df['close'], 169)
-    df['rsi'] = calculate_rsi(df)
+
+    if apply_rsi_filter:
+        df['rsi'] = calculate_rsi(df)
+        rsi_upper = 70
+        rsi_lower = 30
 
     max_wavy = df[['wavy_h', 'wavy_c', 'wavy_l']].max(axis=1)
     min_wavy = df[['wavy_h', 'wavy_c', 'wavy_l']].min(axis=1)
     max_tunnel = df[['tunnel1', 'tunnel2']].max(axis=1)
     min_tunnel = df[['tunnel1', 'tunnel2']].min(axis=1)
 
-    rsi_upper = 70
-    rsi_lower = 30
+    # Long condition with optional RSI filter
+    if apply_rsi_filter:
+        df['long_condition'] = (df['open'] > max_wavy) & (min_wavy > max_tunnel) & (df['rsi'] < rsi_upper)
+        df['short_condition'] = (df['open'] < min_wavy) & (max_wavy < min_tunnel) & (df['rsi'] > rsi_lower)
+    else:
+        df['long_condition'] = (df['open'] > max_wavy) & (min_wavy > max_tunnel)
+        df['short_condition'] = (df['open'] < min_wavy) & (max_wavy < min_tunnel)
 
-    df['long_condition'] = (df['open'] > max_wavy) & (min_wavy > max_tunnel) & (df['rsi'] < rsi_upper)
-    df['short_condition'] = (df['open'] < min_wavy) & (max_wavy < min_tunnel) & (df['rsi'] > rsi_lower)
     df['exit_long'] = df['close'] < min_wavy
     df['exit_short'] = df['close'] > max_wavy
 
@@ -122,7 +132,7 @@ def backtest(symbol, timeframe, start_date, end_date, lot_size=0.01):
     profit_short = 0
 
     for i in range(1, len(df)):
-        row = df.iloc[i]
+        row = df.iloc[i]  # Fixed: Changed df.iloc(i) to df.iloc[i]
         trades_analyzed += 1
 
         if position is None:

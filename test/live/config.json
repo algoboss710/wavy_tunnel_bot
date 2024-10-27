@@ -1,0 +1,40 @@
+{
+    "global_settings": {
+      "risk_percentage": 1,
+      "max_open_positions": 5
+    },
+    "symbols": [
+      {
+        "currency_pair": "EURUSD",
+        "timeframe": "M15",
+        "wavy_ema": 34,
+        "tunnel_ema1": 144,
+        "tunnel_ema2": 169,
+        "atr_period": 14,
+        "atr_multiplier": 0.5,
+        "apply_rsi_filter": true,
+        "rsi_period": 14,
+        "rsi_upper": 70,
+        "rsi_lower": 30,
+        "lot_size": 0.01,
+        "stop_loss_pips": 50,
+        "take_profit_pips": 100
+      },
+      {
+        "currency_pair": "GBPUSD",
+        "timeframe": "H1",
+        "wavy_ema": 30,
+        "tunnel_ema1": 150,
+        "tunnel_ema2": 175,
+        "atr_period": 14,
+        "atr_multiplier": 0.6,
+        "apply_rsi_filter": true,
+        "rsi_period": 14,
+        "rsi_upper": 70,
+        "rsi_lower": 30,
+        "lot_size": 0.01,
+        "stop_loss_pips": 60,
+        "take_profit_pips": 120
+      }
+    ]
+  }
