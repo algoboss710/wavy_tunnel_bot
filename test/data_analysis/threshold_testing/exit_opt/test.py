@@ -834,13 +834,12 @@ def get_start_date(timeframe: str, end_date: datetime) -> datetime:
     else:
         raise ValueError(f"Unknown timeframe: {timeframe}")
 
-
 class MultiTimeframeOptimizer:
     def __init__(self,
+                 start_date: datetime,
                  end_date: datetime,
                  symbol: str = "XAUUSD",
-                 base_path: str = "optimization_results",
-                 custom_start_dates: Dict[str, datetime] = None):
+                 base_path: str = "optimization_results"):
 
         self.end_date = end_date
         self.symbol = symbol
@@ -881,14 +880,10 @@ class MultiTimeframeOptimizer:
                     raise Exception(f"MetaTrader5 initialization failed after {max_retries} attempts: {str(e)}")
                 time.sleep(1)
 
-        # Set start dates - either custom or default
-        if custom_start_dates:
-            self.start_dates = custom_start_dates
-            logging.info(f"Using custom start dates: {self.start_dates}")
-        else:
-            self.start_dates = {
-                tf: get_start_date(tf, end_date) for tf in self.timeframes
-            }
+        # Set dynamic start dates for each timeframe
+        self.start_dates = {
+            tf: get_start_date(tf, end_date) for tf in self.timeframes
+        }
 
         logging.info(f"""
         Optimizer Initialized:
@@ -900,67 +895,17 @@ class MultiTimeframeOptimizer:
         """)
 
     def get_parameter_ranges(self, timeframe: str, phase: str = "initial") -> Dict:
-        """Get parameter ranges based on timeframe and instrument"""
+        """Get parameter ranges based on timeframe and optimization phase"""
+        multiplier = self.timeframes[timeframe]["lookback_multiplier"]
 
-        # Define instrument-specific settings
-        instrument_settings = {
-            "XAUUSD": {
-                "M15": {
-                    "lookback": [20, 40, 60],      # Shorter for quick moves
-                    "threshold": [0.0005, 0.00075, 0.001]  # Gold typically moves 0.05-0.1%
-                },
-                "H1": {
-                    "lookback": [12, 24, 36],      # Hours of lookback
-                    "threshold": [0.001, 0.0015, 0.002]    # Larger moves on H1
-                },
-                "H4": {
-                    "lookback": [6, 12, 18],       # Number of 4-hour periods
-                    "threshold": [0.002, 0.0025, 0.003]    # Larger moves for H4
-                },
-                "D1": {
-                    "lookback": [5, 10, 15],       # Days of lookback
-                    "threshold": [0.003, 0.004, 0.005]     # Significant daily moves
-                }
-            },
-            "EURUSD": {
-                "M15": {
-                    "lookback": [24, 48, 72],
-                    "threshold": [0.0002, 0.0003, 0.0004]  # Forex pairs move less
-                },
-                "H1": {
-                    "lookback": [12, 24, 36],
-                    "threshold": [0.0003, 0.0004, 0.0005]
-                },
-                "H4": {
-                    "lookback": [6, 12, 18],
-                    "threshold": [0.0004, 0.0005, 0.0006]
-                },
-                "D1": {
-                    "lookback": [5, 10, 15],
-                    "threshold": [0.0005, 0.0006, 0.0007]
-                }
-            }
-        }
-
-        # Get settings for current instrument and timeframe
-        settings = instrument_settings.get(self.symbol, {}).get(timeframe, {})
-
-        if not settings:
-            # Default settings if instrument/timeframe not found
-            multiplier = self.timeframes[timeframe]["lookback_multiplier"]
-            settings = {
-                "lookback": [
+        if phase == "initial":
+            return {
+                'lookback_values': [
                     int(50 * multiplier),
                     int(100 * multiplier),
                     int(150 * multiplier)
                 ],
-                "threshold": [0.001, 0.002, 0.003]
-            }
-
-        if phase == "initial":
-            return {
-                'lookback_values': settings["lookback"],
-                'threshold_values': settings["threshold"],
+                'threshold_values': [0.001, 0.002, 0.003],
                 'tp_combinations': [
                     {"levels": [0.2, 0.4, 0.6, 0.8], "quantities": [0.6, 0.15, 0.15, 0.1]},
                     {"levels": [0.15, 0.3, 0.45, 0.6], "quantities": [0.4, 0.3, 0.2, 0.1]},
@@ -968,41 +913,8 @@ class MultiTimeframeOptimizer:
                 ],
                 'atr_multiplier_values': [1.5, 2.5]
             }
-        else:
+        else:  # fine-tuning phase
             return self.current_fine_tuning_ranges
-
-    def get_cached_data(self, timeframe: str) -> np.ndarray:
-        """Get or load data with caching and retry logic"""
-        max_retries = 3
-        retry_delay = 1  # seconds
-        cache_key = f"{self.symbol}_{timeframe}"
-
-        # Check cache first
-        cached_data = self.data_cache.get(cache_key)
-        if cached_data is not None:
-            return cached_data
-
-        # If not in cache, fetch from MT5 with retry logic
-        for attempt in range(max_retries):
-            try:
-                data = mt5.copy_rates_range(
-                    self.symbol,
-                    self.timeframes[timeframe]["mt5_tf"],
-                    self.start_dates[timeframe],
-                    self.end_date
-                )
-
-                if data is None or len(data) == 0:
-                    raise Exception(f"No data returned for {timeframe}")
-
-                self.data_cache.set(cache_key, data)
-                return data
-
-            except Exception as e:
-                if attempt == max_retries - 1:
-                    raise Exception(f"Failed to get data after {max_retries} attempts: {str(e)}")
-                logging.warning(f"Data fetch attempt {attempt + 1} failed, retrying in {retry_delay}s")
-                time.sleep(retry_delay)
 
     def generate_configurations(self, timeframe: str, parameter_ranges: Dict) -> List[Dict]:
         """Generate parameter combinations for testing with validation"""
@@ -1074,94 +986,6 @@ class MultiTimeframeOptimizer:
         except Exception as e:
             logging.error(f"TP config validation failed: {str(e)}")
             return False
-
-    def run_single_backtest(self, config: Dict, market_data: np.ndarray) -> Dict:
-        """Run a single backtest"""
-        try:
-            # Convert market data to DataFrame
-            df = pd.DataFrame(market_data)
-            df.set_index('time', inplace=True)
-            df.index = pd.to_datetime(df.index, unit='s')
-
-            # Check minimum data requirements
-            min_required = max(
-                config['tunnel_ema2'] * 2,  # Largest EMA period * 2
-                config['peak_dip_lookback'] * 2,  # For peak/dip detection
-                config['rsi_period'] * 2  # For RSI calculation
-            )
-
-            if len(df) < min_required:
-                logging.warning(
-                    f"Insufficient data for backtest. "
-                    f"Need {min_required} bars, got {len(df)}"
-                )
-                return None
-
-            # Create and run backtest
-            backtest = BacktestEngine(df, config)
-            results = backtest.run_backtest()
-
-            if results:
-                logging.debug(f"""
-                Backtest completed:
-                Config: {config['timeframe']} - Lookback: {config['peak_dip_lookback']}
-                Trades: {results.get('total_trades', 0)}
-                Profit: ${results.get('net_profit', 0):,.2f}
-                """)
-
-            return results
-
-        except Exception as e:
-            logging.error(f"Backtest failed for config: {str(e)}")
-            return None
-
-    def get_top_performers(self, results: List[OptimizationResult], n: int = 3) -> List[Dict]:
-        """Get top performing configurations"""
-        sorted_results = sorted(
-            results,
-            key=lambda x: (x.net_profit, -x.max_drawdown, x.sharpe_ratio),
-            reverse=True
-        )
-        return [result.config for result in sorted_results[:n]]
-
-    def generate_fine_tuning_ranges(self, base_config: Dict) -> Dict:
-        """Generate parameter ranges around best performing configuration"""
-        lookback = base_config['peak_dip_lookback']
-        threshold = base_config['peak_dip_threshold']
-        atr_mult = base_config['tp_atr_multiplier']
-
-        return {
-            'lookback_values': [
-                int(lookback * 0.9),
-                lookback,
-                int(lookback * 1.1)
-            ],
-            'threshold_values': [
-                threshold * 0.9,
-                threshold,
-                threshold * 1.1
-            ],
-            'tp_combinations': [
-                {"levels": base_config['tp_levels'], "quantities": base_config['tp_quantities']},
-                self.adjust_tp_levels({"levels": base_config['tp_levels'],
-                                     "quantities": base_config['tp_quantities']}, 0.9),
-                self.adjust_tp_levels({"levels": base_config['tp_levels'],
-                                     "quantities": base_config['tp_quantities']}, 1.1)
-            ],
-            'atr_multiplier_values': [
-                atr_mult * 0.9,
-                atr_mult,
-                atr_mult * 1.1
-            ]
-        }
-
-    def adjust_tp_levels(self, tp_config: Dict, multiplier: float) -> Dict:
-        """Adjust take profit levels by a multiplier"""
-        return {
-            "levels": [level * multiplier for level in tp_config["levels"]],
-            "quantities": tp_config["quantities"]
-        }
-
     def run_optimization_phase(self, timeframe: str, phase: str) -> List[OptimizationResult]:
         """Run a single optimization phase with enhanced error handling and progress tracking"""
         try:
@@ -1331,34 +1155,6 @@ class MultiTimeframeOptimizer:
         except Exception as e:
             logging.error(f"Failed to save timeframe results: {str(e)}")
 
-    def save_results(self, results: Dict):
-        """Save final optimization results"""
-        try:
-            results_file = self.results_path / 'optimization_results.json'
-            with open(results_file, 'w') as f:
-                json.dump(results, f, default=lambda x: x.__dict__ if hasattr(x, '__dict__') else str(x))
-            logging.info(f"Saved final results to {results_file}")
-        except Exception as e:
-            logging.error(f"Failed to save final results: {str(e)}")
-
-    def display_results(self, results: Dict):
-        """Display final optimization results"""
-        try:
-            print("\n=== OPTIMIZATION RESULTS ===")
-            for timeframe, timeframe_results in results.items():
-                best_config = timeframe_results['best_config']
-                result = next((r for r in timeframe_results['fine_tuning_phase']
-                             if r.config == best_config), None)
-                if result:
-                    print(f"\n{timeframe} Best Configuration:")
-                    print(f"Net Profit: ${result.net_profit:,.2f}")
-                    print(f"Win Rate: {result.win_rate:.1f}%")
-                    print(f"Total Trades: {result.total_trades}")
-                    print(f"Lookback: {best_config['peak_dip_lookback']}")
-                    print(f"Threshold: {best_config['peak_dip_threshold']:.6f}")
-        except Exception as e:
-            logging.error(f"Failed to display results: {str(e)}")
-
     def summarize_optimization(self, results: Dict):
         """Print summary statistics for optimization run"""
         try:
@@ -1385,14 +1181,6 @@ class MultiTimeframeOptimizer:
                         print(f"Net Profit: ${result.net_profit:,.2f}")
                         print(f"Win Rate: {result.win_rate:.1f}%")
                         print(f"Total Trades: {result.total_trades}")
-                        print(f"Max Drawdown: {result.max_drawdown:.1f}%")
-                        print(f"Sharpe Ratio: {result.sharpe_ratio:.2f}")
-                        print(f"Recovery Factor: {result.recovery_factor:.2f}")
-                        print(f"Expectancy: {result.expectancy:.2f}")
-                        print("Configuration:")
-                        print(f"- Lookback: {data['best_config']['peak_dip_lookback']}")
-                        print(f"- Threshold: {data['best_config']['peak_dip_threshold']:.6f}")
-                        print(f"- ATR Multiplier: {data['best_config']['tp_atr_multiplier']:.2f}")
 
             print(f"\nOverall Statistics:")
             print(f"Total Configurations Tested: {total_configs}")
@@ -1401,25 +1189,23 @@ class MultiTimeframeOptimizer:
 
         except Exception as e:
             logging.error(f"Failed to generate summary: {str(e)}")
+
 def main():
     try:
         # Set date range for optimization
-        end_date = datetime(2024, 10, 27)
-
-        # Define custom start dates
-        custom_dates = {
-            "M15": datetime(2024, 10, 1),
-            "H1": datetime(2024, 9, 1),
-            "H4": datetime(2024, 8, 1),
-            "D1": datetime(2023, 10, 1)
-        }
-
+        end_date = datetime.now()
         symbol = "XAUUSD"
 
+        logging.info(f"""
+        Starting optimization:
+        Symbol: {symbol}
+        End Date: {end_date.date()}
+        """)
+
         optimizer = MultiTimeframeOptimizer(
+            start_date=None,  # Will be set dynamically per timeframe
             end_date=end_date,
-            symbol=symbol,
-            custom_start_dates=custom_dates
+            symbol=symbol
         )
 
         results = optimizer.run_phased_optimization()
@@ -1431,6 +1217,7 @@ def main():
 
     except Exception as e:
         logging.error(f"Optimization failed: {str(e)}", exc_info=True)
+        print(f"Optimization failed: {str(e)}")
     finally:
         mt5.shutdown()
         logging.info("MT5 connection closed")
