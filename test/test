@@ -1,0 +1,39 @@
+Looking at the Pine script, I can identify several components that could be optimized separately. Let's break them down:
+
+Already Optimized Components:
+
+Copy- Wavy Tunnel Parameters:
+  * Wavy Period (currently 34 in script)
+  * Tunnel Periods (144/169 in script)
+  * ATR Period and Multiplier
+
+Components That Need Optimization:
+
+A. Peak/Dip Detection System:
+Copy- peak_type parameter (currently 21)
+- Peak/Dip lookback period
+- Peak/Dip threshold calculations
+B. Take Profit Structure:
+Copy- TpLotPercent array [60, 15, 10, 10]
+- TpWeights array [0.2, 0.4, 0.6, 0.8]
+- Position size (currently 100)
+C. Support/Resistance System:
+Copy- Support/Resistance period (currently 18)
+- SMA smoothing period (currently 5)
+- Proximity percentage (currently 0.01 or 1%)
+D. Secondary Strategy Parameters:
+Copy- MaxAllowIntoZone (currently 0.25 or 25%)
+- Secondary TP structure:
+  * TpLotPercentSecond [60, 15, 10, 10]
+  * TpWeightSecond [0.20, 0.40, 0.60, 0.80]
+E. Filter Parameters:
+Copy- RSI parameters:
+  * Period (14)
+  * Overbought level (70)
+  * Oversold level (30)
+- Long-term EMA period (200)
+F. Currency-Specific Thresholds:
+Copy- Threshold values for different currencies:
+  * USD, EUR, JPY, GBP, CHF, AUD thresholds
+- Take profit limits for each currency
+- Minimum gap requirements for second strategy
