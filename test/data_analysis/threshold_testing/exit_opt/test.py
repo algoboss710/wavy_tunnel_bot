@@ -8,7 +8,7 @@ from itertools import product
 from scipy.ndimage import gaussian_filter1d
 import psutil
 import time
-from typing import Dict, List, Tuple, Optional, Union
+from typing import Dict, List, Tuple, Optional
 
 class OptimizationLogger:
     """Logger class for optimization process"""
@@ -59,11 +59,11 @@ class OptimizationLogger:
             f"\nTotal Signals: {metrics.get('total_signals', 0)}"
             f"\n{'-'*50}"
         )
-
 class MultiSymbolOptimizer:
-    def __init__(self, symbols: List[str], timeframes: List[str], base_path: str = "optimization_results"):
+    def __init__(self, symbols: List[str], timeframes: List[str], wavy_params: Dict[str, Dict[str, dict]], base_path: str = "optimization_results"):
         self.symbols = symbols
         self.timeframes = {tf: getattr(mt5, f"TIMEFRAME_{tf}") for tf in timeframes if hasattr(mt5, f"TIMEFRAME_{tf}")}
+        self.wavy_params = wavy_params
         self.base_path = Path(base_path)
         self.run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.results_path = self.base_path / self.run_id
@@ -152,7 +152,6 @@ class MultiSymbolOptimizer:
         except Exception as e:
             self.logger.main_logger.error(f"Error in preprocessing: {str(e)}")
             return data
-
     def identify_peaks_dips(self, data: pd.DataFrame, lookback: int, threshold: float) -> Tuple[pd.Series, pd.Series]:
         """Enhanced peak and dip identification with multiple confirmation factors"""
         peaks = pd.Series(0, index=data.index)
@@ -174,12 +173,12 @@ class MultiSymbolOptimizer:
                 window_data = data.iloc[start_idx:end_idx].copy()
 
                 # Peak detection with smoothed data
-                if self.validate_peak(window_data, lookback, threshold, smoothed_high[i]):
+                if self.validate_peak(window_data, threshold, smoothed_high[i]):
                     peaks.iloc[i] = smoothed_high[i]
                     self.log_signal_detection("Peak", data.index[i], smoothed_high[i])
 
                 # Dip detection with smoothed data
-                if self.validate_dip(window_data, lookback, threshold, smoothed_low[i]):
+                if self.validate_dip(window_data, threshold, smoothed_low[i]):
                     dips.iloc[i] = smoothed_low[i]
                     self.log_signal_detection("Dip", data.index[i], smoothed_low[i])
 
@@ -212,7 +211,6 @@ class MultiSymbolOptimizer:
             self.logger.main_logger.error(f"Error in peak validation: {str(e)}")
             return False
 
-
     def validate_dip(self, window_data: pd.DataFrame, threshold: float, smoothed_current_low: float) -> bool:
         """Validate dip with multiple confirmation factors using smoothed low data"""
         try:
@@ -235,7 +233,6 @@ class MultiSymbolOptimizer:
         except Exception as e:
             self.logger.main_logger.error(f"Error in dip validation: {str(e)}")
             return False
-
 
     def validate_volume(self, window_data: pd.DataFrame) -> bool:
         """Validate volume confirmation"""
@@ -273,7 +270,6 @@ class MultiSymbolOptimizer:
     def calculate_signal_confidence(self) -> float:
         """Calculate confidence score for signals"""
         return 0.85
-
     def calculate_signal_metrics(self, data: pd.DataFrame, peaks: pd.Series, dips: pd.Series) -> Dict:
         """Calculate comprehensive signal metrics"""
         metrics = {
@@ -347,92 +343,36 @@ class MultiSymbolOptimizer:
             self.logger.main_logger.error(f"Error in dip performance analysis: {str(e)}")
             return False, 0
 
-    def optimize_parameters(self, data: pd.DataFrame, symbol: str, timeframe: str) -> Tuple[Dict, List[Dict]]:
-        """Optimize parameters for peak and dip detection"""
-        optimization_start = time.time()
-        best_score = float('-inf')
-        best_params = None
-        all_results = []
-
-        parameter_combinations = list(product(self.lookback_range, self.threshold_range))
-        total_combinations = len(parameter_combinations)
-
-        self.logger.main_logger.info(f"Starting optimization for {symbol} {timeframe} with {total_combinations} combinations")
-
-        for i, (lookback, threshold) in enumerate(parameter_combinations, 1):
-            try:
-                peaks, dips = self.identify_peaks_dips(data, lookback, threshold)
-                metrics = self.calculate_signal_metrics(data, peaks, dips)
-                score = self.calculate_parameter_score(metrics)
-
-                result = {
-                    'lookback': lookback,
-                    'threshold': threshold,
-                    'metrics': metrics,
-                    'score': score
-                }
-                all_results.append(result)
-
-                if score > best_score:
-                    best_score = score
-                    best_params = result
-
-                if i % 10 == 0:
-                    progress = (i / total_combinations) * 100
-                    self.logger.main_logger.info(
-                        f"Progress: {i}/{total_combinations} ({progress:.1f}%) for {symbol} {timeframe}"
-                    )
-
-            except Exception as e:
-                self.logger.main_logger.error(
-                    f"Error in combination {lookback}, {threshold} for {symbol} {timeframe}: {str(e)}"
-                )
-
-        execution_time = time.time() - optimization_start
-        self.logger.log_performance({
-            'execution_time': execution_time,
-            'memory_usage': psutil.Process().memory_info().rss / 1024 / 1024,
-            'combinations_processed': len(all_results)
-        })
-
-        return best_params, all_results
-
-    def calculate_parameter_score(self, metrics: Dict) -> float:
-        """Calculate score for parameter combination"""
-        try:
-            weights = {
-                'success_rate': 0.4,
-                'average_return': 0.3,
-                'max_drawdown': 0.3
-            }
-
-            score = (
-                metrics['success_rate'] * weights['success_rate'] +
-                metrics['average_return'] * weights['average_return'] +
-                (1 + metrics['max_drawdown']) * weights['max_drawdown']
-            )
-
-            return score
-        except Exception as e:
-            self.logger.main_logger.error(f"Error calculating parameter score: {str(e)}")
-            return float('-inf')
-
 def main():
-    symbols = ["EURUSD", "XAUUSD"]
+    symbols = {
+        "EURUSD": {"M15": {"wavy": (30, 100, 200), "atr": (14, 2)}, "H1": {"wavy": (50, 120, 240), "atr": (14, 2)}},
+        "XAUUSD": {"H1": {"wavy": (21, 89, 144), "atr": (10, 1.5)}, "D1": {"wavy": (34, 144, 233), "atr": (14, 2)}}
+    }
     timeframes = ["M15", "H1", "H4", "D1"]
     start_date = datetime.now() - timedelta(days=100)
     end_date = datetime.now()
 
-    optimizer = MultiSymbolOptimizer(symbols, timeframes)
+    optimizer = MultiSymbolOptimizer(list(symbols.keys()), timeframes)
 
     try:
-        for symbol in symbols:
-            for timeframe in timeframes:
+        for symbol, tf_configs in symbols.items():
+            for timeframe, config in tf_configs.items():
                 optimizer.logger.main_logger.info(f"Starting optimization for {symbol} {timeframe}")
                 data = optimizer.get_data(symbol, timeframe, start_date, end_date)
 
                 if data is not None:
                     data = optimizer.preprocess_data(data)
+
+                    # Configure Wavy Tunnel and ATR settings
+                    data['wavy_h'] = optimizer.calculate_ema(data['high'], config['wavy'][0])
+                    data['wavy_c'] = optimizer.calculate_ema(data['close'], config['wavy'][0])
+                    data['wavy_l'] = optimizer.calculate_ema(data['low'], config['wavy'][0])
+                    data['tunnel1'] = optimizer.calculate_ema(data['close'], config['wavy'][1])
+                    data['tunnel2'] = optimizer.calculate_ema(data['close'], config['wavy'][2])
+                    data['atr'] = optimizer.calculate_atr(data['high'], data['low'], data['close'], config['atr'][0])
+                    data['threshold'] = data['atr'] * config['atr'][1]
+
+                    # Integrate Peak and Dip Optimization
                     best_params, all_results = optimizer.optimize_parameters(data, symbol, timeframe)
 
                     if best_params:
