@@ -1,335 +1,464 @@
 import MetaTrader5 as mt5
 import pandas as pd
 import numpy as np
-from datetime import datetime
-from itertools import product
+from datetime import datetime, timedelta
 import logging
 import os
+from pathlib import Path
 import asyncio
-import concurrent.futures
-import signal
-import sys
+import multiprocessing as mp
+from concurrent.futures import ProcessPoolExecutor
+from itertools import product
 import time
+from typing import Dict, List, Tuple, Optional
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
-# Set up logging
-log_dir = 'dy_wavy_tunnel_logs'
-os.makedirs(log_dir, exist_ok=True)
-logging.basicConfig(filename=f'{log_dir}/optimization.log', level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+class OptimizationLogger:
+    """Handles logging for the optimization process"""
+    def __init__(self, base_path: Path, symbol: str, timeframe: str):
+        self.base_path = base_path
+        self.symbol = symbol
+        self.timeframe = timeframe
+        self.log_path = base_path / f"{symbol}_{timeframe}"
+        self.log_path.mkdir(parents=True, exist_ok=True)
 
-# HTML logging setup
-def setup_html_logger(symbol, timeframe):
-    logger = logging.getLogger(f'{symbol}_{timeframe}')
-    logger.setLevel(logging.INFO)
-    file_handler = logging.FileHandler(f'{log_dir}/{symbol}_{timeframe}_results.html', mode='w')
-    file_handler.setFormatter(logging.Formatter('%(message)s'))
-    logger.addHandler(file_handler)
-    return logger
+        # Setup different loggers
+        self.setup_loggers()
 
-def log_html_header(logger, symbol, timeframe):
-    logger.info(f"""
-    <html>
-    <head>
-        <style>
-            body {{ font-family: Arial, sans-serif; }}
-            h1 {{ color: #333366; }}
-            table {{ border-collapse: collapse; width: 100%; }}
-            th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-            th {{ background-color: #f2f2f2; }}
-            tr:nth-child(even) {{ background-color: #f9f9f9; }}
-        </style>
-    </head>
-    <body>
-    <h1>Top 10 Parameter Combinations for {symbol} on {timeframe}</h1>
-    """)
+    def setup_loggers(self):
+        # Main optimization logger
+        self.main_logger = self._setup_logger('main', 'optimization.log')
+        # Progress logger
+        self.progress_logger = self._setup_logger('progress', 'progress.log')
+        # Results logger
+        self.results_logger = self._setup_logger('results', 'results.log')
 
-def log_html_results(logger, results):
-    logger.info("<table>")
-    logger.info("<tr><th>Rank</th><th>Wavy Period</th><th>Tunnel Period 1</th><th>Tunnel Period 2</th><th>ATR Period</th><th>ATR Multiplier</th><th>Sharpe Ratio</th><th>Final Balance</th><th>Analyzed Trades</th><th>Executed Trades</th><th>Win Rate</th><th>Profit Factor</th></tr>")
-    for rank, row in enumerate(results.itertuples(), 1):
-        logger.info(f"<tr><td>{rank}</td><td>{row.wavy_period}</td><td>{row.tunnel_period1}</td><td>{row.tunnel_period2}</td><td>{row.atr_period}</td><td>{row.atr_multiplier}</td><td>{row.sharpe_ratio:.4f}</td><td>${row.final_balance:.2f}</td><td>{row.analyzed_trades}</td><td>{row.total_trades}</td><td>{row.win_rate:.2%}</td><td>{row.profit_factor:.2f}</td></tr>")
-    logger.info("</table>")
+    def _setup_logger(self, name: str, filename: str) -> logging.Logger:
+        logger = logging.getLogger(f"{self.symbol}_{self.timeframe}_{name}")
+        logger.setLevel(logging.INFO)
+        handler = logging.FileHandler(self.log_path / filename)
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        return logger
 
-def log_html_footer(logger):
-    logger.info("</body></html>")
+    def log_params(self, params: Dict):
+        self.main_logger.info(f"Starting optimization with parameters: {params}")
 
-def initialize_mt5():
-    if not mt5.initialize():
-        logging.error("MetaTrader 5 initialization failed")
-        mt5.shutdown()
-        return False
-    logging.info("MetaTrader 5 initialized successfully")
-    return True
+    def log_progress(self, current: int, total: int, elapsed_time: float):
+        progress = (current / total) * 100
+        self.progress_logger.info(
+            f"Progress: {current}/{total} ({progress:.2f}%) - "
+            f"Elapsed Time: {elapsed_time:.2f}s"
+        )
 
-def get_data(symbol, timeframe, start_date, end_date):
-    rates = mt5.copy_rates_range(symbol, timeframe, start_date, end_date)
-    if rates is None or len(rates) == 0:
-        logging.error(f"Failed to retrieve data for {symbol} on {timeframe} from {start_date} to {end_date}")
-        return None
+    def log_results(self, results: Dict):
+        self.results_logger.info(f"Optimization Results:\n{results}")
 
-    df = pd.DataFrame(rates)
+class WavyTunnelOptimizer:
+    """Main optimizer class for Wavy Tunnel strategy"""
+    def __init__(self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime,
+                 base_path: str = "optimization_results"):
+        self.symbol = symbol
+        self.timeframe = timeframe
+        self.start_date = start_date
+        self.end_date = end_date
+        self.base_path = Path(base_path) / datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.base_path.mkdir(parents=True, exist_ok=True)
 
-    if 'time' not in df.columns:
-        if 'date' in df.columns:
-            df['time'] = pd.to_datetime(df['date'], unit='s')
-        else:
-            logging.warning(f"No 'time' or 'date' column found for {symbol} on {timeframe}. Creating a dummy time index.")
-            df['time'] = pd.date_range(start=start_date, periods=len(df), freq='H')
-    else:
-        df['time'] = pd.to_datetime(df['time'], unit='s')
+        # Initialize logger
+        self.logger = OptimizationLogger(self.base_path, symbol, timeframe)
 
-    logging.info(f"Retrieved {len(df)} data points for {symbol} on {timeframe} from {start_date} to {end_date}")
-    return df
+        # Parameter ranges for optimization
+        self.param_ranges = self._setup_param_ranges()
 
-def calculate_ema(data, period):
-    return data.ewm(span=period, adjust=False).mean()
-
-def calculate_atr(high, low, close, period):
-    tr = np.maximum(high - low, np.abs(high - close.shift(1)), np.abs(low - close.shift(1)))
-    return tr.rolling(window=period).mean()
-
-def wavy_tunnel_strategy(df, wavy_period, tunnel_period1, tunnel_period2, atr_period, atr_multiplier):
-    df['wavy_h'] = calculate_ema(df['high'], wavy_period)
-    df['wavy_c'] = calculate_ema(df['close'], wavy_period)
-    df['wavy_l'] = calculate_ema(df['low'], wavy_period)
-    df['tunnel1'] = calculate_ema(df['close'], tunnel_period1)
-    df['tunnel2'] = calculate_ema(df['close'], tunnel_period2)
-
-    df['atr'] = calculate_atr(df['high'], df['low'], df['close'], atr_period)
-    df['threshold'] = df['atr'] * atr_multiplier
-
-    df['long_condition'] = (df['open'] > df[['wavy_h', 'wavy_c', 'wavy_l']].max(axis=1) + df['threshold']) & \
-                           (df[['wavy_h', 'wavy_c', 'wavy_l']].min(axis=1) > df[['tunnel1', 'tunnel2']].max(axis=1))
-
-    df['short_condition'] = (df['open'] < df[['wavy_h', 'wavy_c', 'wavy_l']].min(axis=1) - df['threshold']) & \
-                            (df[['wavy_h', 'wavy_c', 'wavy_l']].max(axis=1) < df[['tunnel1', 'tunnel2']].min(axis=1))
-
-    df['analyzed_trade'] = df['long_condition'] | df['short_condition']
-
-    return df
-
-def backtest(df, initial_balance=10000, lot_size=0.01):
-    balance = initial_balance
-    position = None
-    trades = []
-    analyzed_trades = df['analyzed_trade'].sum()
-
-    for i in range(1, len(df)):
-        if position is None:
-            if df['long_condition'].iloc[i]:
-                position = {'type': 'long', 'entry_price': df['open'].iloc[i], 'entry_time': df['time'].iloc[i]}
-            elif df['short_condition'].iloc[i]:
-                position = {'type': 'short', 'entry_price': df['open'].iloc[i], 'entry_time': df['time'].iloc[i]}
-        else:
-            exit_condition = (position['type'] == 'long' and df['close'].iloc[i] < df['wavy_l'].iloc[i]) or \
-                             (position['type'] == 'short' and df['close'].iloc[i] > df['wavy_h'].iloc[i])
-
-            if exit_condition:
-                exit_price = df['close'].iloc[i]
-                pnl = (exit_price - position['entry_price']) * lot_size * 100000 if position['type'] == 'long' else \
-                      (position['entry_price'] - exit_price) * lot_size * 100000
-                balance += pnl
-                trades.append({
-                    'entry_time': position['entry_time'],
-                    'exit_time': df['time'].iloc[i],
-                    'type': position['type'],
-                    'entry_price': position['entry_price'],
-                    'exit_price': exit_price,
-                    'pnl': pnl
-                })
-                position = None
-
-    return balance, trades, analyzed_trades
-
-def optimize_parameters(df, param_ranges):
-    results = []
-    for wavy_period, tunnel_period1, tunnel_period2, atr_period, atr_multiplier in product(
-        param_ranges['wavy_period'], param_ranges['tunnel_period1'], param_ranges['tunnel_period2'],
-        param_ranges['atr_period'], param_ranges['atr_multiplier']):
-
-        df_strategy = wavy_tunnel_strategy(df.copy(), wavy_period, tunnel_period1, tunnel_period2, atr_period, atr_multiplier)
-        final_balance, trades, analyzed_trades = backtest(df_strategy)
-
-        if trades:
-            total_trades = len(trades)
-            win_rate = sum(1 for trade in trades if trade['pnl'] > 0) / total_trades
-
-            total_profit = sum(trade['pnl'] for trade in trades if trade['pnl'] > 0)
-            total_loss = abs(sum(trade['pnl'] for trade in trades if trade['pnl'] < 0))
-
-            epsilon = 1e-10  # Small value to avoid division by zero due to floating-point precision
-            if total_loss <= epsilon:
-                profit_factor = float('inf') if total_profit > epsilon else 0
-            else:
-                profit_factor = total_profit / total_loss
-
-            returns = [trade['pnl'] for trade in trades]
-            sharpe_ratio = np.mean(returns) / np.std(returns) if np.std(returns) != 0 else 0
-        else:
-            total_trades = win_rate = profit_factor = sharpe_ratio = 0
-
-        results.append({
-            'wavy_period': wavy_period,
-            'tunnel_period1': tunnel_period1,
-            'tunnel_period2': tunnel_period2,
-            'atr_period': atr_period,
-            'atr_multiplier': atr_multiplier,
-            'final_balance': final_balance,
-            'total_trades': total_trades,
-            'analyzed_trades': analyzed_trades,
-            'win_rate': win_rate,
-            'profit_factor': profit_factor,
-            'sharpe_ratio': sharpe_ratio
-        })
-
-    return pd.DataFrame(results)
-
-async def analyze_pair_timeframe(symbol, timeframe, start_date, end_date, param_ranges):
-    try:
-        df = await asyncio.to_thread(get_data, symbol, timeframe, start_date, end_date)
-        if df is None or len(df) == 0:
-            logging.error(f"No data available for {symbol} on {timeframe}. Skipping analysis.")
-            return symbol, timeframe, None
-
-        results = await asyncio.to_thread(optimize_parameters, df, param_ranges)
-        if results.empty:
-            logging.warning(f"No valid results for {symbol} on {timeframe}. Skipping analysis.")
-            return symbol, timeframe, None
-
-        top_results = results.sort_values('sharpe_ratio', ascending=False).head(10)
-
-        # Log results to HTML file
-        html_logger = setup_html_logger(symbol, timeframe)
-        log_html_header(html_logger, symbol, timeframe)
-        log_html_results(html_logger, top_results)
-        log_html_footer(html_logger)
-
-        logging.info(f"Results for {symbol} on {timeframe} logged to {log_dir}/{symbol}_{timeframe}_results.html")
-
-        return symbol, timeframe, top_results
-    except Exception as e:
-        logging.error(f"Error analyzing {symbol} on {timeframe}: {str(e)}")
-        return symbol, timeframe, None
-
-def get_symbol_selection():
-    all_symbols = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "XAUUSD"]
-    print("\nAvailable symbols:")
-    for i, symbol in enumerate(all_symbols, 1):
-        print(f"{i}. {symbol}")
-    print("7. All symbols")
-    print("8. Custom selection")
-
-    while True:
-        choice = input("\nEnter your choice (1-8): ")
-        if choice == '7':
-            return all_symbols
-        elif choice == '8':
-            custom_symbols = input("Enter symbols separated by commas (e.g., EURUSD,GBPUSD): ").split(',')
-            return [symbol.strip().upper() for symbol in custom_symbols]
-        elif choice.isdigit() and 1 <= int(choice) <= 6:
-            return [all_symbols[int(choice) - 1]]
-        else:
-            print("Invalid choice. Please try again.")
-async def main():
-    try:
-        if not initialize_mt5():
-            return
-
-        selected_symbols = get_symbol_selection()
-        print(f"Selected symbols: {', '.join(selected_symbols)}")
-        #, mt5.TIMEFRAME_H4, mt5.TIMEFRAME_D1
-        timeframes = [mt5.TIMEFRAME_D1]
-        start_date = datetime(2023, 9, 1)
-        end_date = datetime(2024, 10, 20)
-
-        param_ranges = {
+    def _setup_param_ranges(self) -> Dict:
+        """Define parameter ranges for optimization"""
+        return {
             'wavy_period': range(20, 51, 5),
             'tunnel_period1': range(100, 301, 20),
             'tunnel_period2': range(120, 321, 20),
-            'atr_period': range(5, 31, 5),
-            'atr_multiplier': np.arange(0.5, 3.1, 0.5)
+            'min_gap_second': range(5, 31, 5),
+            'max_zone_percentage': np.arange(0.1, 0.5, 0.05),
         }
 
-        tasks = []
-        for symbol in selected_symbols:
-            for timeframe in timeframes:
-                task = analyze_pair_timeframe(symbol, timeframe, start_date, end_date, param_ranges)
-                tasks.append(task)
+    def _initialize_mt5(self) -> bool:
+        """Initialize MT5 connection"""
+        if not mt5.initialize():
+            self.logger.main_logger.error("Failed to initialize MT5")
+            return False
+        return True
 
-        total_tasks = len(tasks)
-        completed_tasks = 0
+    def get_data(self) -> Optional[pd.DataFrame]:
+        """Fetch and preprocess market data"""
+        try:
+            if not self._initialize_mt5():
+                return None
+
+            timeframe = getattr(mt5, f"TIMEFRAME_{self.timeframe}")
+            rates = mt5.copy_rates_range(self.symbol, timeframe,
+                                       self.start_date, self.end_date)
+
+            if rates is None or len(rates) == 0:
+                self.logger.main_logger.error(f"No data available for {self.symbol} {self.timeframe}")
+                return None
+
+            df = pd.DataFrame(rates)
+            df['time'] = pd.to_datetime(df['time'], unit='s')
+            df.set_index('time', inplace=True)
+
+            return self._preprocess_data(df)
+
+        except Exception as e:
+            self.logger.main_logger.error(f"Error fetching data: {str(e)}")
+            return None
+        finally:
+            mt5.shutdown()
+
+    def _preprocess_data(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Preprocess the market data"""
+        # Handle missing values
+        data = data.fillna(method='ffill').fillna(method='bfill')
+
+        # Remove outliers
+        for col in ['high', 'low', 'close', 'open']:
+            z_scores = np.abs((data[col] - data[col].mean()) / data[col].std())
+            data[col] = data[col].mask(z_scores > 3, data[col].rolling(5, center=True).mean())
+
+        # Add basic volume metrics
+        data['volume_sma'] = data['tick_volume'].rolling(20).mean()
+
+        return data
+    def generate_signals(self, data: pd.DataFrame, params: Dict) -> Tuple[pd.Series, pd.Series]:
+        """Generate entry signals for both primary and secondary strategies"""
+        # Calculate EMAs
+        wavy_h = data['high'].ewm(span=params['wavy_period'], adjust=False).mean()
+        wavy_c = data['close'].ewm(span=params['wavy_period'], adjust=False).mean()
+        wavy_l = data['low'].ewm(span=params['wavy_period'], adjust=False).mean()
+        tunnel1 = data['close'].ewm(span=params['tunnel_period1'], adjust=False).mean()
+        tunnel2 = data['close'].ewm(span=params['tunnel_period2'], adjust=False).mean()
+
+        # Calculate max/min values for waves and tunnels
+        wavy_max = pd.concat([wavy_h, wavy_c, wavy_l], axis=1).max(axis=1)
+        wavy_min = pd.concat([wavy_h, wavy_c, wavy_l], axis=1).min(axis=1)
+        tunnel_max = pd.concat([tunnel1, tunnel2], axis=1).max(axis=1)
+        tunnel_min = pd.concat([tunnel1, tunnel2], axis=1).min(axis=1)
+
+        # Primary Strategy Signals
+        primary_longs = (data['open'] > wavy_max) & (wavy_min > tunnel_max)
+        primary_shorts = (data['open'] < wavy_min) & (wavy_max < tunnel_min)
+
+        # Secondary Strategy Signals
+        # Detect crossovers
+        crossover_up = (data['close'].shift(1) <= wavy_max.shift(1)) & (data['close'] > wavy_max)
+        crossover_down = (data['close'].shift(1) >= wavy_min.shift(1)) & (data['close'] < wavy_min)
+
+        # Calculate distances for secondary strategy
+        long_distance = tunnel_min - data['close']
+        short_distance = data['close'] - tunnel_max
+
+        # Calculate zone percentages
+        zone_percentage_long = (data['close'] - wavy_max) / (tunnel_min - wavy_max)
+        zone_percentage_short = (wavy_min - data['close']) / (wavy_min - tunnel_max)
+
+        # Secondary strategy conditions
+        secondary_longs = (crossover_up &
+                         (data['close'] < tunnel_min) &
+                         (long_distance > params['min_gap_second'] * data['tick_volume'].mean()) &
+                         (zone_percentage_long <= params['max_zone_percentage']))
+
+        secondary_shorts = (crossover_down &
+                          (data['close'] > tunnel_max) &
+                          (short_distance > params['min_gap_second'] * data['tick_volume'].mean()) &
+                          (zone_percentage_short <= params['max_zone_percentage']))
+
+        # Combine signals
+        long_signals = primary_longs | secondary_longs
+        short_signals = primary_shorts | secondary_shorts
+
+        return long_signals, short_signals
+
+    def evaluate_signals(self, data: pd.DataFrame, long_signals: pd.Series,
+                        short_signals: pd.Series, forward_bars: int = 5) -> Dict:
+        """Evaluate the quality of entry signals"""
+        results = {
+            'total_signals': 0,
+            'winning_signals': 0,
+            'avg_profit_loss': 0,
+            'max_drawdown': 0,
+            'sharpe_ratio': 0,
+            'primary_signals': 0,
+            'secondary_signals': 0
+        }
+
+        # Calculate forward returns
+        forward_returns = pd.Series(index=data.index, dtype=float)
+
+        # Calculate returns for long signals
+        for idx in data.index[long_signals]:
+            if idx + forward_bars <= data.index[-1]:
+                forward_return = (data['close'].loc[idx:idx + forward_bars].max() -
+                                data['open'].loc[idx]) / data['open'].loc[idx]
+                forward_returns[idx] = forward_return
+
+        # Calculate returns for short signals
+        for idx in data.index[short_signals]:
+            if idx + forward_bars <= data.index[-1]:
+                forward_return = (data['open'].loc[idx] -
+                                data['close'].loc[idx:idx + forward_bars].min()) / data['open'].loc[idx]
+                forward_returns[idx] = forward_return
+
+        # Calculate metrics
+        valid_returns = forward_returns.dropna()
+        if len(valid_returns) > 0:
+            results['total_signals'] = len(valid_returns)
+            results['winning_signals'] = (valid_returns > 0).sum()
+            results['avg_profit_loss'] = valid_returns.mean()
+            results['max_drawdown'] = valid_returns.min()
+            results['sharpe_ratio'] = (valid_returns.mean() / valid_returns.std()
+                                     if valid_returns.std() != 0 else 0)
+            results['win_rate'] = results['winning_signals'] / results['total_signals']
+
+        return results
+    def optimize_parallel(self) -> Tuple[Dict, pd.DataFrame]:
+        """Run parallel optimization process"""
+        data = self.get_data()
+        if data is None:
+            return None, None
+
+        # Generate parameter combinations
+        param_combinations = self._generate_param_combinations()
+        total_combinations = len(param_combinations)
+
+        self.logger.log_params({'total_combinations': total_combinations})
+
+        # Split combinations for parallel processing
+        num_cores = mp.cpu_count()
+        chunk_size = max(1, total_combinations // (num_cores * 4))
+        chunks = [param_combinations[i:i + chunk_size]
+                 for i in range(0, len(param_combinations), chunk_size)]
+
         start_time = time.time()
-
-        async def status_update():
-            nonlocal completed_tasks
-            while completed_tasks < total_tasks:
-                elapsed_time = time.time() - start_time
-                print(f"Status update: {completed_tasks}/{total_tasks} tasks completed. "
-                      f"Elapsed time: {elapsed_time:.2f} seconds")
-                await asyncio.sleep(300)  # Update every 5 minutes
-
-        status_task = asyncio.create_task(status_update())
-
         results = []
-        for task in asyncio.as_completed(tasks):
-            result = await task
-            results.append(result)
-            completed_tasks += 1
 
-        status_task.cancel()
+        with ProcessPoolExecutor(max_workers=num_cores) as executor:
+            # Submit chunks for parallel processing
+            futures = [
+                executor.submit(self._process_chunk, chunk, data.copy())
+                for chunk in chunks
+            ]
 
-        for symbol, timeframe, top_results in results:
-            if isinstance(top_results, Exception):
-                print(f"Error occurred for {symbol} on {timeframe}: {str(top_results)}")
-            elif top_results is not None:
-                print(f"\nResults for {symbol} on {timeframe} logged to {log_dir}/{symbol}_{timeframe}_results.html")
+            # Process results as they complete
+            for i, future in enumerate(futures):
+                chunk_results = future.result()
+                results.extend(chunk_results)
 
-                best_combination = top_results.iloc[0]
-                print(f"\nBest parameters for {symbol} on {timeframe}:")
-                print(f"Wavy Period: {best_combination['wavy_period']}")
-                print(f"Tunnel Period 1: {best_combination['tunnel_period1']}")
-                print(f"Tunnel Period 2: {best_combination['tunnel_period2']}")
-                print(f"ATR Period: {best_combination['atr_period']}")
-                print(f"ATR Multiplier: {best_combination['atr_multiplier']}")
-                print(f"Sharpe Ratio: {best_combination['sharpe_ratio']:.4f}")
-                print(f"Final Balance: ${best_combination['final_balance']:.2f}")
-                print(f"Analyzed Trades: {best_combination['analyzed_trades']}")
-                print(f"Executed Trades: {best_combination['total_trades']}")
-                print(f"Win Rate: {best_combination['win_rate']:.2%}")
-                print(f"Profit Factor: {best_combination['profit_factor']:.2f}")
+                elapsed_time = time.time() - start_time
+                self.logger.log_progress(
+                    (i + 1) * chunk_size,
+                    total_combinations,
+                    elapsed_time
+                )
+
+        # Convert results to DataFrame and find best parameters
+        results_df = pd.DataFrame(results)
+        if len(results_df) > 0:
+            best_params = results_df.nlargest(1, 'sharpe_ratio').iloc[0].to_dict()
+            self.logger.log_results(best_params)
+        else:
+            best_params = None
+            self.logger.main_logger.warning("No valid results found")
+
+        return best_params, results_df
+
+    def _process_chunk(self, chunk: List[Dict], data: pd.DataFrame) -> List[Dict]:
+        """Process a chunk of parameter combinations"""
+        chunk_results = []
+        for params in chunk:
+            try:
+                # Generate signals
+                long_signals, short_signals = self.generate_signals(data, params)
+
+                # Evaluate signals
+                evaluation = self.evaluate_signals(data, long_signals, short_signals)
+
+                # Store results
+                result = {**params, **evaluation}
+                chunk_results.append(result)
+
+            except Exception as e:
+                self.logger.main_logger.error(f"Error processing parameters {params}: {str(e)}")
+
+        return chunk_results
+
+    def _generate_param_combinations(self) -> List[Dict]:
+        """Generate all parameter combinations for testing"""
+        param_keys = list(self.param_ranges.keys())
+        param_values = list(self.param_ranges.values())
+
+        combinations = []
+        for values in product(*param_values):
+            combinations.append(dict(zip(param_keys, values)))
+
+        return combinations
+
+    def create_optimization_report(self, results_df: pd.DataFrame):
+        """Create and save optimization report with visualizations"""
+        if results_df is None or len(results_df) == 0:
+            self.logger.main_logger.warning("No results to create report")
+            return
+
+        # Create report directory
+        report_path = self.base_path / f"{self.symbol}_{self.timeframe}_report"
+        report_path.mkdir(exist_ok=True)
+
+        # Create performance visualization
+        fig = make_subplots(rows=2, cols=2,
+                          subplot_titles=('Sharpe Ratio Distribution',
+                                        'Win Rate vs Sharpe Ratio',
+                                        'Parameter Impact on Sharpe Ratio',
+                                        'Trade Count Distribution'))
+
+        # Sharpe ratio distribution
+        fig.add_trace(go.Histogram(x=results_df['sharpe_ratio'],
+                                 name='Sharpe Ratio'),
+                     row=1, col=1)
+
+        # Win rate vs Sharpe ratio
+        fig.add_trace(go.Scatter(x=results_df['win_rate'],
+                               y=results_df['sharpe_ratio'],
+                               mode='markers',
+                               name='Win Rate vs Sharpe'),
+                     row=1, col=2)
+
+        # Parameter impact
+def create_optimization_report(self, results_df: pd.DataFrame):
+        """Create and save optimization report with visualizations"""
+        if results_df is None or len(results_df) == 0:
+            self.logger.main_logger.warning("No results to create report")
+            return
+
+        # Create report directory
+        report_path = self.base_path / f"{self.symbol}_{self.timeframe}_report"
+        report_path.mkdir(exist_ok=True)
+
+        # Create performance visualization
+        fig = make_subplots(rows=2, cols=2,
+                          subplot_titles=('Sharpe Ratio Distribution',
+                                        'Win Rate vs Sharpe Ratio',
+                                        'Parameter Impact on Sharpe Ratio',
+                                        'Trade Count Distribution'))
+
+        # Sharpe ratio distribution
+        fig.add_trace(go.Histogram(x=results_df['sharpe_ratio'],
+                                 name='Sharpe Ratio'),
+                     row=1, col=1)
+
+        # Win rate vs Sharpe ratio
+        fig.add_trace(go.Scatter(x=results_df['win_rate'],
+                               y=results_df['sharpe_ratio'],
+                               mode='markers',
+                               name='Win Rate vs Sharpe'),
+                     row=1, col=2)
+
+        # Parameter impact plots
+        for param in ['wavy_period', 'tunnel_period1', 'tunnel_period2']:
+            fig.add_trace(go.Box(x=results_df[param],
+                               y=results_df['sharpe_ratio'],
+                               name=param),
+                         row=2, col=1)
+
+        # Trade count distribution
+        fig.add_trace(go.Histogram(x=results_df['total_signals'],
+                                 name='Trade Count'),
+                     row=2, col=2)
+
+        # Update layout
+        fig.update_layout(height=800, width=1200,
+                         title_text=f"Optimization Results for {self.symbol} {self.timeframe}")
+
+        # Save plot
+        fig.write_html(report_path / "optimization_results.html")
+
+        # Save top results to CSV
+        top_results = results_df.nlargest(20, 'sharpe_ratio')
+        top_results.to_csv(report_path / "top_results.csv")
+
+        # Create summary text report
+        with open(report_path / "summary_report.txt", "w") as f:
+            f.write(f"Optimization Summary for {self.symbol} {self.timeframe}\n")
+            f.write("=" * 50 + "\n\n")
+
+            f.write("Best Parameters:\n")
+            best_params = results_df.nlargest(1, 'sharpe_ratio').iloc[0]
+            for param in self.param_ranges.keys():
+                f.write(f"{param}: {best_params[param]}\n")
+
+            f.write("\nPerformance Metrics:\n")
+            f.write(f"Sharpe Ratio: {best_params['sharpe_ratio']:.4f}\n")
+            f.write(f"Win Rate: {best_params['win_rate']:.2%}\n")
+            f.write(f"Total Signals: {best_params['total_signals']}\n")
+            f.write(f"Average Profit/Loss: {best_params['avg_profit_loss']:.4f}\n")
+
+            f.write("\nOptimization Statistics:\n")
+            f.write(f"Total Combinations Tested: {len(results_df)}\n")
+            f.write(f"Sharpe Ratio Range: {results_df['sharpe_ratio'].min():.4f} to {results_df['sharpe_ratio'].max():.4f}\n")
+            f.write(f"Win Rate Range: {results_df['win_rate'].min():.2%} to {results_df['win_rate'].max():.2%}\n")
+
+def main():
+    """Main execution function"""
+    # Configuration
+    symbol = "XAUUSD"  # Can be changed to any symbol
+    timeframes = ["M5", "M15", "M30", "H1", "H4", "D1"]
+    start_date = datetime.now() - timedelta(days=365)
+    end_date = datetime.now()
+
+    # Process each timeframe
+    for timeframe in timeframes:
+        try:
+            print(f"\nOptimizing {symbol} on {timeframe}")
+
+            # Initialize optimizer
+            optimizer = WavyTunnelOptimizer(
+                symbol=symbol,
+                timeframe=timeframe,
+                start_date=start_date,
+                end_date=end_date
+            )
+
+            # Run optimization
+            best_params, results_df = optimizer.optimize_parallel()
+
+            if best_params is not None:
+                print(f"\nBest parameters found for {symbol} {timeframe}:")
+                print(f"Wavy Period: {best_params['wavy_period']}")
+                print(f"Tunnel Period 1: {best_params['tunnel_period1']}")
+                print(f"Tunnel Period 2: {best_params['tunnel_period2']}")
+                print(f"Min Gap Second: {best_params['min_gap_second']}")
+                print(f"Max Zone Percentage: {best_params['max_zone_percentage']:.2f}")
+                print(f"Sharpe Ratio: {best_params['sharpe_ratio']:.4f}")
+                print(f"Win Rate: {best_params['win_rate']:.2%}")
+                print(f"Total Signals: {best_params['total_signals']}")
+
+                # Create report
+                optimizer.create_optimization_report(results_df)
+
             else:
-                print(f"\nNo results available for {symbol} on {timeframe}")
+                print(f"No valid results found for {symbol} {timeframe}")
 
-        total_time = time.time() - start_time
-        print(f"\nTotal execution time: {total_time:.2f} seconds")
-
-    except asyncio.CancelledError:
-        print("Optimization process was cancelled.")
-    finally:
-        mt5.shutdown()
-        print("MetaTrader 5 connection closed.")
-
-def signal_handler(signum, frame):
-    raise KeyboardInterrupt()
+        except Exception as e:
+            print(f"Error optimizing {symbol} {timeframe}: {str(e)}")
+            continue
 
 if __name__ == "__main__":
-    # Set up SIGINT (Ctrl+C) handler for all platforms
-    signal.signal(signal.SIGINT, signal_handler)
-
-    # Set up SIGTSTP (Ctrl+Z) handler only for Unix-like systems
-    if sys.platform != "win32":
-        def sigtstp_handler(signum, frame):
-            print("\nCtrl+Z detected. Please use Ctrl+C to exit the script.")
-        signal.signal(signal.SIGTSTP, sigtstp_handler)
-
     try:
-        asyncio.run(main())
+        main()
     except KeyboardInterrupt:
-        print("\nScript interrupted by user. Shutting down...")
+        print("\nOptimization interrupted by user")
     except Exception as e:
-        print(f"An unexpected error occurred: {str(e)}")
+        print(f"Error during execution: {str(e)}")
     finally:
         if mt5.initialize():
             mt5.shutdown()
-            print("MetaTrader 5 connection closed.")
-        print("Script execution completed.")
+        print("\nOptimization process completed")
