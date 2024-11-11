@@ -454,9 +454,9 @@ def create_optimization_report(self, results_df: pd.DataFrame):
 def main():
     """Main execution function"""
     # Configuration
-    symbol = "XAUUSD"  # Can be changed to any symbol
+    symbol = "EURUSD" # Can be changed to any symbol
     timeframes = ["M5", "M15", "M30", "H1", "H4", "D1"]
-    start_date = datetime.now() - timedelta(days=3)
+    start_date = datetime.now() - timedelta(days=220)
     end_date = datetime.now()
 
     # Process each timeframe
