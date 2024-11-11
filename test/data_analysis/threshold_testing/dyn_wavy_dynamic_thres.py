@@ -130,6 +130,7 @@ class WavyTunnelOptimizer:
         data['volume_sma'] = data['tick_volume'].rolling(20).mean()
 
         return data
+
     def generate_signals(self, data: pd.DataFrame, params: Dict) -> Tuple[pd.Series, pd.Series]:
         """Generate entry signals for both primary and secondary strategies"""
         # Calculate EMAs
@@ -150,77 +151,121 @@ class WavyTunnelOptimizer:
         primary_shorts = (data['open'] < wavy_min) & (wavy_max < tunnel_min)
 
         # Secondary Strategy Signals
-        # Detect crossovers
         crossover_up = (data['close'].shift(1) <= wavy_max.shift(1)) & (data['close'] > wavy_max)
         crossover_down = (data['close'].shift(1) >= wavy_min.shift(1)) & (data['close'] < wavy_min)
 
-        # Calculate distances for secondary strategy
+        # Calculate distances and zone percentages
         long_distance = tunnel_min - data['close']
         short_distance = data['close'] - tunnel_max
 
-        # Calculate zone percentages
         zone_percentage_long = (data['close'] - wavy_max) / (tunnel_min - wavy_max)
         zone_percentage_short = (wavy_min - data['close']) / (wavy_min - tunnel_max)
 
         # Secondary strategy conditions
         secondary_longs = (crossover_up &
-                         (data['close'] < tunnel_min) &
-                         (long_distance > params['min_gap_second'] * data['tick_volume'].mean()) &
-                         (zone_percentage_long <= params['max_zone_percentage']))
+                        (data['close'] < tunnel_min) &
+                        (long_distance > params['min_gap_second']) &
+                        (zone_percentage_long <= params['max_zone_percentage']))
 
         secondary_shorts = (crossover_down &
-                          (data['close'] > tunnel_max) &
-                          (short_distance > params['min_gap_second'] * data['tick_volume'].mean()) &
-                          (zone_percentage_short <= params['max_zone_percentage']))
+                        (data['close'] > tunnel_max) &
+                        (short_distance > params['min_gap_second']) &
+                        (zone_percentage_short <= params['max_zone_percentage']))
+
+        # Create flags for signal types
+        data['is_primary_signal'] = primary_longs | primary_shorts
+        data['is_secondary_signal'] = secondary_longs | secondary_shorts
 
         # Combine signals
         long_signals = primary_longs | secondary_longs
         short_signals = primary_shorts | secondary_shorts
 
         return long_signals, short_signals
-
     def evaluate_signals(self, data: pd.DataFrame, long_signals: pd.Series,
                         short_signals: pd.Series, forward_bars: int = 5) -> Dict:
         """Evaluate the quality of entry signals"""
         results = {
             'total_signals': 0,
-            'winning_signals': 0,
-            'avg_profit_loss': 0,
-            'max_drawdown': 0,
-            'sharpe_ratio': 0,
             'primary_signals': 0,
-            'secondary_signals': 0
+            'secondary_signals': 0,
+            'long_signals': 0,
+            'short_signals': 0,
+            'winning_signals': 0,
+            'primary_wins': 0,
+            'secondary_wins': 0,
+            'win_rate': 0.0,
+            'primary_win_rate': 0.0,
+            'secondary_win_rate': 0.0,
+            'avg_profit_loss': 0.0,
+            'sharpe_ratio': 0.0
         }
 
-        # Calculate forward returns
-        forward_returns = pd.Series(index=data.index, dtype=float)
+        primary_returns = []
+        secondary_returns = []
 
-        # Calculate returns for long signals
-        for idx in data.index[long_signals]:
-            if idx + forward_bars <= data.index[-1]:
-                forward_return = (data['close'].loc[idx:idx + forward_bars].max() -
-                                data['open'].loc[idx]) / data['open'].loc[idx]
-                forward_returns[idx] = forward_return
+        # Process long signals
+        for i in range(len(data)-forward_bars):
+            if long_signals.iloc[i]:
+                entry_price = data['open'].iloc[i]
+                forward_slice = data['close'].iloc[i:i+forward_bars+1]
+                if len(forward_slice) > 0:
+                    max_price = forward_slice.max()
+                    ret = (max_price - entry_price) / entry_price
 
-        # Calculate returns for short signals
-        for idx in data.index[short_signals]:
-            if idx + forward_bars <= data.index[-1]:
-                forward_return = (data['open'].loc[idx] -
-                                data['close'].loc[idx:idx + forward_bars].min()) / data['open'].loc[idx]
-                forward_returns[idx] = forward_return
+                    results['long_signals'] += 1
+                    if data['is_primary_signal'].iloc[i]:
+                        results['primary_signals'] += 1
+                        primary_returns.append(ret)
+                        if ret > 0:
+                            results['primary_wins'] += 1
+                    else:
+                        results['secondary_signals'] += 1
+                        secondary_returns.append(ret)
+                        if ret > 0:
+                            results['secondary_wins'] += 1
 
-        # Calculate metrics
-        valid_returns = forward_returns.dropna()
-        if len(valid_returns) > 0:
-            results['total_signals'] = len(valid_returns)
-            results['winning_signals'] = (valid_returns > 0).sum()
-            results['avg_profit_loss'] = valid_returns.mean()
-            results['max_drawdown'] = valid_returns.min()
-            results['sharpe_ratio'] = (valid_returns.mean() / valid_returns.std()
-                                     if valid_returns.std() != 0 else 0)
-            results['win_rate'] = results['winning_signals'] / results['total_signals']
+        # Process short signals
+        for i in range(len(data)-forward_bars):
+            if short_signals.iloc[i]:
+                entry_price = data['open'].iloc[i]
+                forward_slice = data['close'].iloc[i:i+forward_bars+1]
+                if len(forward_slice) > 0:
+                    min_price = forward_slice.min()
+                    ret = (entry_price - min_price) / entry_price
+
+                    results['short_signals'] += 1
+                    if data['is_primary_signal'].iloc[i]:
+                        results['primary_signals'] += 1
+                        primary_returns.append(ret)
+                        if ret > 0:
+                            results['primary_wins'] += 1
+                    else:
+                        results['secondary_signals'] += 1
+                        secondary_returns.append(ret)
+                        if ret > 0:
+                            results['secondary_wins'] += 1
+
+        # Calculate statistics
+        results['total_signals'] = results['long_signals'] + results['short_signals']
+
+        if results['primary_signals'] > 0:
+            results['primary_win_rate'] = results['primary_wins'] / results['primary_signals']
+
+        if results['secondary_signals'] > 0:
+            results['secondary_win_rate'] = results['secondary_wins'] / results['secondary_signals']
+
+        total_wins = results['primary_wins'] + results['secondary_wins']
+        if results['total_signals'] > 0:
+            results['win_rate'] = total_wins / results['total_signals']
+
+        all_returns = primary_returns + secondary_returns
+        if all_returns:
+            results['avg_profit_loss'] = np.mean(all_returns)
+            results['sharpe_ratio'] = (np.mean(all_returns) / np.std(all_returns)
+                                 if np.std(all_returns) != 0 else 0)
 
         return results
+
     def optimize_parallel(self) -> Tuple[Dict, pd.DataFrame]:
         """Run parallel optimization process"""
         data = self.get_data()
@@ -411,7 +456,7 @@ def main():
     # Configuration
     symbol = "XAUUSD"  # Can be changed to any symbol
     timeframes = ["M5", "M15", "M30", "H1", "H4", "D1"]
-    start_date = datetime.now() - timedelta(days=365)
+    start_date = datetime.now() - timedelta(days=3)
     end_date = datetime.now()
 
     # Process each timeframe
@@ -431,16 +476,22 @@ def main():
             best_params, results_df = optimizer.optimize_parallel()
 
             if best_params is not None:
-                print(f"\nBest parameters found for {symbol} {timeframe}:")
+                print(f"\nBest parameters for {symbol} {timeframe}:")
                 print(f"Wavy Period: {best_params['wavy_period']}")
                 print(f"Tunnel Period 1: {best_params['tunnel_period1']}")
                 print(f"Tunnel Period 2: {best_params['tunnel_period2']}")
                 print(f"Min Gap Second: {best_params['min_gap_second']}")
                 print(f"Max Zone Percentage: {best_params['max_zone_percentage']:.2f}")
-                print(f"Sharpe Ratio: {best_params['sharpe_ratio']:.4f}")
-                print(f"Win Rate: {best_params['win_rate']:.2%}")
+                print("\nPerformance Metrics:")
                 print(f"Total Signals: {best_params['total_signals']}")
-
+                print(f"  - Primary Signals: {best_params['primary_signals']}")
+                print(f"  - Secondary Signals: {best_params['secondary_signals']}")
+                print(f"Long/Short Split: {best_params['long_signals']}/{best_params['short_signals']}")
+                print("\nWin Rates:")
+                print(f"Overall Win Rate: {best_params['win_rate']:.2%}")
+                print(f"Primary Strategy: {best_params['primary_win_rate']:.2%}")
+                print(f"Secondary Strategy: {best_params['secondary_win_rate']:.2%}")
+                print(f"Sharpe Ratio: {best_params['sharpe_ratio']:.4f}")
                 # Create report
                 optimizer.create_optimization_report(results_df)
 
