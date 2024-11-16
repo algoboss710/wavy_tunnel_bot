@@ -13,7 +13,7 @@ import concurrent.futures
 from itertools import product
 import time
 import json
-from typing import Dict, List, Tuple, Optional, Union
+from typing import Dict, List, Tuple, Optional, Any, Union
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -96,10 +96,10 @@ def test_mt5_connection():
     if not mt5.initialize():
         print("Failed to initialize MT5")
         return False
-        
+
     print("MT5 Package Version:", mt5.__version__)
     print("Terminal Info:", mt5.terminal_info())
-    
+
     # Test symbol info
     symbol_info = mt5.symbol_info(SYMBOL)
     if symbol_info is not None:
@@ -110,7 +110,7 @@ def test_mt5_connection():
     else:
         print(f"Failed to get symbol info for {SYMBOL}")
         return False
-    
+
     account_info = mt5.account_info()
     if account_info is not None:
         print("Connected to account:", account_info.login)
@@ -118,7 +118,7 @@ def test_mt5_connection():
     else:
         print("Failed to get account info")
         return False
-    
+
     return True
 
 class OptimizationLogger:
@@ -148,27 +148,27 @@ class OptimizationLogger:
     def _setup_logger(self, name: str, filename: str) -> logging.Logger:
         logger = logging.getLogger(f"{self.symbol}_{self.timeframe}_{name}")
         logger.setLevel(logging.DEBUG)
-        
+
         # File handler
         fh = logging.FileHandler(self.log_path / filename)
         fh.setLevel(logging.DEBUG)
-        
+
         # Console handler
         ch = logging.StreamHandler()
         ch.setLevel(logging.INFO)
-        
+
         # Formatter
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         fh.setFormatter(formatter)
         ch.setFormatter(formatter)
-        
+
         # Clear existing handlers
         logger.handlers = []
-        
+
         # Add handlers
         logger.addHandler(fh)
         logger.addHandler(ch)
-        
+
         return logger
 
     def warning(self, message: str):
@@ -185,13 +185,13 @@ class OptimizationLogger:
         msg = (f"Progress: {current}/{total} ({progress:.2f}%) - "
                f"Elapsed: {elapsed_time:.2f}s - "
                f"Remaining: {remaining_time:.2f}s")
-        
+
         if best_result:
             msg += (f"\nBest so far - "
                    f"Trades: {best_result.get('total_trades', 0)}, "
                    f"Win Rate: {best_result.get('win_rate', 0)*100:.2f}%, "
                    f"Profit: {best_result.get('avg_profit', 0)*100:.2f}%")
-        
+
         self.progress_logger.info(msg)
 
     def log_debug(self, message: str):
@@ -230,7 +230,9 @@ class MarketAnalyzer:
         self.lookback_period = lookback_period
         self.market_states = []
         self.current_regime = None
-        
+        self.regime_probabilities = {}
+        self.last_validation_time = None
+
     def analyze_market_condition(self, data: pd.DataFrame) -> Dict:
         """Analyze current market conditions"""
         try:
@@ -238,22 +240,22 @@ class MarketAnalyzer:
             returns = data['close'].pct_change()
             volatility = returns.rolling(20).std()
             avg_volatility = volatility.rolling(50).mean()
-            
+
             # Calculate trend metrics
             sma_short = data['close'].rolling(20).mean()
             sma_long = data['close'].rolling(50).mean()
             trend_strength = ((sma_short - sma_long) / sma_long * 100)
-            
+
             # Calculate volume metrics
             volume_sma = data['tick_volume'].rolling(20).mean()
             relative_volume = data['tick_volume'] / volume_sma
-            
+
             # Determine market regime
-            regime = self._determine_regime(volatility.iloc[-1], 
+            regime = self._determine_regime(volatility.iloc[-1],
                                          avg_volatility.iloc[-1],
                                          trend_strength.iloc[-1],
                                          relative_volume.iloc[-1])
-            
+
             return {
                 'regime': regime,
                 'volatility': volatility.iloc[-1],
@@ -261,19 +263,19 @@ class MarketAnalyzer:
                 'trend_strength': trend_strength.iloc[-1],
                 'relative_volume': relative_volume.iloc[-1]
             }
-            
+
         except Exception as e:
             logging.error(f"Error in market analysis: {str(e)}")
             return None
-            
-    def _determine_regime(self, 
-                         current_vol: float, 
+
+    def _determine_regime(self,
+                         current_vol: float,
                          avg_vol: float,
                          trend_str: float,
                          rel_volume: float) -> str:
         """Determine current market regime"""
         vol_ratio = current_vol / avg_vol if avg_vol > 0 else 1.0
-        
+
         if vol_ratio > 2.0:
             regime = 'high_volatility'
         elif vol_ratio < 0.5:
@@ -282,23 +284,167 @@ class MarketAnalyzer:
             regime = 'trending'
         else:
             regime = 'ranging'
-            
+
         self.current_regime = regime
         return regime
-        
+
     def should_trade(self, market_condition: Dict) -> bool:
         """Determine if market conditions are suitable for trading"""
         if market_condition['regime'] == 'high_volatility':
             return False
-            
+
         if market_condition['volatility'] > market_condition['avg_volatility'] * 2:
             return False
-            
+
         if abs(market_condition['trend_strength']) < 0.2:
             return False
-            
+
         return True
 
+    def validate_data_quality(self, data: pd.DataFrame) -> Tuple[bool, str]:
+        """
+        Validate the quality of market data for analysis.
+
+        Args:
+            data (pd.DataFrame): Market data to validate
+
+        Returns:
+            Tuple[bool, str]: (is_valid, reason)
+        """
+        try:
+            if data is None or data.empty:
+                return False, "No data provided"
+
+            # Check for minimum required columns
+            required_columns = ['open', 'high', 'low', 'close', 'tick_volume']
+            if not all(col in data.columns for col in required_columns):
+                return False, "Missing required columns"
+
+            # Check for sufficient data points
+            if len(data) < self.lookback_period:
+                return False, f"Insufficient data points. Need at least {self.lookback_period}"
+
+            # Check for missing values
+            if data[required_columns].isnull().any().any():
+                return False, "Data contains missing values"
+
+            # Check for zero or negative prices
+            if (data[['open', 'high', 'low', 'close']] <= 0).any().any():
+                return False, "Invalid price values detected"
+
+            # Check for price consistency
+            invalid_prices = (
+                (data['high'] < data['low']) |
+                (data['close'] > data['high']) |
+                (data['close'] < data['low'])
+            )
+            if invalid_prices.any():
+                return False, "Inconsistent price relationships detected"
+
+            return True, "Data validation successful"
+
+        except Exception as e:
+            logging.error(f"Error validating data: {str(e)}")
+            return False, f"Validation error: {str(e)}"
+
+    def calculate_regime_probabilities(self) -> Dict[str, float]:
+        """
+        Calculate probability distribution of different market regimes.
+
+        Returns:
+            Dict[str, float]: Probability of each market regime
+        """
+        try:
+            if not self.market_states:
+                return {}
+
+            # Get recent market states
+            recent_states = self.market_states[-self.lookback_period:]
+            total_states = len(recent_states)
+
+            if total_states == 0:
+                return {}
+
+            # Calculate regime frequencies
+            regime_counts = {}
+            for state in recent_states:
+                regime = state.get('regime', 'unknown')
+                regime_counts[regime] = regime_counts.get(regime, 0) + 1
+
+            # Calculate probabilities
+            self.regime_probabilities = {
+                regime: count / total_states
+                for regime, count in regime_counts.items()
+            }
+
+            return self.regime_probabilities
+
+        except Exception as e:
+            logging.error(f"Error calculating regime probabilities: {str(e)}")
+            return {}
+
+    def get_market_state(self) -> Dict[str, Any]:
+        """
+        Get current market state and analysis.
+
+        Returns:
+            Dict[str, Any]: Current market state and analysis
+        """
+        try:
+            if self.current_regime is None:
+                return {}
+
+            # Get regime probabilities if needed
+            if not self.regime_probabilities:
+                self.calculate_regime_probabilities()
+
+            # Compile market state
+            market_state = {
+                'current_regime': self.current_regime,
+                'regime_probabilities': self.regime_probabilities,
+                'regime_duration': self._calculate_regime_duration(),
+                'regime_stability': self._calculate_regime_stability(),
+                'last_update': datetime.now()
+            }
+
+            return market_state
+
+        except Exception as e:
+            logging.error(f"Error getting market state: {str(e)}")
+            return {}
+
+    def _calculate_regime_duration(self) -> int:
+        """Calculate how long current regime has been active"""
+        if not self.market_states:
+            return 0
+
+        current_duration = 0
+        for state in reversed(self.market_states):
+            if state.get('regime') == self.current_regime:
+                current_duration += 1
+            else:
+                break
+        return current_duration
+
+    def _calculate_regime_stability(self) -> float:
+        """Calculate stability of current regime"""
+        try:
+            if not self.market_states or len(self.market_states) < 2:
+                return 0.0
+
+            # Get recent regime changes
+            regime_changes = sum(
+                1 for i in range(1, len(self.market_states))
+                if self.market_states[i].get('regime') != self.market_states[i-1].get('regime')
+            )
+
+            # Calculate stability (inverse of change frequency)
+            stability = 1.0 - (regime_changes / len(self.market_states))
+            return max(0.0, min(1.0, stability))
+
+        except Exception as e:
+            logging.error(f"Error calculating regime stability: {str(e)}")
+            return 0.0
 
 class PositionSizer:
     """Position sizing and risk management class"""
@@ -309,10 +455,10 @@ class PositionSizer:
         self.open_positions = []
         self.market_analyzer = MarketAnalyzer()
         self.peak_balance = account_info['balance']
-        
-    def calculate_position_size(self, 
-                              signal_type: str, 
-                              entry_price: float, 
+
+    def calculate_position_size(self,
+                              signal_type: str,
+                              entry_price: float,
                               stop_loss: float,
                               market_condition: str,
                               volatility: float,
@@ -324,110 +470,110 @@ class PositionSizer:
             risk_amount = self.account_info['balance'] * self.risk_config['max_position_size']
             risk_per_pip = abs(entry_price - stop_loss)
             base_position_size = risk_amount / risk_per_pip
-            
+
             # Recent performance adjustment
             if trade_history:
                 recent_performance = self._calculate_recent_performance(trade_history)
                 performance_multiplier = min(1.0, max(0.5, recent_performance))
             else:
                 performance_multiplier = 1.0
-            
+
             # Adjust for market conditions
             condition_multiplier = self.risk_config['position_scaling'][market_condition]
-            
+
             # Adjust for signal type
             signal_multiplier = 1.0 if signal_type == 'primary' else 0.7
-            
+
             # Adjust for volatility
-            volatility_multiplier = min(1.0, 
+            volatility_multiplier = min(1.0,
                                      self.risk_config['market_conditions']['volatility_threshold'] / volatility)
-            
+
             # Adjust for trend strength
-            trend_multiplier = min(1.0, 
+            trend_multiplier = min(1.0,
                                  abs(trend_strength) / self.risk_config['market_conditions']['trend_strength_threshold'])
-            
+
             # Calculate drawdown adjustment
             current_drawdown = self._calculate_drawdown()
             drawdown_multiplier = max(0.5, 1 - current_drawdown)
-            
+
             # Calculate final position size
-            final_position_size = (base_position_size * 
-                                 condition_multiplier * 
-                                 signal_multiplier * 
-                                 volatility_multiplier * 
+            final_position_size = (base_position_size *
+                                 condition_multiplier *
+                                 signal_multiplier *
+                                 volatility_multiplier *
                                  trend_multiplier *
                                  performance_multiplier *
                                  drawdown_multiplier)
-            
+
             # Apply daily risk limit
-            remaining_daily_risk = (self.risk_config['max_daily_risk'] * 
-                                  self.account_info['balance'] - 
+            remaining_daily_risk = (self.risk_config['max_daily_risk'] *
+                                  self.account_info['balance'] -
                                   self.daily_risk_used)
-            
+
             max_position_risk = remaining_daily_risk / risk_per_pip
             final_position_size = min(final_position_size, max_position_risk)
-            
+
             # Additional safety checks
             final_position_size = self._apply_safety_limits(final_position_size, entry_price)
-            
+
             return final_position_size
-            
+
         except Exception as e:
             logging.error(f"Error calculating position size: {str(e)}")
             return 0.0
-            
+
     def _calculate_recent_performance(self, trade_history: List[Dict], lookback: int = 10) -> float:
         """Calculate recent trading performance"""
         if not trade_history:
             return 1.0
-            
+
         recent_trades = trade_history[-lookback:]
         if not recent_trades:
             return 1.0
-            
+
         wins = sum(1 for t in recent_trades if t['profit'] > 0)
         win_rate = wins / len(recent_trades)
-        
+
         return min(1.0, max(0.5, win_rate))
-        
+
     def _calculate_drawdown(self) -> float:
         """Calculate current drawdown"""
         current_equity = self.account_info['equity']
         self.peak_balance = max(self.peak_balance, current_equity)
-        
+
         if self.peak_balance == 0:
             return 0.0
-            
+
         drawdown = (self.peak_balance - current_equity) / self.peak_balance
         return drawdown
-        
+
     def _apply_safety_limits(self, position_size: float, entry_price: float) -> float:
         """Apply additional safety limits to position size"""
         # Maximum position value limit
         max_position_value = self.account_info['balance'] * 0.1  # Max 10% of account in single trade
         max_size_by_value = max_position_value / entry_price
         position_size = min(position_size, max_size_by_value)
-        
+
         # Ensure minimum free margin
         margin_required = self._estimate_margin_required(position_size, entry_price)
         if margin_required > self.account_info['margin_free'] * 0.8:  # Keep 20% margin buffer
             position_size *= 0.8 * self.account_info['margin_free'] / margin_required
-            
+
         return position_size
-        
+
     def _estimate_margin_required(self, position_size: float, price: float) -> float:
         """Estimate required margin for position"""
         leverage = 100  # Example leverage 1:100
         return (position_size * price) / leverage
-        
+
     def update_daily_risk(self, risk_amount: float):
         """Update daily risk tracker"""
         self.daily_risk_used += risk_amount
-        
+
     def reset_daily_risk(self):
         """Reset daily risk tracker"""
         self.daily_risk_used = 0.0
-        
+
     def check_correlation_risk(self, new_position: dict) -> bool:
         """Check if new position violates correlation risk limits"""
         for position in self.open_positions:
@@ -435,7 +581,7 @@ class PositionSizer:
             if correlation > self.risk_config['max_correlation_risk']:
                 return False
         return True
-        
+
     def _calculate_correlation(self, pos1: dict, pos2: dict) -> float:
         """Calculate correlation between two positions"""
         if pos1['position'] == pos2['position']:  # Same direction
@@ -443,13 +589,13 @@ class PositionSizer:
         elif pos1['position'] != pos2['position']:  # Opposite direction
             return -1.0
         return 0.0
-        
+
     def get_position_status(self) -> Dict:
         """Get current position status and risk metrics"""
         return {
             'daily_risk_used': self.daily_risk_used,
-            'daily_risk_remaining': (self.risk_config['max_daily_risk'] * 
-                                   self.account_info['balance'] - 
+            'daily_risk_remaining': (self.risk_config['max_daily_risk'] *
+                                   self.account_info['balance'] -
                                    self.daily_risk_used),
             'open_positions': len(self.open_positions),
             'current_drawdown': self._calculate_drawdown()
@@ -474,14 +620,14 @@ class RiskManager:
         self.trade_history = []
         self.risk_alerts = []
         self.stop_trading = False
-        
+
     def initialize_position_sizer(self, account_info: dict):
         """Initialize position sizer with account information"""
         self.position_sizer = PositionSizer(account_info, self.risk_config)
         self.daily_stats['peak_balance'] = account_info['balance']
-    
-    def evaluate_market_condition(self, 
-                                data: pd.DataFrame, 
+
+    def evaluate_market_condition(self,
+                                data: pd.DataFrame,
                                 current_idx: int) -> Tuple[str, dict]:
         """Evaluate current market conditions with enhanced metrics"""
         try:
@@ -489,16 +635,16 @@ class RiskManager:
             volatility = self._calculate_volatility(data, current_idx)
             avg_volatility = volatility.rolling(50).mean().iloc[current_idx]
             rel_volatility = volatility.iloc[current_idx] / avg_volatility
-            
+
             # Calculate trend metrics
             trend_strength = self._calculate_trend_strength(data, current_idx)
-            
+
             # Calculate volume metrics
             volume_ratio = self._calculate_volume_ratio(data, current_idx)
-            
+
             # Calculate momentum
             momentum = self._calculate_momentum(data, current_idx)
-            
+
             # Determine market condition
             condition = self._determine_market_condition(
                 rel_volatility,
@@ -506,7 +652,7 @@ class RiskManager:
                 volume_ratio,
                 momentum
             )
-            
+
             metrics = {
                 'volatility': volatility.iloc[current_idx],
                 'avg_volatility': avg_volatility,
@@ -515,29 +661,29 @@ class RiskManager:
                 'momentum': momentum,
                 'rel_volatility': rel_volatility
             }
-            
+
             # Update market conditions history
             self.market_conditions[data.index[current_idx]] = metrics
-            
+
             return condition, metrics
-            
+
         except Exception as e:
             logging.error(f"Error evaluating market condition: {str(e)}")
             return 'poor_condition', {}
-            
+
     def _calculate_volatility(self, data: pd.DataFrame, idx: int) -> pd.Series:
         """Calculate enhanced volatility metrics"""
         returns = data['close'].pct_change()
         volatility = returns.rolling(20).std()
         return volatility
-        
+
     def _calculate_trend_strength(self, data: pd.DataFrame, idx: int) -> float:
         """Calculate trend strength using multiple indicators"""
         # EMA-based trend
         short_ema = data['close'].ewm(span=20).mean()
         long_ema = data['close'].ewm(span=50).mean()
         ema_trend = ((short_ema - long_ema) / long_ema * 100).iloc[idx]
-        
+
         # ADX-based trend strength
         high_low = data['high'] - data['low']
         high_close = abs(data['high'] - data['close'].shift())
@@ -545,23 +691,23 @@ class RiskManager:
         tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
         atr = tr.rolling(14).mean()
         dx = (atr / data['close'] * 100).iloc[idx]
-        
+
         # Combine metrics
         trend_strength = (ema_trend * 0.7 + dx * 0.3)
         return trend_strength
-        
+
     def _calculate_volume_ratio(self, data: pd.DataFrame, idx: int) -> float:
         """Calculate volume strength ratio"""
         volume_sma = data['tick_volume'].rolling(20).mean()
         current_volume = data['tick_volume'].iloc[idx]
         return current_volume / volume_sma.iloc[idx] if volume_sma.iloc[idx] > 0 else 1.0
-        
+
     def _calculate_momentum(self, data: pd.DataFrame, idx: int) -> float:
         """Calculate price momentum"""
         returns = data['close'].pct_change()
         momentum = returns.rolling(10).mean().iloc[idx]
         return momentum
-        
+
     def _determine_market_condition(self,
                                   rel_volatility: float,
                                   trend_strength: float,
@@ -570,24 +716,24 @@ class RiskManager:
         """Determine market condition based on multiple factors"""
         if rel_volatility > self.risk_config['market_conditions']['volatility_threshold']:
             return 'poor_condition'
-            
+
         if (abs(trend_strength) > self.risk_config['market_conditions']['trend_strength_threshold'] and
             volume_ratio > self.risk_config['market_conditions']['volume_threshold'] and
             abs(momentum) > 0.001):
             return 'excellent_condition'
-            
+
         if (abs(trend_strength) > self.risk_config['market_conditions']['trend_strength_threshold'] * 0.7 and
             volume_ratio > 1.0):
             return 'good_condition'
-            
+
         if rel_volatility < 0.8:
             return 'moderate_condition'
-            
+
         return 'poor_condition'
-        
-    def validate_trade(self, 
-                      signal_type: str, 
-                      entry_price: float, 
+
+    def validate_trade(self,
+                      signal_type: str,
+                      entry_price: float,
                       stop_loss: float,
                       market_metrics: dict) -> Tuple[bool, float]:
         """Validate trade and calculate position size with enhanced checks"""
@@ -595,13 +741,13 @@ class RiskManager:
             # Check if trading should be stopped
             if self.stop_trading:
                 return False, 0.0
-                
+
             # Check if daily risk limit is exceeded
-            if self.position_sizer.daily_risk_used >= (self.risk_config['max_daily_risk'] * 
+            if self.position_sizer.daily_risk_used >= (self.risk_config['max_daily_risk'] *
                                                       self.position_sizer.account_info['balance']):
                 self.risk_alerts.append("Daily risk limit exceeded")
                 return False, 0.0
-            
+
             # Check market conditions
             condition = self._determine_market_condition(
                 market_metrics['rel_volatility'],
@@ -609,12 +755,12 @@ class RiskManager:
                 market_metrics['volume_ratio'],
                 market_metrics['momentum']
             )
-            
+
             # Validate signal type and market condition combination
             if condition == 'poor_condition' and signal_type == 'secondary':
                 self.risk_alerts.append("Poor market condition for secondary signal")
                 return False, 0.0
-            
+
             # Calculate position size
             position_size = self.position_sizer.calculate_position_size(
                 signal_type=signal_type,
@@ -625,11 +771,11 @@ class RiskManager:
                 trend_strength=market_metrics['trend_strength'],
                 trade_history=self.trade_history
             )
-            
+
             if position_size <= 0:
                 self.risk_alerts.append("Invalid position size calculated")
                 return False, 0.0
-            
+
             # Perform correlation check
             new_position = {
                 'entry_price': entry_price,
@@ -637,22 +783,22 @@ class RiskManager:
                 'position_size': position_size,
                 'signal_type': signal_type
             }
-            
+
             if not self.position_sizer.check_correlation_risk(new_position):
                 self.risk_alerts.append("Correlation risk limit exceeded")
                 return False, 0.0
-            
+
             return True, position_size
-            
+
         except Exception as e:
             logging.error(f"Error validating trade: {str(e)}")
             return False, 0.0
-    
+
     def update_trade_stats(self, trade_result: dict):
         """Update trading statistics with enhanced metrics"""
         self.trade_history.append(trade_result)
         self.daily_stats['trades'] += 1
-        
+
         if trade_result['profit'] > 0:
             self.daily_stats['wins'] += 1
             self.daily_stats['consecutive_losses'] = 0
@@ -663,24 +809,24 @@ class RiskManager:
                 self.daily_stats['largest_loss'],
                 trade_result['profit']
             )
-        
+
         self.daily_stats['profit'] += trade_result['profit']
-        
+
         # Update drawdown statistics
-        current_equity = (self.position_sizer.account_info['balance'] + 
+        current_equity = (self.position_sizer.account_info['balance'] +
                          self.daily_stats['profit'])
         self.daily_stats['peak_balance'] = max(
             self.daily_stats['peak_balance'],
             current_equity
         )
-        current_drawdown = ((self.daily_stats['peak_balance'] - current_equity) / 
+        current_drawdown = ((self.daily_stats['peak_balance'] - current_equity) /
                            self.daily_stats['peak_balance'])
         self.daily_stats['max_drawdown'] = max(
             self.daily_stats['max_drawdown'],
             current_drawdown
         )
         self.daily_stats['current_drawdown'] = current_drawdown
-    
+
     def should_stop_trading(self) -> bool:
         """Determine if trading should be stopped based on risk metrics"""
         # Check daily loss limit
@@ -688,26 +834,26 @@ class RiskManager:
             self.risk_alerts.append("Daily loss limit reached")
             self.stop_trading = True
             return True
-        
+
         # Check consecutive losses
         if self.daily_stats['consecutive_losses'] >= 3:
             self.risk_alerts.append("Maximum consecutive losses reached")
             self.stop_trading = True
             return True
-        
+
         # Check drawdown limit
         if self.daily_stats['current_drawdown'] >= 0.1:  # 10% drawdown limit
             self.risk_alerts.append("Maximum drawdown limit reached")
             self.stop_trading = True
             return True
-        
+
         return False
 
     def get_risk_metrics(self) -> Dict:
         """Get current risk metrics and statistics"""
-        win_rate = (self.daily_stats['wins'] / self.daily_stats['trades'] 
+        win_rate = (self.daily_stats['wins'] / self.daily_stats['trades']
                    if self.daily_stats['trades'] > 0 else 0.0)
-        
+
         return {
             'daily_stats': self.daily_stats,
             'win_rate': win_rate,
@@ -715,9 +861,107 @@ class RiskManager:
             'market_conditions': self.market_conditions,
             'position_status': self.position_sizer.get_position_status()
         }
+
+    # New methods being added
+
+    def validate_market_regime(self, market_data: pd.DataFrame) -> Tuple[bool, str]:
+        """
+        Validate current market regime for trading suitability.
+
+        Args:
+            market_data (pd.DataFrame): Market data for analysis
+
+        Returns:
+            Tuple[bool, str]: (is_valid, reason)
+        """
+        try:
+            # Calculate volatility
+            returns = market_data['close'].pct_change()
+            current_volatility = returns.rolling(20).std().iloc[-1]
+            avg_volatility = returns.rolling(50).std().mean()
+
+            # Calculate volume profile
+            volume_sma = market_data['tick_volume'].rolling(20).mean()
+            current_volume = market_data['tick_volume'].iloc[-1]
+            volume_ratio = current_volume / volume_sma.iloc[-1] if volume_sma.iloc[-1] > 0 else 1.0
+
+            # Validate regime conditions
+            if current_volatility > avg_volatility * 2:
+                return False, "Excessive volatility"
+
+            if volume_ratio < 0.5:
+                return False, "Insufficient volume"
+
+            return True, "Market regime valid"
+
+        except Exception as e:
+            logging.error(f"Error validating market regime: {str(e)}")
+            return False, f"Validation error: {str(e)}"
+
+    def check_risk_limits(self) -> Tuple[bool, List[str]]:
+        """
+        Check if current risk levels are within acceptable limits.
+
+        Returns:
+            Tuple[bool, List[str]]: (is_within_limits, warning_messages)
+        """
+        warnings = []
+
+        # Check daily loss limit
+        daily_loss_limit = self.risk_config['max_daily_risk'] * self.position_sizer.account_info['balance']
+        if abs(self.daily_stats['profit']) > daily_loss_limit:
+            warnings.append(f"Daily loss limit exceeded: {self.daily_stats['profit']:.2f}")
+
+        # Check drawdown limit
+        max_drawdown_limit = 0.1  # 10% maximum drawdown
+        if self.daily_stats['current_drawdown'] > max_drawdown_limit:
+            warnings.append(f"Maximum drawdown limit exceeded: {self.daily_stats['current_drawdown']:.2%}")
+
+        # Check consecutive losses
+        max_consecutive_losses = 5
+        if self.daily_stats['consecutive_losses'] >= max_consecutive_losses:
+            warnings.append(f"Maximum consecutive losses reached: {self.daily_stats['consecutive_losses']}")
+
+        return len(warnings) == 0, warnings
+
+    def reset_daily_stats(self):
+        """Reset daily statistics and risk metrics."""
+        try:
+            # Store previous peak balance
+            prev_peak_balance = self.daily_stats['peak_balance']
+
+            # Reset core statistics
+            self.daily_stats.update({
+                'trades': 0,
+                'wins': 0,
+                'losses': 0,
+                'profit': 0.0,
+                'consecutive_losses': 0,
+                'largest_loss': 0.0
+            })
+
+            # Maintain peak balance
+            self.daily_stats['peak_balance'] = max(
+                prev_peak_balance,
+                self.position_sizer.account_info['balance']
+            )
+
+            # Reset risk alerts
+            self.risk_alerts = []
+
+            # Reset stop trading flag if conditions allow
+            if self.daily_stats['current_drawdown'] < 0.05:  # 5% drawdown threshold
+                self.stop_trading = False
+
+            logging.info("Daily statistics reset successfully")
+
+        except Exception as e:
+            logging.error(f"Error resetting daily stats: {str(e)}")
+            raise
+
 class WavyTunnelExitOptimizer:
-    def __init__(self, symbol: str, timeframe: str, start_date: datetime, 
-                end_date: datetime, entry_params: Dict, 
+    def __init__(self, symbol: str, timeframe: str, start_date: datetime,
+                end_date: datetime, entry_params: Dict,
                 base_path: str = "exit_optimization_results"):
         self.symbol = symbol
         self.timeframe = timeframe
@@ -735,7 +979,7 @@ class WavyTunnelExitOptimizer:
         symbol_info = mt5.symbol_info(symbol)
         if symbol_info is None:
             raise ValueError(f"Could not get symbol info for {symbol}")
-    
+
         # Store symbol properties
         self.point = symbol_info.point
         self.digits = symbol_info.digits
@@ -757,21 +1001,21 @@ class WavyTunnelExitOptimizer:
                     'margin_free': 10000.0
                 }
                 self.logger.warning("Using default account values as MT5 account info unavailable")
-    
+
         self.account_info = WavyTunnelExitOptimizer._account_info
         self.risk_manager = RiskManager(RISK_CONFIG)
         self.risk_manager.initialize_position_sizer(self.account_info)
 
         # Parameter ranges for optimization
         self.param_ranges = self._setup_param_ranges()
-    
+
         # Configuration parameters
         self.min_signals_required = 50
         self.max_signal_ratio = 3.0
         self.min_secondary_winrate = 0.5
         self.regime_period = 50
-    
-    # Performance metrics
+
+        # Performance metrics
         self.performance_metrics = {
             'signal_balance': 0.0,
             'avg_profit_primary': 0.0,
@@ -783,7 +1027,543 @@ class WavyTunnelExitOptimizer:
         self.optimization_results = []
         self.best_params = None
         self.best_performance = None
-    
+
+    def _validate_optimization_params(self, params: Dict) -> bool:
+        """
+        Validate optimization parameters for validity.
+
+        Args:
+            params (Dict): Dictionary of parameters to validate
+
+        Returns:
+            bool: True if parameters are valid, False otherwise
+        """
+        try:
+            required_keys = ['tp1_lot_percent', 'tp2_lot_percent', 'tp3_lot_percent', 'tp4_lot_percent',
+                           'tp1_weight', 'tp2_weight', 'tp3_weight', 'tp4_weight',
+                           'wave_cross_buffer', 'tunnel_touch_buffer']
+
+            if not all(key in params for key in required_keys):
+                return False
+
+            # Validate lot percentages sum to 100
+            lot_sum = sum(params[f'tp{i}_lot_percent'] for i in range(1, 5))
+            if abs(lot_sum - 100) > 0.001:
+                return False
+
+            # Validate take profit levels are properly ordered
+            tp_weights = [params[f'tp{i}_weight'] for i in range(1, 5)]
+            if not all(tp_weights[i] < tp_weights[i+1] for i in range(len(tp_weights)-1)):
+                return False
+
+            return True
+
+        except Exception as e:
+            self.logger.main_logger.error(f"Error validating parameters: {str(e)}")
+            return False
+
+    def _generate_param_combinations(self) -> List[Dict]:
+        """Generate parameter combinations with validation"""
+        param_keys = list(self.param_ranges.keys())
+        param_values = list(self.param_ranges.values())
+
+        combinations = []
+        total_attempted = 0
+        valid_count = 0
+
+        try:
+            for values in product(*param_values):
+                total_attempted += 1
+                params = dict(zip(param_keys, values))
+
+                # Add validation check here
+                if self._validate_optimization_params(params):
+                    combinations.append(params)
+                    valid_count += 1
+
+            self.logger.debug_logger.info(
+                f"Parameter generation: {valid_count} valid combinations "
+                f"from {total_attempted} attempted"
+            )
+
+            return combinations
+
+        except Exception as e:
+            self.logger.main_logger.error(f"Error generating parameter combinations: {str(e)}")
+            return []
+
+    def generate_signals(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        """Generate entry signals using fixed parameters with improved validation"""
+        try:
+            # Calculate EMAs using entry parameters
+            wavy_h = data['high'].ewm(span=self.entry_params['wavy_period'], adjust=False).mean()
+            wavy_c = data['close'].ewm(span=self.entry_params['wavy_period'], adjust=False).mean()
+            wavy_l = data['low'].ewm(span=self.entry_params['wavy_period'], adjust=False).mean()
+            tunnel1 = data['close'].ewm(span=self.entry_params['tunnel_period1'], adjust=False).mean()
+            tunnel2 = data['close'].ewm(span=self.entry_params['tunnel_period2'], adjust=False).mean()
+
+            wavy_max = pd.concat([wavy_h, wavy_c, wavy_l], axis=1).max(axis=1)
+            wavy_min = pd.concat([wavy_h, wavy_c, wavy_l], axis=1).min(axis=1)
+            tunnel_max = pd.concat([tunnel1, tunnel2], axis=1).max(axis=1)
+            tunnel_min = pd.concat([tunnel1, tunnel2], axis=1).min(axis=1)
+
+            # Store for later use in exit conditions
+            self.wavy_max = wavy_max
+            self.wavy_min = wavy_min
+            self.tunnel_max = tunnel_max
+            self.tunnel_min = tunnel_min
+
+            # Calculate trend and volume conditions
+            trend = self._calculate_trend(data)
+            volume_condition = data['tick_volume'] > data['tick_volume'].rolling(20).mean()
+
+            # Generate primary signals
+            primary_longs = (
+                (data['open'] > wavy_max) &
+                (wavy_min > tunnel_max) &
+                (trend > 0) &
+                volume_condition &
+                (data['open'] > 0)
+            )
+
+            primary_shorts = (
+                (data['open'] < wavy_min) &
+                (wavy_max < tunnel_min) &
+                (trend < 0) &
+                volume_condition &
+                (data['open'] > 0)
+            )
+
+            # Secondary signals with additional validation
+            min_gap = self.entry_params['min_gap_second']
+            max_zone = self.entry_params['max_zone_percentage']
+
+            secondary_longs = (
+                (data['close'].shift(1) <= wavy_max.shift(1)) &
+                (data['close'] > wavy_max) &
+                (data['close'] < tunnel_min) &
+                ((tunnel_min - data['close']) > min_gap) &
+                ((data['close'] - wavy_max) / (tunnel_min - wavy_max) <= max_zone) &
+                (trend > 0) &
+                volume_condition &
+                (data['close'] > 0)
+            )
+
+            secondary_shorts = (
+                (data['close'].shift(1) >= wavy_min.shift(1)) &
+                (data['close'] < wavy_min) &
+                (data['close'] > tunnel_max) &
+                ((data['close'] - tunnel_max) > min_gap) &
+                ((wavy_min - data['close']) / (wavy_min - tunnel_max) <= max_zone) &
+                (trend < 0) &
+                volume_condition &
+                (data['close'] > 0)
+            )
+
+            # Combine signals
+            long_signals = primary_longs | secondary_longs
+            short_signals = primary_shorts | secondary_shorts
+
+            # Log signal imbalance only once per run
+            if not hasattr(self, '_signal_imbalance_logged'):
+                long_count = long_signals.sum()
+                short_count = short_signals.sum()
+                signal_ratio = max(long_count, short_count) / min(long_count, short_count)
+
+                if signal_ratio > self.max_signal_ratio:
+                    self.logger.warning(
+                        f"Signal imbalance detected - Ratio: {signal_ratio:.2f}, "
+                        f"Longs: {long_count}, Shorts: {short_count}. "
+                        f"Time period: {data.index[0]} to {data.index[-1]}"
+                    )
+
+                # Add detailed analysis to debug log
+                self.logger.debug_logger.info(
+                    f"\nSignal Distribution Analysis:"
+                    f"\n- Total Signals: {long_count + short_count}"
+                    f"\n- Long/Short Ratio: {signal_ratio:.2f}"
+                    f"\n- Primary Long: {primary_longs.sum()}"
+                    f"\n- Primary Short: {primary_shorts.sum()}"
+                    f"\n- Secondary Long: {secondary_longs.sum()}"
+                    f"\n- Secondary Short: {secondary_shorts.sum()}"
+                    f"\n- Time Period: {data.index[0]} to {data.index[-1]}"
+                )
+
+                self._signal_imbalance_logged = True
+
+            return long_signals, short_signals, pd.Series(primary_longs | primary_shorts, index=data.index)
+
+        except Exception as e:
+            self.logger.main_logger.error(f"Error generating signals: {str(e)}")
+            return (pd.Series(False, index=data.index),
+                    pd.Series(False, index=data.index),
+                    pd.Series(False, index=data.index))
+
+    def analyze_signal_imbalance(self,
+                               primary_longs: pd.Series,
+                               primary_shorts: pd.Series,
+                               secondary_longs: pd.Series,
+                               secondary_shorts: pd.Series) -> Dict:
+        """
+        Analyze signal imbalance and provide insights.
+        """
+        analysis = {}
+        try:
+            # Calculate basic metrics
+            analysis['total_primary'] = primary_longs.sum() + primary_shorts.sum()
+            analysis['total_secondary'] = secondary_longs.sum() + secondary_shorts.sum()
+            analysis['long_ratio'] = primary_longs.sum() / (secondary_longs.sum() + 1e-10)
+            analysis['short_ratio'] = primary_shorts.sum() / (secondary_shorts.sum() + 1e-10)
+
+            # Analyze time distribution
+            primary_long_times = primary_longs[primary_longs].index
+            primary_short_times = primary_shorts[primary_shorts].index
+
+            if len(primary_long_times) > 0 and len(primary_short_times) > 0:
+                analysis['avg_time_between_signals'] = (
+                    np.mean([
+                        (t2 - t1).total_seconds() / 3600
+                        for t1, t2 in zip(primary_long_times[:-1], primary_long_times[1:])
+                    ])
+                )
+
+            # Check for clustering
+            analysis['signal_clustering'] = self._check_signal_clustering(
+                primary_longs, primary_shorts
+            )
+
+            return analysis
+
+        except Exception as e:
+            self.logger.error(f"Error analyzing signal imbalance: {str(e)}")
+            return {}
+
+    def _check_signal_clustering(self,
+                               primary_longs: pd.Series,
+                               primary_shorts: pd.Series) -> Dict:
+        """Check for signal clustering in time"""
+        try:
+            window = 12  # 1-hour window for 5-minute data
+            long_clusters = primary_longs.rolling(window).sum()
+            short_clusters = primary_shorts.rolling(window).sum()
+
+            return {
+                'max_long_cluster': long_clusters.max(),
+                'max_short_cluster': short_clusters.max(),
+                'avg_long_cluster': long_clusters.mean(),
+                'avg_short_cluster': short_clusters.mean()
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error checking signal clustering: {str(e)}")
+            return {}
+
+    def _validate_optimization_params(self, params: Dict) -> bool:
+        """
+        Validate optimization parameters for validity.
+
+        Args:
+            params (Dict): Dictionary of parameters to validate
+
+        Returns:
+            bool: True if parameters are valid, False otherwise
+        """
+        try:
+            required_keys = ['tp1_lot_percent', 'tp2_lot_percent', 'tp3_lot_percent', 'tp4_lot_percent',
+                           'tp1_weight', 'tp2_weight', 'tp3_weight', 'tp4_weight',
+                           'wave_cross_buffer', 'tunnel_touch_buffer']
+
+            if not all(key in params for key in required_keys):
+                return False
+
+            # Validate lot percentages sum to 100
+            lot_sum = sum(params[f'tp{i}_lot_percent'] for i in range(1, 5))
+            if abs(lot_sum - 100) > 0.001:
+                return False
+
+            # Validate take profit levels are properly ordered
+            tp_weights = [params[f'tp{i}_weight'] for i in range(1, 5)]
+            if not all(tp_weights[i] < tp_weights[i+1] for i in range(len(tp_weights)-1)):
+                return False
+
+            return True
+
+        except Exception as e:
+            self.logger.main_logger.error(f"Error validating parameters: {str(e)}")
+            return False
+
+    def _generate_param_combinations(self) -> List[Dict]:
+        """Generate parameter combinations with validation"""
+        param_keys = list(self.param_ranges.keys())
+        param_values = list(self.param_ranges.values())
+
+        combinations = []
+        total_attempted = 0
+        valid_count = 0
+
+        try:
+            for values in product(*param_values):
+                total_attempted += 1
+                params = dict(zip(param_keys, values))
+
+                # Add validation check here
+                if self._validate_optimization_params(params):
+                    combinations.append(params)
+                    valid_count += 1
+
+            self.logger.debug_logger.info(
+                f"Parameter generation: {valid_count} valid combinations "
+                f"from {total_attempted} attempted"
+            )
+
+            return combinations
+
+        except Exception as e:
+            self.logger.main_logger.error(f"Error generating parameter combinations: {str(e)}")
+            return []
+
+    def _validate_signal_balance(self, long_signals: pd.Series, short_signals: pd.Series) -> bool:
+        """
+        Validate if there's a reasonable balance between long and short signals.
+
+        Args:
+            long_signals (pd.Series): Series of long signals
+            short_signals (pd.Series): Series of short signals
+
+        Returns:
+            bool: True if signal balance is acceptable, False otherwise
+        """
+        long_count = long_signals.sum()
+        short_count = short_signals.sum()
+
+    # Minimum required signals
+        if (long_count + short_count) < self.min_signals_required:
+            self.logger.warning(f"Insufficient total signals: {long_count + short_count}")
+            return False
+
+    # Check signal ratio
+        if long_count == 0 or short_count == 0:
+            self.logger.warning("Missing signals for one direction")
+            return False
+
+        signal_ratio = max(long_count, short_count) / min(long_count, short_count)
+        if signal_ratio > self.max_signal_ratio:
+            self.logger.warning(f"Signal ratio exceeds limit: {signal_ratio:.2f}")
+            return False
+
+        return True
+
+    def _save_optimization_results(self, results_df: pd.DataFrame, best_params: Dict):
+        """
+        Save optimization results to files with comprehensive formatting and error handling.
+
+        Args:
+            results_df (pd.DataFrame): DataFrame containing all optimization results
+            best_params (Dict): Dictionary containing the best parameters found
+        """
+        try:
+            # Create results directory if it doesn't exist
+            results_dir = self.base_path / "optimization_results"
+            results_dir.mkdir(parents=True, exist_ok=True)
+
+            # Save detailed results to CSV
+            csv_path = results_dir / "detailed_results.csv"
+            results_df.to_csv(csv_path, index=False)
+
+            # Save best parameters with formatting
+            best_params_path = results_dir / "best_parameters.json"
+            with open(best_params_path, "w") as f:
+                json.dump({
+                    'symbol': self.symbol,
+                    'timeframe': self.timeframe,
+                    'optimization_date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    'best_parameters': best_params,
+                    'performance_metrics': {
+                        'total_trades': best_params.get('total_trades', 0),
+                        'win_rate': best_params.get('win_rate', 0),
+                        'profit_factor': best_params.get('profit_factor', 0),
+                        'sharpe_ratio': best_params.get('sharpe_ratio', 0),
+                        'max_drawdown': best_params.get('max_drawdown', 0),
+                        'avg_profit_per_trade': best_params.get('avg_profit_per_trade_pct', 0)
+                    }
+                }, f, indent=4)
+
+            # Save summary statistics
+            summary_path = results_dir / "optimization_summary.txt"
+            with open(summary_path, "w") as f:
+                f.write(f"Optimization Summary for {self.symbol} {self.timeframe}\n")
+                f.write("=" * 50 + "\n\n")
+                f.write(f"Total Combinations Tested: {len(results_df)}\n")
+                f.write(f"Optimization Period: {self.start_date} to {self.end_date}\n\n")
+
+                f.write("Performance Statistics:\n")
+                f.write("-" * 20 + "\n")
+                stats = results_df.describe()
+                f.write(stats.to_string())
+
+            self.logger.main_logger.info(f"Optimization results saved to {results_dir}")
+
+        except Exception as e:
+            self.logger.main_logger.error(f"Error saving optimization results: {str(e)}")
+            raise
+
+    def _update_best_result(self, current_best: Dict, new_results: List[Dict]) -> Dict:
+        """Update the best result based on new optimization results"""
+        try:
+            if not new_results:
+                return current_best or {}
+
+            # Filter out None values and invalid results
+            valid_results = [r for r in new_results if r is not None and isinstance(r, dict)]
+            if not valid_results:
+                return current_best or {}
+
+            # Find best result from new batch
+            new_best = None
+            best_score = float('-inf')
+
+            for result in valid_results:
+                try:
+                # Calculate composite score
+                    win_rate = result.get('win_rate', 0)
+                    profit_factor = result.get('profit_factor', 0)
+                    sharpe_ratio = result.get('sharpe_ratio', 0)
+                    drawdown = result.get('max_drawdown', 1)
+                    trades = result.get('total_trades', 0)
+
+                    # Skip invalid results
+                    if trades == 0:
+                        continue
+
+                    score = (win_rate * 0.3 +
+                            min(profit_factor, 5)/5 * 0.3 +
+                            (1 - drawdown) * 0.2 +
+                            min(max(sharpe_ratio, 0), 3)/3 * 0.2)
+
+                    if score > best_score:
+                        best_score = score
+                        new_best = result
+                        new_best['composite_score'] = score
+
+                except Exception as e:
+                    self.logger.debug_logger.error(f"Error processing result: {str(e)}")
+                    continue
+
+            # Compare with current best
+            if new_best is not None:
+                if not current_best or new_best.get('composite_score', 0) > current_best.get('composite_score', 0):
+                    self.logger.main_logger.info(
+                        f"New best result found: Score {new_best.get('composite_score', 0):.4f} "
+                        f"(previous: {current_best.get('composite_score', 0) if current_best else 0:.4f})"
+                    )
+                    return new_best
+
+            return current_best or {}
+
+        except Exception as e:
+            self.logger.main_logger.error(f"Error updating best result: {str(e)}")
+            return current_best or {}
+
+    def _calculate_composite_score(self, result: Dict) -> float:
+        """
+        Calculate a composite score for ranking optimization results.
+
+        Args:
+            result (Dict): Dictionary containing optimization result metrics
+
+        Returns:
+            float: Composite score
+        """
+        try:
+            # Extract metrics with safety checks
+            win_rate = result.get('win_rate', 0)
+            profit_factor = result.get('profit_factor', 0)
+            sharpe_ratio = result.get('sharpe_ratio', 0)
+            max_drawdown = result.get('max_drawdown', 1)
+            avg_profit = result.get('avg_profit_per_trade_pct', 0)
+            total_trades = result.get('total_trades', 0)
+
+            # Weight components
+            win_rate_score = win_rate * 0.25
+            profit_score = min(profit_factor, 5) / 5 * 0.25
+            risk_score = (1 - max_drawdown) * 0.20
+            sharpe_score = min(max(sharpe_ratio, 0), 3) / 3 * 0.15
+            trade_score = min(total_trades / 100, 1) * 0.15
+
+            # Calculate composite score
+            composite_score = (win_rate_score + profit_score + risk_score +
+                             sharpe_score + trade_score)
+
+            return float(composite_score)
+
+        except Exception as e:
+            self.logger.debug_logger.error(f"Error calculating composite score: {str(e)}")
+            return 0.0
+
+    def _create_summary_report(self, results_df: pd.DataFrame, report_path: Path):
+        """
+        Create a comprehensive summary report of optimization results.
+
+        Args:
+            results_df (pd.DataFrame): DataFrame containing all optimization results
+            report_path (Path): Path where the report should be saved
+        """
+        try:
+            with open(report_path / "optimization_summary.txt", "w") as f:
+                # Header
+                f.write(f"Optimization Summary Report\n")
+                f.write(f"Symbol: {self.symbol}\n")
+                f.write(f"Timeframe: {self.timeframe}\n")
+                f.write(f"Date Range: {self.start_date} to {self.end_date}\n")
+                f.write("=" * 50 + "\n\n")
+
+                # Overall Statistics
+                f.write("Overall Statistics:\n")
+                f.write("-" * 20 + "\n")
+                f.write(f"Total Combinations Tested: {len(results_df)}\n")
+                f.write(f"Valid Results: {len(results_df[results_df['total_trades'] > 0])}\n\n")
+
+                # Performance Metrics
+                f.write("Performance Metrics:\n")
+                f.write("-" * 20 + "\n")
+                metrics = {
+                    'Win Rate': results_df['win_rate'].mean() * 100,
+                    'Average Profit': results_df['avg_profit_per_trade_pct'].mean(),
+                    'Best Profit': results_df['avg_profit_per_trade_pct'].max(),
+                    'Worst Profit': results_df['avg_profit_per_trade_pct'].min(),
+                    'Average Trades': results_df['total_trades'].mean(),
+                    'Max Drawdown': results_df['max_drawdown'].mean() * 100
+                }
+
+                for metric, value in metrics.items():
+                    f.write(f"{metric}: {value:.2f}\n")
+
+                # Best Parameters
+                if self.best_params:
+                    f.write("\nBest Parameters Found:\n")
+                    f.write("-" * 20 + "\n")
+                    for param, value in self.best_params.items():
+                        if isinstance(value, float):
+                            f.write(f"{param}: {value:.6f}\n")
+                        else:
+                            f.write(f"{param}: {value}\n")
+
+                # Parameter Distribution Analysis
+                f.write("\nParameter Distribution Analysis:\n")
+                f.write("-" * 20 + "\n")
+                for param in self.param_ranges.keys():
+                    if param in results_df.columns:
+                        stats = results_df[param].describe()
+                        f.write(f"\n{param}:\n")
+                        f.write(f"  Mean: {stats['mean']:.6f}\n")
+                        f.write(f"  Std: {stats['std']:.6f}\n")
+                        f.write(f"  Min: {stats['min']:.6f}\n")
+                        f.write(f"  Max: {stats['max']:.6f}\n")
+
+        except Exception as e:
+            self.logger.main_logger.error(f"Error creating summary report: {str(e)}")
+            raise
+
     def _setup_param_ranges(self) -> Dict:
         """Define parameter ranges with significantly reduced combinations"""
         return {
@@ -792,18 +1572,18 @@ class WavyTunnelExitOptimizer:
             'tp2_lot_percent': [20, 25, 30],
             'tp3_lot_percent': [10, 15],
             'tp4_lot_percent': [10, 15],
-            
+
             # Take profit distances calibrated for XAUUSD
             'tp1_weight': np.array([0.001, 0.002, 0.003]),
             'tp2_weight': np.array([0.004, 0.005, 0.006]),
             'tp3_weight': np.array([0.007, 0.008, 0.009]),
             'tp4_weight': np.array([0.010, 0.011, 0.012]),
-            
+
             # Stop loss parameters
             'wave_cross_buffer': np.array([0.001, 0.002]),
             'tunnel_touch_buffer': np.array([0.001, 0.002])
         }
-    
+
     def _get_default_results(self) -> Dict:
         """Return default results dictionary for error cases"""
         return {
@@ -823,31 +1603,31 @@ class WavyTunnelExitOptimizer:
         """Generate parameter combinations with validation"""
         param_keys = list(self.param_ranges.keys())
         param_values = list(self.param_ranges.values())
-    
+
         combinations = []
         total_attempted = 0
         valid_count = 0
-    
+
         try:
             for values in product(*param_values):
                 total_attempted += 1
                 params = dict(zip(param_keys, values))
-            
+
                 if self._validate_params(params):
                     combinations.append(params)
                     valid_count += 1
-        
+
             self.logger.debug_logger.info(
                 f"Parameter generation: {valid_count} valid combinations "
                 f"from {total_attempted} attempted"
             )
-        
+
             return combinations
 
         except Exception as e:
             self.logger.main_logger.error(f"Error generating parameter combinations: {str(e)}")
             return []
-    
+
     def _evaluate_params(self, params: Dict, data: pd.DataFrame) -> Dict:
         """Evaluate parameters with enhanced performance metrics"""
         try:
@@ -858,12 +1638,12 @@ class WavyTunnelExitOptimizer:
             entry_price = 0
             entry_time = None
             remaining_position = 0
-        
+
             for i in range(len(data)-1):
                 # Skip invalid data
                 if pd.isna(data['open'].iloc[i]) or data['open'].iloc[i] <= 0:
                     continue
-                
+
                 # Get market condition and metrics
                 market_condition, metrics = self.risk_manager.evaluate_market_condition(
                     data, i
@@ -873,35 +1653,35 @@ class WavyTunnelExitOptimizer:
                 if current_position is None:
                     entry_valid = False
                     position_size = 0.0
-                
+
                     if long_signals.iloc[i]:
                         signal_type = 'primary' if is_primary.iloc[i] else 'secondary'
                         stop_loss = data['open'].iloc[i] * (1 - params['wave_cross_buffer'])
-                    
+
                         entry_valid, position_size = self.risk_manager.validate_trade(
                             signal_type=signal_type,
                             entry_price=data['open'].iloc[i],
                             stop_loss=stop_loss,
                             market_metrics=metrics
                         )
-                    
+
                         if entry_valid:
                             current_position = 'long'
                             entry_price = data['open'].iloc[i]
                             entry_time = data.index[i]
                             remaining_position = position_size
-                        
+
                     elif short_signals.iloc[i]:
                         signal_type = 'primary' if is_primary.iloc[i] else 'secondary'
                         stop_loss = data['open'].iloc[i] * (1 + params['wave_cross_buffer'])
-                    
+
                         entry_valid, position_size = self.risk_manager.validate_trade(
                             signal_type=signal_type,
                             entry_price=data['open'].iloc[i],
                             stop_loss=stop_loss,
                             market_metrics=metrics
                         )
-                    
+
                         if entry_valid:
                             current_position = 'short'
                             entry_price = data['open'].iloc[i]
@@ -933,7 +1713,7 @@ class WavyTunnelExitOptimizer:
                                     }
                                     trades.append(trade_result)
                                     remaining_position -= lot_percent
-                    
+
                         # Process stop loss
                         if remaining_position > 0:
                             sl_level = entry_price * (1 - params['wave_cross_buffer'])
@@ -950,7 +1730,7 @@ class WavyTunnelExitOptimizer:
                                 }
                                 trades.append(trade_result)
                                 remaining_position = 0
-                
+
                     elif current_position == 'short':
                         # Similar logic for short positions...
                         for j, (lot_percent, weight) in enumerate(zip(
@@ -974,7 +1754,7 @@ class WavyTunnelExitOptimizer:
                                     }
                                     trades.append(trade_result)
                                     remaining_position -= lot_percent
-                    
+
                         if remaining_position > 0:
                             sl_level = entry_price * (1 + params['wave_cross_buffer'])
                             if data['high'].iloc[i] >= sl_level:
@@ -990,7 +1770,7 @@ class WavyTunnelExitOptimizer:
                                 }
                                 trades.append(trade_result)
                                 remaining_position = 0
-                
+
                     # Reset position if fully closed
                     if remaining_position == 0:
                         current_position = None
@@ -1000,7 +1780,7 @@ class WavyTunnelExitOptimizer:
         # Calculate performance metrics
             if trades:
                 df_trades = pd.DataFrame(trades)
-            
+
                 return {
                     'total_trades': len(df_trades),
                     'profitable_trades': len(df_trades[df_trades['profit'] > 0]),
@@ -1019,7 +1799,7 @@ class WavyTunnelExitOptimizer:
         except Exception as e:
             self.logger.main_logger.error(f"Error evaluating parameters: {str(e)}")
             return self._get_default_results()
-    
+
     def _get_market_data(self) -> Optional[pd.DataFrame]:
         """Fetch and preprocess market data with enhanced error handling"""
         try:
@@ -1030,7 +1810,7 @@ class WavyTunnelExitOptimizer:
             timeframe = getattr(mt5, f"TIMEFRAME_{self.timeframe}")
             rates = mt5.copy_rates_range(self.symbol, timeframe,
                                        self.start_date, self.end_date)
-            
+
             if rates is None or len(rates) == 0:
                 self.logger.main_logger.error(
                     f"No data available for {self.symbol} {self.timeframe}"
@@ -1041,15 +1821,15 @@ class WavyTunnelExitOptimizer:
             df = pd.DataFrame(rates)
             df['time'] = pd.to_datetime(df['time'], unit='s')
             df.set_index('time', inplace=True)
-            
+
             # Basic data validation
             required_cols = ['open', 'high', 'low', 'close', 'tick_volume']
             if not all(col in df.columns for col in required_cols):
                 self.logger.main_logger.error("Missing required columns in data")
                 return None
-            
+
             return self._preprocess_data(df)
-            
+
         except Exception as e:
             self.logger.main_logger.error(f"Error fetching data: {str(e)}")
             return None
@@ -1065,136 +1845,34 @@ class WavyTunnelExitOptimizer:
 
             # Handle missing values
             data = data.fillna(method='ffill')
-            
+
             # Remove outliers using rolling median
             window = 5
             for col in ['high', 'low', 'close', 'open']:
                 median = data[col].rolling(window=window, center=True).median()
                 std = data[col].rolling(window=window, center=True).std()
-                
+
                 # More conservative outlier threshold for XAUUSD
                 threshold = 2.5
                 data[col] = data[col].where(
                     abs(data[col] - median) <= threshold * std,
                     median
                 )
-            
+
             # Validate high/low relationships
             data['high'] = data[['high', 'open', 'close']].max(axis=1)
             data['low'] = data[['low', 'open', 'close']].min(axis=1)
-            
+
             self.logger.debug_logger.info(
                 f"Preprocessed data shape: {data.shape}, "
                 f"Date range: {data.index[0]} to {data.index[-1]}"
             )
-            
+
             return data
 
         except Exception as e:
             self.logger.main_logger.error(f"Error preprocessing data: {str(e)}")
             return data
-        
-    def generate_signals(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series, pd.Series]:
-        """Generate entry signals using fixed parameters with improved validation"""
-        try:
-        # Calculate EMAs using entry parameters
-            wavy_h = data['high'].ewm(span=self.entry_params['wavy_period'], adjust=False).mean()
-            wavy_c = data['close'].ewm(span=self.entry_params['wavy_period'], adjust=False).mean()
-            wavy_l = data['low'].ewm(span=self.entry_params['wavy_period'], adjust=False).mean()
-            tunnel1 = data['close'].ewm(span=self.entry_params['tunnel_period1'], adjust=False).mean()
-            tunnel2 = data['close'].ewm(span=self.entry_params['tunnel_period2'], adjust=False).mean()
-
-            wavy_max = pd.concat([wavy_h, wavy_c, wavy_l], axis=1).max(axis=1)
-            wavy_min = pd.concat([wavy_h, wavy_c, wavy_l], axis=1).min(axis=1)
-            tunnel_max = pd.concat([tunnel1, tunnel2], axis=1).max(axis=1)
-            tunnel_min = pd.concat([tunnel1, tunnel2], axis=1).min(axis=1)
-           
-            # Store for later use in exit conditions
-            self.wavy_max = wavy_max
-            self.wavy_min = wavy_min
-            self.tunnel_max = tunnel_max
-            self.tunnel_min = tunnel_min
-
-            # Calculate trend and volume conditions
-            trend = self._calculate_trend(data)
-            volume_condition = data['tick_volume'] > data['tick_volume'].rolling(20).mean()
-
-                    # Generate signals
-            primary_longs = (
-                (data['open'] > wavy_max) & 
-                (wavy_min > tunnel_max) & 
-                (trend > 0) &
-                volume_condition &
-                (data['open'] > 0)
-            )
-        
-            primary_shorts = (
-                (data['open'] < wavy_min) & 
-                (wavy_max < tunnel_min) & 
-                (trend < 0) &
-                volume_condition &
-                (data['open'] > 0)
-            )
-
-            # Secondary signals with additional validation
-            min_gap = self.entry_params['min_gap_second']
-            max_zone = self.entry_params['max_zone_percentage']
-        
-            secondary_longs = (
-                (data['close'].shift(1) <= wavy_max.shift(1)) & 
-                (data['close'] > wavy_max) &
-                (data['close'] < tunnel_min) &
-                ((tunnel_min - data['close']) > min_gap) &
-                ((data['close'] - wavy_max) / (tunnel_min - wavy_max) <= max_zone) &
-                (trend > 0) &
-                volume_condition &
-                (data['close'] > 0)
-            )
-        
-            secondary_shorts = (
-                (data['close'].shift(1) >= wavy_min.shift(1)) & 
-                (data['close'] < wavy_min) &
-                (data['close'] > tunnel_max) &
-                ((data['close'] - tunnel_max) > min_gap) &
-                ((wavy_min - data['close']) / (wavy_min - tunnel_max) <= max_zone) &
-                (trend < 0) &
-                volume_condition &
-                (data['close'] > 0)
-            )
-
-        # Log signal generation stats (only once)
-            if not hasattr(self, '_signals_logged'):
-                self.logger.debug_logger.info(
-                    f"Generated signals:\n"
-                    f"Primary Longs: {primary_longs.sum()}\n"
-                    f"Primary Shorts: {primary_shorts.sum()}\n"
-                    f"Secondary Longs: {secondary_longs.sum()}\n"
-                    f"Secondary Shorts: {secondary_shorts.sum()}"
-                )
-                self._signals_logged = True
-
-            # Validate signal balance (only once per data set)
-            long_signals = primary_longs | secondary_longs
-            short_signals = primary_shorts | secondary_shorts
-            signal_ratio = (long_signals.sum() + 1) / (short_signals.sum() + 1)
-        
-            if not hasattr(self, '_imbalance_warned') and (signal_ratio > self.max_signal_ratio or signal_ratio < (1/self.max_signal_ratio)):
-                self.logger.warning(f"Signal imbalance detected: {signal_ratio:.2f} ratio")
-                self._imbalance_warned = True
-
-            return (
-                long_signals,
-                short_signals,
-                pd.Series(primary_longs | primary_shorts, index=data.index)
-            )
-
-        except Exception as e:
-            self.logger.main_logger.error(f"Error generating signals: {str(e)}")
-            return (
-                pd.Series(False, index=data.index),
-                pd.Series(False, index=data.index),
-                pd.Series(False, index=data.index)
-            )
 
     def _calculate_trend(self, data: pd.DataFrame) -> pd.Series:
         """Calculate trend direction and strength"""
@@ -1203,14 +1881,14 @@ class WavyTunnelExitOptimizer:
             short_ma = data['close'].ewm(span=20).mean()
             medium_ma = data['close'].ewm(span=50).mean()
             long_ma = data['close'].ewm(span=100).mean()
-            
+
             # Trend strength indicators
             short_trend = (short_ma - medium_ma) / medium_ma
             long_trend = (medium_ma - long_ma) / long_ma
-            
+
             # Combine trends with more weight on shorter timeframe
             combined_trend = short_trend * 0.6 + long_trend * 0.4
-            
+
             return combined_trend
 
         except Exception as e:
@@ -1220,7 +1898,7 @@ class WavyTunnelExitOptimizer:
     def test_data_and_signals(self, start_date: datetime, end_date: datetime) -> Tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series]:
         """Test function to verify data fetching and signal generation"""
         print("\nRunning diagnostic test...")
-        
+
         # Test data fetching
         print("1. Testing MT5 data fetch...")
         data = self._get_market_data()
@@ -1234,33 +1912,33 @@ class WavyTunnelExitOptimizer:
             print("✗ Failed to fetch data")
             self.logger.debug_logger.error("Data fetch failed")
             return None, None, None, None
-        
+
         # Test signal generation
         print("\n2. Testing signal generation...")
         long_signals, short_signals, is_primary = self.generate_signals(data)
-        
+
         total_signals = long_signals.sum() + short_signals.sum()
         min_required = self.min_signals_required
-        
+
         if total_signals < min_required:
             print(f"✗ Insufficient signals: {total_signals} found, {min_required} required")
             return None, None, None, None
-            
+
         print(f"Long signals found: {long_signals.sum()}")
         print(f"Short signals found: {short_signals.sum()}")
         print(f"Primary signals found: {is_primary.sum()}")
-        
+
         self.logger.debug_logger.info(
             f"Signal generation test - Longs: {long_signals.sum()}, "
             f"Shorts: {short_signals.sum()}, Primary: {is_primary.sum()}"
         )
-        
+
         if long_signals.sum() > 0 or short_signals.sum() > 0:
             print("\nSignal dates:")
             signal_dates = data.index[long_signals | short_signals]
             for date in signal_dates[:5]:  # Show first 5 signals
                 print(f"Signal at: {date}")
-        
+
         # Test parameter generation
         print("\n3. Testing parameter combinations...")
         params = self._generate_param_combinations()
@@ -1269,7 +1947,7 @@ class WavyTunnelExitOptimizer:
             print("\nSample parameter set:")
             print(params[0])
             self.logger.debug_logger.info(f"Parameter combinations generated: {len(params)}")
-        
+
         # Test single evaluation
         print("\n4. Testing parameter evaluation...")
         if params:
@@ -1287,29 +1965,29 @@ class WavyTunnelExitOptimizer:
             if len(data) < 100:
                 self.logger.main_logger.error("Insufficient data points")
                 return False
-        
+
             # Filter out rows with missing data instead of rejecting entirely
             data = data.dropna()
             if len(data) < 100:
                 self.logger.main_logger.error("Insufficient valid data points after cleaning")
                 return False
-        
+
             # Check price validity
             if (data['high'] < data['low']).any():
                 self.logger.main_logger.error("Invalid price data detected")
                 return False
-        
+
             # Check volume
             if (data['tick_volume'] <= 0).any():
                 self.logger.main_logger.warning("Invalid volume data detected")
                 return False
-        
+
             return True
-            
+
         except Exception as e:
             self.logger.main_logger.error(f"Error in data validation: {str(e)}")
             return False
-    
+
     def optimize_parallel(self) -> Tuple[Dict, pd.DataFrame]:
         """Run parallel optimization process with enhanced monitoring"""
         try:
@@ -1321,30 +1999,30 @@ class WavyTunnelExitOptimizer:
             # Generate parameter combinations
             param_combinations = self._generate_param_combinations()
             total_combinations = len(param_combinations)
-            
+
             self.logger.main_logger.info(
                 f"Starting optimization with {total_combinations} parameter combinations"
             )
-            
+
             # Setup parallel processing
             num_cores = mp.cpu_count()
             chunk_size = max(1, min(1000, total_combinations // (num_cores * 4)))
-            chunks = [param_combinations[i:i + chunk_size] 
+            chunks = [param_combinations[i:i + chunk_size]
                      for i in range(0, len(param_combinations), chunk_size)]
-            
+
             start_time = time.time()
             results = []
-            
+
             # Initialize progress tracking
             completed = 0
             best_result = None
-            
+
             with ProcessPoolExecutor(max_workers=num_cores) as executor:
                 futures = {
-                    executor.submit(self._process_chunk, chunk, data.copy()): i 
+                    executor.submit(self._process_chunk, chunk, data.copy()): i
                     for i, chunk in enumerate(chunks)
                 }
-                
+
                 try:
                     for future in concurrent.futures.as_completed(futures):
                         # Check for emergency stop
@@ -1352,26 +2030,26 @@ class WavyTunnelExitOptimizer:
                             self.logger.main_logger.warning("Emergency stop triggered")
                             executor.shutdown(wait=False)
                             return None, None
-                            
+
                         chunk_results = future.result(timeout=300)
                         if chunk_results:
                             results.extend(chunk_results)
                             completed += len(chunk_results)
-                            
+
                             # Update progress and best result
                             elapsed_time = time.time() - start_time
                             self._update_optimization_progress(
                                 completed, total_combinations, elapsed_time, chunk_results
                             )
-                            
+
                             # Update best result if necessary
                             best_result = self._update_best_result(best_result, chunk_results)
-                            
+
                 except KeyboardInterrupt:
                     self.logger.main_logger.warning("Optimization interrupted by user")
                     executor.shutdown(wait=False)
                     return None, None
-                    
+
                 except Exception as e:
                     self.logger.main_logger.error(f"Error in optimization: {str(e)}")
                     executor.shutdown(wait=False)
@@ -1400,19 +2078,19 @@ class WavyTunnelExitOptimizer:
                     evaluation = self._evaluate_params(params, data)
                     if evaluation['total_trades'] > 0:
                         chunk_results.append({**params, **evaluation})
-                        
+
             except Exception as e:
                 self.logger.debug_logger.error(
                     f"Error processing parameters {params}: {str(e)}"
                 )
-                
+
         return chunk_results
 
     def _validate_params(self, params: Dict) -> bool:
         """Validate parameter combinations with enhanced rules"""
         try:
             # Check lot percentages sum to 100%
-            lot_sum = (params['tp1_lot_percent'] + params['tp2_lot_percent'] + 
+            lot_sum = (params['tp1_lot_percent'] + params['tp2_lot_percent'] +
                       params['tp3_lot_percent'] + params['tp4_lot_percent'])
             if abs(lot_sum - 100) > 0.0001:
                 return False
@@ -1424,13 +2102,13 @@ class WavyTunnelExitOptimizer:
                 params['tp3_weight'],
                 params['tp4_weight']
             ]
-            
+
             # Check ascending order with minimum spacing
             if not all(weights[i] + 0.001 < weights[i+1] for i in range(len(weights)-1)):
                 return False
 
             # Validate buffer parameters
-            if (params['wave_cross_buffer'] <= 0 or 
+            if (params['wave_cross_buffer'] <= 0 or
                 params['tunnel_touch_buffer'] <= 0):
                 return False
 
@@ -1449,21 +2127,21 @@ class WavyTunnelExitOptimizer:
             results_df['sharpe_ratio'] * 0.2 +
             (1 - results_df['max_drawdown']) * 0.2
         )
-        
+
         # Get best parameters
         best_params = results_df.nlargest(1, 'composite_score').iloc[0].to_dict()
-        
+
         # Log best parameters
         self.logger.main_logger.info(f"Best parameters found: {best_params}")
-        
+
         return best_params
 
-    def _update_optimization_progress(self, completed: int, total: int, 
+    def _update_optimization_progress(self, completed: int, total: int,
                                    elapsed_time: float, chunk_results: List[Dict]):
         """Update optimization progress with enhanced metrics"""
         progress = (completed / total) * 100
         remaining_time = (elapsed_time / progress) * (100 - progress) if progress > 0 else 0
-        
+
         # Calculate chunk statistics
         if chunk_results:
             chunk_df = pd.DataFrame(chunk_results)
@@ -1475,7 +2153,7 @@ class WavyTunnelExitOptimizer:
             }
         else:
             chunk_stats = {}
-        
+
         self.logger.log_progress(completed, total, elapsed_time, remaining_time, chunk_stats)
 
     def _calculate_max_drawdown(self, profits: pd.Series) -> float:
@@ -1586,7 +2264,7 @@ class WavyTunnelExitOptimizer:
                 'TP3': results_df['tp3_weight'].multiply(100),
                 'TP4': results_df['tp4_weight'].multiply(100)
             })
-            
+
             fig.add_trace(
                 go.Box(
                     x=tp_levels.values.flatten(),
@@ -1661,7 +2339,7 @@ class WavyTunnelExitOptimizer:
             fig.add_trace(
                 go.Bar(
                     x=['Primary', 'Secondary'],
-                    y=[signal_performance['primary_profit'], 
+                    y=[signal_performance['primary_profit'],
                        signal_performance['secondary_profit']],
                     name='Signal Performance',
                     marker_color=['blue', 'red']
@@ -1679,7 +2357,7 @@ class WavyTunnelExitOptimizer:
 
             # Update axes
             self._update_chart_axes(fig)
-            
+
             # Save visualization and reports
             fig.write_html(report_path / "optimization_results.html")
             self._create_summary_report(results_df, report_path)
@@ -1692,10 +2370,10 @@ class WavyTunnelExitOptimizer:
     def _prepare_market_condition_heatmap(self, results_df: pd.DataFrame) -> Dict:
         """Prepare data for market condition heatmap"""
         try:
-            conditions = ['excellent_condition', 'good_condition', 
+            conditions = ['excellent_condition', 'good_condition',
                          'moderate_condition', 'poor_condition']
             metrics = ['win_rate', 'avg_profit', 'trade_count']
-            
+
             values = []
             for condition in conditions:
                 condition_data = []
@@ -1705,7 +2383,7 @@ class WavyTunnelExitOptimizer:
                         value = condition_results[metric].mean()
                         condition_data.append(value)
                 values.append(condition_data)
-            
+
             return {
                 'values': values,
                 'rows': conditions,
@@ -1720,7 +2398,7 @@ class WavyTunnelExitOptimizer:
         try:
             primary_trades = results_df[results_df['is_primary']]
             secondary_trades = results_df[~results_df['is_primary']]
-            
+
             return {
                 'primary_profit': primary_trades['avg_profit_per_trade_pct'].mean(),
                 'secondary_profit': secondary_trades['avg_profit_per_trade_pct'].mean()
@@ -1758,7 +2436,7 @@ class WavyTunnelExitOptimizer:
         try:
             # Filter for successful parameter combinations
             successful_params = results_df[
-                (results_df['win_rate'] > 0.5) & 
+                (results_df['win_rate'] > 0.5) &
                 (results_df['profit_factor'] > 1.5)
             ]
 
@@ -1776,7 +2454,7 @@ class WavyTunnelExitOptimizer:
             with open(report_path / "parameter_analysis.txt", "w") as f:
                 f.write("Parameter Distribution Analysis\n")
                 f.write("=" * 50 + "\n\n")
-                
+
                 for param, stats in param_analysis.items():
                     f.write(f"\n{param}:\n")
                     for metric, value in stats.items():
@@ -1791,7 +2469,7 @@ class WavyTunnelExitOptimizer:
             with open(report_path / "trade_analysis.txt", "w") as f:
                 f.write("Trade Analysis Report\n")
                 f.write("=" * 50 + "\n\n")
-                
+
                 # Overall statistics
                 f.write("Overall Statistics:\n")
                 f.write("-" * 20 + "\n")
@@ -1800,11 +2478,11 @@ class WavyTunnelExitOptimizer:
                 f.write(f"Average Profit Factor: {results_df['profit_factor'].mean():.2f}\n")
                 f.write(f"Average Sharpe Ratio: {results_df['sharpe_ratio'].mean():.2f}\n")
                 f.write(f"Average Maximum Drawdown: {results_df['max_drawdown'].mean()*100:.2f}%\n\n")
-                
+
                 # Market condition analysis
                 f.write("Market Condition Analysis:\n")
                 f.write("-" * 20 + "\n")
-                for condition in ['excellent_condition', 'good_condition', 
+                for condition in ['excellent_condition', 'good_condition',
                                 'moderate_condition', 'poor_condition']:
                     condition_data = results_df[results_df['market_condition'] == condition]
                     if len(condition_data) > 0:
@@ -1812,18 +2490,18 @@ class WavyTunnelExitOptimizer:
                         f.write(f"  Trade Count: {len(condition_data)}\n")
                         f.write(f"  Win Rate: {condition_data['win_rate'].mean()*100:.2f}%\n")
                         f.write(f"  Average Profit: {condition_data['avg_profit_per_trade_pct'].mean():.2f}%\n")
-                
+
                 # Signal type analysis
                 f.write("\nSignal Type Analysis:\n")
                 f.write("-" * 20 + "\n")
                 primary = results_df[results_df['is_primary']]
                 secondary = results_df[~results_df['is_primary']]
-                
+
                 f.write("\nPrimary Signals:\n")
                 f.write(f"  Count: {len(primary)}\n")
                 f.write(f"  Win Rate: {primary['win_rate'].mean()*100:.2f}%\n")
                 f.write(f"  Average Profit: {primary['avg_profit_per_trade_pct'].mean():.2f}%\n")
-                
+
                 f.write("\nSecondary Signals:\n")
                 f.write(f"  Count: {len(secondary)}\n")
                 f.write(f"  Win Rate: {secondary['win_rate'].mean()*100:.2f}%\n")
@@ -1836,7 +2514,7 @@ def create_combined_summary_report(all_results: Dict, base_dir: Path, symbol: st
     """Create a comprehensive summary report combining results from all timeframes"""
     try:
         summary_path = base_dir / "combined_summary.txt"
-        
+
         with open(summary_path, "w") as f:
             f.write(f"Combined Summary Report for {symbol}\n")
             f.write(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
@@ -1845,25 +2523,25 @@ def create_combined_summary_report(all_results: Dict, base_dir: Path, symbol: st
             for timeframe, results in all_results.items():
                 f.write(f"\nTimeframe: {timeframe}\n")
                 f.write("-" * 40 + "\n")
-                
+
                 # Entry Parameters
                 f.write("Entry Parameters:\n")
                 for param, value in results['entry_params'].items():
                     f.write(f"  {param}: {value}\n")
-                
+
                 # Exit Parameters
                 f.write("\nOptimized Exit Parameters:\n")
                 exit_params = results['exit_params']
-                
+
                 f.write("Take Profit Levels:\n")
                 for i in range(1, 5):
                     f.write(f"  TP{i}: {exit_params[f'tp{i}_lot_percent']}% "
                            f"at {exit_params[f'tp{i}_weight']*100:.2f}%\n")
-                
+
                 f.write("\nStop Loss Parameters:\n")
                 f.write(f"  Wave Cross Buffer: {exit_params['wave_cross_buffer']*100:.3f}%\n")
                 f.write(f"  Tunnel Touch Buffer: {exit_params['tunnel_touch_buffer']*100:.3f}%\n")
-                
+
                 f.write("\nPerformance Metrics:\n")
                 f.write(f"  Total Trades: {exit_params['total_trades']}\n")
                 f.write(f"  Win Rate: {exit_params['win_rate']*100:.1f}%\n")
@@ -1871,9 +2549,9 @@ def create_combined_summary_report(all_results: Dict, base_dir: Path, symbol: st
                 f.write(f"  Sharpe Ratio: {exit_params['sharpe_ratio']:.2f}\n")
                 f.write(f"  Profit Factor: {exit_params['profit_factor']:.2f}\n")
                 f.write(f"  Max Drawdown: {exit_params['max_drawdown']*100:.2f}%\n")
-                
+
                 f.write("\n" + "=" * 80 + "\n")
-                
+
     except Exception as e:
         logging.error(f"Error creating combined summary report: {str(e)}")
 
@@ -1934,7 +2612,7 @@ def main():
         symbol = SYMBOL
         start_date = datetime.now() - timedelta(days=5)
         end_date = datetime.now()
-        
+
         print(f"\nRunning optimization for {symbol} from {start_date} to {end_date}")
 
         # Create results directory with timestamp
@@ -1953,7 +2631,7 @@ def main():
 
         # Summary of all timeframe results
         all_results = {}
-        
+
         # Test MT5 connection first
         if not test_mt5_connection():
             raise ConnectionError("Failed to establish MT5 connection")
@@ -1962,11 +2640,11 @@ def main():
             try:
                 logging.info(f"\nOptimizing exit strategy for {symbol} on {timeframe}")
                 entry_params = TIMEFRAME_ENTRY_PARAMS[timeframe]
-                
+
                 # Create timeframe-specific directory
                 timeframe_dir = base_results_dir / timeframe
                 timeframe_dir.mkdir(exist_ok=True)
-                
+
                 # Initialize optimizer
                 optimizer = WavyTunnelExitOptimizer(
                     symbol=symbol,
@@ -1999,7 +2677,7 @@ def main():
                 # Run optimization
                 logging.info("Starting optimization process...")
                 best_params, results_df = optimizer.optimize_parallel()
-                
+
                 if best_params is not None:
                     # Store results
                     all_results[timeframe] = {
@@ -2013,10 +2691,10 @@ def main():
                             'max_drawdown': best_params['max_drawdown']
                         }
                     }
-                    
+
                     # Create detailed reports
                     optimizer.create_optimization_report(results_df)
-                    
+
                     # Log best parameters
                     logging.info(f"\nOptimization completed for {timeframe}")
                     logging.info("Best parameters found:")

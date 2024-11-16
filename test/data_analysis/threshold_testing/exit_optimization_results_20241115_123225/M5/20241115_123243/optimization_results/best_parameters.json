@@ -1,0 +1,37 @@
+{
+    "symbol": "XAUUSD",
+    "timeframe": "M5",
+    "optimization_date": "2024-11-15 12:46:46",
+    "best_parameters": {
+        "tp1_lot_percent": 40.0,
+        "tp2_lot_percent": 30.0,
+        "tp3_lot_percent": 15.0,
+        "tp4_lot_percent": 15.0,
+        "tp1_weight": 0.002,
+        "tp2_weight": 0.005,
+        "tp3_weight": 0.008,
+        "tp4_weight": 0.012,
+        "wave_cross_buffer": 0.002,
+        "tunnel_touch_buffer": 0.002,
+        "total_trades": 1.0,
+        "profitable_trades": 0.0,
+        "total_profit_pct": -0.2082192597228019,
+        "avg_profit_per_trade_pct": -0.2082192597228019,
+        "max_drawdown": 0.0,
+        "win_rate": 0.0,
+        "profit_factor": 0.0,
+        "sharpe_ratio": 0.0,
+        "avg_hold_time": 0.25,
+        "primary_profit_per_trade": NaN,
+        "secondary_profit_per_trade": -0.2082192597228019,
+        "composite_score": 0.2
+    },
+    "performance_metrics": {
+        "total_trades": 1.0,
+        "win_rate": 0.0,
+        "profit_factor": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_profit_per_trade": -0.2082192597228019
+    }
+}

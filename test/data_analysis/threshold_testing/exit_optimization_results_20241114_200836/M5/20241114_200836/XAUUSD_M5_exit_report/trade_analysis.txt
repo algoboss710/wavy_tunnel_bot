@@ -1,0 +1,13 @@
+Trade Analysis Report
+==================================================
+
+Overall Statistics:
+--------------------
+Total Combinations Tested: 1512
+Average Win Rate: 0.00%
+Average Profit Factor: 0.00
+Average Sharpe Ratio: -0.57
+Average Maximum Drawdown: 0.02%
+
+Market Condition Analysis:
+--------------------

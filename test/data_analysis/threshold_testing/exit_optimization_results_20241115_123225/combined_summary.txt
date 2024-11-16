@@ -1,0 +1,34 @@
+Combined Summary Report for XAUUSD
+Generated on: 2024-11-15 12:46:47
+================================================================================
+
+
+Timeframe: M5
+----------------------------------------
+Entry Parameters:
+  wavy_period: 25
+  tunnel_period1: 280
+  tunnel_period2: 300
+  min_gap_second: 5.0
+  max_zone_percentage: 0.45000000000000007
+
+Optimized Exit Parameters:
+Take Profit Levels:
+  TP1: 40.0% at 0.20%
+  TP2: 30.0% at 0.50%
+  TP3: 15.0% at 0.80%
+  TP4: 15.0% at 1.20%
+
+Stop Loss Parameters:
+  Wave Cross Buffer: 0.200%
+  Tunnel Touch Buffer: 0.200%
+
+Performance Metrics:
+  Total Trades: 1.0
+  Win Rate: 0.0%
+  Average Profit: -0.21%
+  Sharpe Ratio: 0.00
+  Profit Factor: 0.00
+  Max Drawdown: 0.00%
+
+================================================================================

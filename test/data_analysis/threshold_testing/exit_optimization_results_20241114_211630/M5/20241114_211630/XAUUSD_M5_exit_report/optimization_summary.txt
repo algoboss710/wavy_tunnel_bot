@@ -1,0 +1,82 @@
+Optimization Summary Report
+Symbol: XAUUSD
+Timeframe: M5
+Date Range: 2024-11-09 21:16:30.151736 to 2024-11-14 21:16:30.151736
+==================================================
+
+Overall Statistics:
+--------------------
+Total Combinations Tested: 1512
+Valid Results: 1512
+
+Performance Metrics:
+--------------------
+Win Rate: 0.00
+Average Profit: -0.16
+Best Profit: -0.11
+Worst Profit: -0.21
+Average Trades: 1.50
+Max Drawdown: 0.02
+
+Parameter Distribution Analysis:
+--------------------
+
+tp1_lot_percent:
+  Mean: 50.000000
+  Std: 5.775413
+  Min: 40.000000
+  Max: 60.000000
+
+tp2_lot_percent:
+  Mean: 25.000000
+  Std: 4.083834
+  Min: 20.000000
+  Max: 30.000000
+
+tp3_lot_percent:
+  Mean: 12.500000
+  Std: 2.500827
+  Min: 10.000000
+  Max: 15.000000
+
+tp4_lot_percent:
+  Mean: 12.500000
+  Std: 2.500827
+  Min: 10.000000
+  Max: 15.000000
+
+tp1_weight:
+  Mean: 0.001857
+  Std: 0.000774
+  Min: 0.001000
+  Max: 0.003000
+
+tp2_weight:
+  Mean: 0.005000
+  Std: 0.000756
+  Min: 0.004000
+  Max: 0.006000
+
+tp3_weight:
+  Mean: 0.008143
+  Std: 0.000774
+  Min: 0.007000
+  Max: 0.009000
+
+tp4_weight:
+  Mean: 0.011000
+  Std: 0.000817
+  Min: 0.010000
+  Max: 0.012000
+
+wave_cross_buffer:
+  Mean: 0.001500
+  Std: 0.000500
+  Min: 0.001000
+  Max: 0.002000
+
+tunnel_touch_buffer:
+  Mean: 0.001500
+  Std: 0.000500
+  Min: 0.001000
+  Max: 0.002000

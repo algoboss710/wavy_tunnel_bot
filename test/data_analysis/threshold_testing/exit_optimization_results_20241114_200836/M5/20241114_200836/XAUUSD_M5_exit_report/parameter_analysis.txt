@@ -1,0 +1,73 @@
+Parameter Distribution Analysis
+==================================================
+
+
+tp1_lot_percent:
+  mean: nan
+  median: nan
+  std: nan
+  min: nan
+  max: nan
+
+tp2_lot_percent:
+  mean: nan
+  median: nan
+  std: nan
+  min: nan
+  max: nan
+
+tp3_lot_percent:
+  mean: nan
+  median: nan
+  std: nan
+  min: nan
+  max: nan
+
+tp4_lot_percent:
+  mean: nan
+  median: nan
+  std: nan
+  min: nan
+  max: nan
+
+tp1_weight:
+  mean: nan
+  median: nan
+  std: nan
+  min: nan
+  max: nan
+
+tp2_weight:
+  mean: nan
+  median: nan
+  std: nan
+  min: nan
+  max: nan
+
+tp3_weight:
+  mean: nan
+  median: nan
+  std: nan
+  min: nan
+  max: nan
+
+tp4_weight:
+  mean: nan
+  median: nan
+  std: nan
+  min: nan
+  max: nan
+
+wave_cross_buffer:
+  mean: nan
+  median: nan
+  std: nan
+  min: nan
+  max: nan
+
+tunnel_touch_buffer:
+  mean: nan
+  median: nan
+  std: nan
+  min: nan
+  max: nan
